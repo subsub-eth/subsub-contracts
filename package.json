@@ -16,6 +16,7 @@
     "url": "https://github.com/suiiii-rip/createz-contracts/issues"
   },
   "homepage": "https://createz.xyz",
+  "types": "./types/web3-v1-contracts/types.d.ts",
   "scripts": {
     "generate-types": "typechain --target=truffle-v5 'build/contracts/**.json'",
     "generate-frontend-types": "typechain --target=web3-v1 'build/contracts/**.json'",

@@ -1,0 +1,13 @@
+*.tgz
+*.tar.gz
+
+.*
+truffle-config.js
+tsconfig.json
+
+build/
+test/
+migrations/
+node_modules/
+
+types/truffle-contracts/
