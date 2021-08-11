@@ -5,7 +5,6 @@
 truffle-config.js
 tsconfig.json
 
-build/
 test/
 migrations/
 node_modules/
