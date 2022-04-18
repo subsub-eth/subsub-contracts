@@ -20,25 +20,25 @@
   "scripts": {
     "generate-types": "typechain --target=truffle-v5 'build/contracts/**.json'",
     "generate-frontend-types": "typechain --target=web3-v1 'build/contracts/**.json'",
-    "truffle-compile": "truffle compile && npm run generate-types && npm run generate-frontend-types",
-    "clean-dist": "rimraf dist/*",
-    "truffle-test": "truffle test"
+    "build": "truffle compile && npm run generate-types && npm run generate-frontend-types",
+    "clean": "rimraf types/ build/",
+    "test": "truffle test"
   },
   "devDependencies": {
-    "@openzeppelin/contracts": "^4.2.0",
-    "@typechain/truffle-v5": "^5.0.0",
-    "@typechain/web3-v1": "^3.0.0",
+    "@typechain/truffle-v5": "^8.0.0",
+    "@typechain/web3-v1": "^6.0.0",
     "@types/bn.js": "^5.1.0",
-    "@types/chai": "^4.2.21",
-    "@types/mocha": "^8.2.2",
-    "@types/node": "^16.4.13",
+    "@types/chai": "^4.3.1",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^17.0.24",
     "rimraf": "^3.0.2",
-    "solidity-linked-list": "^5.0.0",
-    "truffle": "^5.4.5",
-    "ts-node": "^10.1.0",
-    "typechain": "^5.1.2",
-    "typescript": "^4.3.5"
+    "truffle": "^5.5.10",
+    "ts-node": "^10.7.0",
+    "typechain": "^8.0.0",
+    "typescript": "^4.6.3"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^4.5.0",
+    "solidity-linked-list": "^5.1.0"
   }
 }

@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js 15
+    - name: Use Node.js 17
       uses: actions/setup-node@v1
       with:
-        node-version: '15.x'
+        node-version: '17.x'
     - uses: actions/cache@v2
       with:
         path: |
@@ -23,7 +23,7 @@ jobs:
           ${{ runner.os }}-node-
     - name: Install dependencies
       run: npm ci
-    - name: Truffle - compile
-      run: npm run truffle-compile
-    - name: Truffle - test
-      run: npm run truffle-test --stacktrace
+    - name: Build
+      run: npm run build
+    - name: Test
+      run: npm run test --stacktrace
