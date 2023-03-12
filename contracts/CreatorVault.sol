@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "solidity-linked-list/contracts/StructuredLinkedList.sol";
 import "./subscriptionlist/SubscriptionList.sol";
 
-import "./Blockaware.sol";
+import "./util/Blockaware.sol";
 import "./Versioned.sol";
 
 contract CreatorVault is Ownable, Blockaware, Versioned {

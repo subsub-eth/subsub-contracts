@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "./CreatorVault.sol";
-import "./Blockdetermined.sol";
+import "../CreatorVault.sol";
+import "../util/Blockdetermined.sol";
 
 /**
   * @title CreatorVault that allows for artifical change of the block number
