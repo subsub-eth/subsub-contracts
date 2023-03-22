@@ -11,6 +11,7 @@ contract SubscriptionTest is Test {
     Subscription public subscription;
     IERC20 public testToken;
     uint256 public rate;
+    uint public epochSize;
 
     address public alice;
     address public bob;
@@ -21,8 +22,9 @@ contract SubscriptionTest is Test {
         bob = address(20);
         charlie = address(30);
         rate = 5;
+        epochSize = 10;
         testToken = new TestToken(1_000_000, address(this));
-        subscription = new Subscription(testToken, rate);
+        subscription = new Subscription(testToken, rate, epochSize);
 
         testToken.approve(address(subscription), type(uint256).max);
 
@@ -38,6 +40,7 @@ contract SubscriptionTest is Test {
         testToken.approve(address(subscription), amount);
         tokenId = subscription.mint(amount);
         vm.stopPrank();
+        assertEq(testToken.balanceOf(address(subscription)), amount, "amount send to subscription contract");
     }
 
     function testMint() public {
@@ -95,6 +98,8 @@ contract SubscriptionTest is Test {
 
         subscription.deposit(tokenId, 200);
 
+        assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
+
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.subscriptionEnd(tokenId);
         assertEq(end, initialEnd + 40, "subscription ends at 60");
@@ -105,6 +110,8 @@ contract SubscriptionTest is Test {
 
         vm.expectRevert("SUB: subscription does not exist");
         subscription.deposit(tokenId, 200);
+
+        assertEq(testToken.balanceOf(address(subscription)), 0, "no tokens sent");
     }
 
     function testDeposit_afterMint() public {
@@ -118,6 +125,8 @@ contract SubscriptionTest is Test {
         );
 
         subscription.deposit(tokenId, 200);
+
+        assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.subscriptionEnd(tokenId);
@@ -140,6 +149,8 @@ contract SubscriptionTest is Test {
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
 
         subscription.deposit(tokenId, 200);
+
+        assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.subscriptionEnd(tokenId);
@@ -164,6 +175,8 @@ contract SubscriptionTest is Test {
 
         vm.stopPrank();
 
+        assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
+
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.subscriptionEnd(tokenId);
         assertEq(
@@ -187,6 +200,7 @@ contract SubscriptionTest is Test {
             initialDeposit - (passed * rate),
             "withdrawable deposit 75"
         );
+        assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
     function testWithdrawable_inActive() public {
@@ -203,6 +217,7 @@ contract SubscriptionTest is Test {
             0,
             "withdrawable deposit 0"
         );
+        assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
     function testWithdrawable_afterMint() public {
@@ -215,6 +230,8 @@ contract SubscriptionTest is Test {
             initialDeposit,
             "withdrawable deposit 100"
         );
+
+        assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
     function testWithdraw() public {
@@ -327,6 +344,7 @@ contract SubscriptionTest is Test {
         vm.prank(bob);
         vm.expectRevert("SUB: not the owner");
         subscription.withdraw(tokenId, 10000);
+        assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
     function testWithdraw_revert_largerAmount() public {
@@ -336,6 +354,7 @@ contract SubscriptionTest is Test {
         vm.prank(alice);
         vm.expectRevert("SUB: amount exceeds withdrawable");
         subscription.withdraw(tokenId, initialDeposit + 1);
+        assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
     function testWithdrawAll() public {
@@ -375,5 +394,6 @@ contract SubscriptionTest is Test {
         vm.prank(alice);
         vm.expectRevert("SUB: subscription does not exist");
         subscription.withdrawAll(tokenId);
+        assertEq(testToken.balanceOf(address(subscription)), 0, "token balance not changed");
     }
 }

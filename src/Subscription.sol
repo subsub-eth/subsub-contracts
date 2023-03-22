@@ -5,6 +5,7 @@ import {ISubscription} from "./ISubscription.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 contract Subscription is ISubscription, ERC721 {
     // TODO add Ownable
@@ -13,12 +14,20 @@ contract Subscription is ISubscription, ERC721 {
     // TODO add messages to deposits
 
     using SafeERC20 for IERC20;
+    using Math for uint256;
 
     struct SubscriptionData {
         uint256 start; // mint date
         uint256 totalDeposit; // amount of tokens ever deposited
         uint256 lastDeposit; // data of last deposit
         uint256 currentDeposit; // amount of tokens at lastDeposit
+    }
+
+    struct Epoch {
+        uint256 ending; // number if ending subscriptions
+        uint256 amountEnding; // amount of funds of ending subscriptions in the epoch
+        uint256 starting; // number of starting subscriptions
+        uint256 amountStarting; // amount of funds of starting subscriptions in the epoch
     }
 
     uint256 public totalSupply;
@@ -34,10 +43,30 @@ contract Subscription is ISubscription, ERC721 {
     // TODO lock % of the deposit
     uint256 public lock;
 
-    constructor(IERC20 _token, uint256 _rate) ERC721("Subscription", "SUB") {
+    // time of contract's inception
+    // uint private creationBlock;
+    uint256 private epochSize;
+
+    uint256 private lastProcessedEpoch;
+    uint256 private activeSubscriptions;
+
+    mapping(uint256 => Epoch) private epochs;
+
+    constructor(
+        IERC20 _token,
+        uint256 _rate,
+        uint256 _epochSize
+    ) ERC721("Subscription", "SUB") {
         // TODO init with owner properties for proxy: name, symbol, rate
+        require(_epochSize > 0, "SUB: invalid epochSize");
         token = _token;
         rate = _rate;
+        epochSize = _epochSize;
+        lastProcessedEpoch = getCurrentEpoch(); // 0
+    }
+
+    function getCurrentEpoch() internal view returns (uint256) {
+        return block.number / epochSize;
     }
 
     /// @notice "Mints" a new subscription token
@@ -51,6 +80,8 @@ contract Subscription is ISubscription, ERC721 {
         subscriptionData[tokenId].totalDeposit = amount;
         subscriptionData[tokenId].currentDeposit = amount;
 
+        addNewSubscriptionToEpochs(amount);
+
         token.safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
@@ -58,20 +89,73 @@ contract Subscription is ISubscription, ERC721 {
         return tokenId;
     }
 
+    function addNewSubscriptionToEpochs(uint256 amount) internal {
+        uint256 endingBlock = block.number + (amount / rate);
+
+        // TODO use _subscriptionEnd(tokenId)
+        // starting
+        uint256 _currentEpoch = getCurrentEpoch();
+        epochs[_currentEpoch].starting += 1;
+        uint256 remaining = (epochSize - (block.number % epochSize)).min(
+            endingBlock - block.number // subscription ends within current block
+        );
+        epochs[_currentEpoch].amountStarting += (remaining * rate);
+
+        // ending
+        uint256 endingEpoch = endingBlock / epochSize;
+        epochs[endingEpoch].ending += 1;
+        epochs[endingEpoch].amountEnding +=
+            (endingBlock - (endingEpoch * epochSize)).min(
+                endingBlock - block.number // subscription ends within current block
+            ) *
+            rate;
+    }
+
+    function moveSubscriptionInEpochs(uint _lastDeposit, uint _oldDeposit, uint _newDeposit) internal {
+        // when does the sub currently end?
+        uint256 oldEndingBlock = _lastDeposit + (_oldDeposit / rate);
+        // update old epoch
+        uint256 oldEpoch = oldEndingBlock / epochSize;
+        epochs[oldEpoch].ending -= 1;
+        uint256 removable = (oldEndingBlock -
+            ((oldEpoch * epochSize).max(block.number))) * rate;
+        epochs[oldEpoch].amountEnding -= removable;
+
+        // update new epoch
+        uint256 newEndingBlock = _lastDeposit + (_newDeposit / rate);
+        uint256 newEpoch = newEndingBlock / epochSize;
+        epochs[newEpoch].ending += 1;
+        epochs[newEpoch].amountEnding +=
+            (newEndingBlock - ((newEpoch * epochSize).max(block.number))) *
+            rate;
+    }
+
     /// @notice adds deposits to an existing subscription token
     function deposit(uint256 tokenId, uint256 amount) external {
         require(_exists(tokenId), "SUB: subscription does not exist");
 
-        uint256 end = _subscriptionEnd(tokenId);
+        uint256 oldEndingBlock = _subscriptionEnd(tokenId);
 
-        uint256 remaining = 0;
-        if (end > block.number) {
-            remaining = (end - block.number) * rate;
+        uint256 remainingDeposit = 0;
+        if (oldEndingBlock > block.number) {
+            // subscription is still active
+            remainingDeposit = (oldEndingBlock - block.number) * rate;
+
+            uint _currentDeposit = subscriptionData[tokenId].currentDeposit;
+            uint newDeposit = _currentDeposit + amount;
+            moveSubscriptionInEpochs(subscriptionData[tokenId].lastDeposit, _currentDeposit, newDeposit);
+        } else {
+            // subscription is inactive
+            addNewSubscriptionToEpochs(amount);
         }
 
-        subscriptionData[tokenId].currentDeposit = remaining + amount;
+        // TODO add lock
+        subscriptionData[tokenId].currentDeposit = remainingDeposit + amount;
         subscriptionData[tokenId].lastDeposit = block.number;
         subscriptionData[tokenId].totalDeposit += amount;
+
+        // finally transfer tokens into this contract
+        token.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external {
@@ -89,7 +173,14 @@ contract Subscription is ISubscription, ERC721 {
         uint256 withdrawable_ = _withdrawable(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
-        subscriptionData[tokenId].currentDeposit -= amount;
+        uint256 _currentDeposit = subscriptionData[tokenId].currentDeposit;
+        uint256 _lastDeposit = subscriptionData[tokenId].lastDeposit;
+
+        uint newDeposit = _currentDeposit - amount;
+        moveSubscriptionInEpochs(_lastDeposit, _currentDeposit, newDeposit);
+
+        // when is is the sub going to end now?
+        subscriptionData[tokenId].currentDeposit = newDeposit;
         subscriptionData[tokenId].totalDeposit -= amount;
 
         token.safeTransfer(msg.sender, amount);
@@ -149,5 +240,8 @@ contract Subscription is ISubscription, ERC721 {
     /// @notice The owner claims their rewards
     function claim() external {}
 
-    function claimable() external view returns (uint256) {}
+    function claimable() external view returns (uint256) {
+
+
+    }
 }
