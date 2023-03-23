@@ -83,7 +83,7 @@ contract SubscriptionTest is Test {
         assertFalse(active, "subscription inactive");
     }
 
-    function testDeposit() public {
+    function testRenew() public {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
@@ -105,7 +105,7 @@ contract SubscriptionTest is Test {
         assertEq(end, initialEnd + 40, "subscription ends at 60");
     }
 
-    function testDeposit_revert_nonExisting() public {
+    function testRenew_revert_nonExisting() public {
         uint256 tokenId = 100;
 
         vm.expectRevert("SUB: subscription does not exist");
@@ -114,7 +114,7 @@ contract SubscriptionTest is Test {
         assertEq(testToken.balanceOf(address(subscription)), 0, "no tokens sent");
     }
 
-    function testDeposit_afterMint() public {
+    function testRenew_afterMint() public {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
@@ -133,7 +133,7 @@ contract SubscriptionTest is Test {
         assertEq(end, initialEnd + 40, "subscription ends at 60");
     }
 
-    function testDeposit_inActive() public {
+    function testRenew_inActive() public {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
@@ -157,7 +157,7 @@ contract SubscriptionTest is Test {
         assertEq(end, block.number + 40, "subscription ends at 90");
     }
 
-    function testDeposit_notOwner() public {
+    function testRenew_notOwner() public {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
@@ -357,7 +357,7 @@ contract SubscriptionTest is Test {
         assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
-    function testWithdrawAll() public {
+    function testCancel() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
 
@@ -388,7 +388,7 @@ contract SubscriptionTest is Test {
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
     }
 
-    function testWithdrawAll_revert_nonExisting() public {
+    function testCancel_revert_nonExisting() public {
         uint tokenId = 100;
 
         vm.prank(alice);
