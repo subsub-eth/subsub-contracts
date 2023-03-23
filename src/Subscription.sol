@@ -26,10 +26,9 @@ contract Subscription is ISubscription, ERC721 {
     }
 
     struct Epoch {
-        uint256 ending; // number of expiring subscriptions
+        uint256 expiring; // number of expiring subscriptions
         uint256 starting; // number of starting subscriptions
-        uint256 amountEnding; // amount of funds of ending subscriptions in the epoch
-        uint256 amountStarting; // amount of funds of starting subscriptions in the epoch
+        uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
     }
 
     uint256 public totalSupply;
@@ -104,12 +103,12 @@ contract Subscription is ISubscription, ERC721 {
         uint256 remaining = (epochSize - (block.number % epochSize)).min(
             endingBlock - block.number // subscription ends within current block
         );
-        epochs[_currentEpoch].amountStarting += (remaining * rate);
+        epochs[_currentEpoch].partialFunds += (remaining * rate);
 
         // ending
         uint256 endingEpoch = endingBlock / epochSize;
-        epochs[endingEpoch].ending += 1;
-        epochs[endingEpoch].amountEnding +=
+        epochs[endingEpoch].expiring += 1;
+        epochs[endingEpoch].partialFunds +=
             (endingBlock - (endingEpoch * epochSize)).min(
                 endingBlock - block.number // subscription ends within current block
             ) *
@@ -125,16 +124,16 @@ contract Subscription is ISubscription, ERC721 {
         uint256 oldEndingBlock = _lastDeposit + (_oldDeposit / rate);
         // update old epoch
         uint256 oldEpoch = oldEndingBlock / epochSize;
-        epochs[oldEpoch].ending -= 1;
+        epochs[oldEpoch].expiring -= 1;
         uint256 removable = (oldEndingBlock -
             ((oldEpoch * epochSize).max(block.number))) * rate;
-        epochs[oldEpoch].amountEnding -= removable;
+        epochs[oldEpoch].partialFunds -= removable;
 
         // update new epoch
         uint256 newEndingBlock = _lastDeposit + (_newDeposit / rate);
         uint256 newEpoch = newEndingBlock / epochSize;
-        epochs[newEpoch].ending += 1;
-        epochs[newEpoch].amountEnding +=
+        epochs[newEpoch].expiring += 1;
+        epochs[newEpoch].partialFunds +=
             (newEndingBlock - ((newEpoch * epochSize).max(block.number))) *
             rate;
     }
@@ -287,16 +286,15 @@ contract Subscription is ISubscription, ERC721 {
 
         for (; i < _currentEpoch; i++) {
             // remove subs expiring in this epoch
-            _activeSubs -= epochs[i].ending;
+            _activeSubs -= epochs[i].expiring;
 
             amount +=
-                epochs[i].amountStarting +
-                epochs[i].amountEnding +
+                epochs[i].partialFunds +
                 _activeSubs *
                 epochSize *
                 rate;
             starting += epochs[i].starting;
-            expiring += epochs[i].ending;
+            expiring += epochs[i].expiring;
 
             // add new subs starting in this epoch
             _activeSubs += epochs[i].starting;
