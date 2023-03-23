@@ -7,6 +7,8 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
+import "forge-std/console.sol";
+
 contract Subscription is ISubscription, ERC721 {
     // TODO add Ownable
     // should the tokenId 0 == owner?
@@ -47,8 +49,9 @@ contract Subscription is ISubscription, ERC721 {
     // uint private creationBlock;
     uint256 private epochSize;
 
+    uint256 private nextEpochToProcess;
     uint256 private lastProcessedEpoch;
-    uint256 private activeSubscriptions;
+    uint256 private activeSubs;
 
     mapping(uint256 => Epoch) private epochs;
 
@@ -59,10 +62,12 @@ contract Subscription is ISubscription, ERC721 {
     ) ERC721("Subscription", "SUB") {
         // TODO init with owner properties for proxy: name, symbol, rate
         require(_epochSize > 0, "SUB: invalid epochSize");
+        // TODO check _token not 0
         token = _token;
+        // TODO check _rate > 0
         rate = _rate;
         epochSize = _epochSize;
-        lastProcessedEpoch = getCurrentEpoch(); // 0
+        lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
     function getCurrentEpoch() internal view returns (uint256) {
@@ -111,7 +116,11 @@ contract Subscription is ISubscription, ERC721 {
             rate;
     }
 
-    function moveSubscriptionInEpochs(uint _lastDeposit, uint _oldDeposit, uint _newDeposit) internal {
+    function moveSubscriptionInEpochs(
+        uint256 _lastDeposit,
+        uint256 _oldDeposit,
+        uint256 _newDeposit
+    ) internal {
         // when does the sub currently end?
         uint256 oldEndingBlock = _lastDeposit + (_oldDeposit / rate);
         // update old epoch
@@ -141,9 +150,13 @@ contract Subscription is ISubscription, ERC721 {
             // subscription is still active
             remainingDeposit = (oldEndingBlock - block.number) * rate;
 
-            uint _currentDeposit = subscriptionData[tokenId].currentDeposit;
-            uint newDeposit = _currentDeposit + amount;
-            moveSubscriptionInEpochs(subscriptionData[tokenId].lastDeposit, _currentDeposit, newDeposit);
+            uint256 _currentDeposit = subscriptionData[tokenId].currentDeposit;
+            uint256 newDeposit = _currentDeposit + amount;
+            moveSubscriptionInEpochs(
+                subscriptionData[tokenId].lastDeposit,
+                _currentDeposit,
+                newDeposit
+            );
         } else {
             // subscription is inactive
             addNewSubscriptionToEpochs(amount);
@@ -176,7 +189,7 @@ contract Subscription is ISubscription, ERC721 {
         uint256 _currentDeposit = subscriptionData[tokenId].currentDeposit;
         uint256 _lastDeposit = subscriptionData[tokenId].lastDeposit;
 
-        uint newDeposit = _currentDeposit - amount;
+        uint256 newDeposit = _currentDeposit - amount;
         moveSubscriptionInEpochs(_lastDeposit, _currentDeposit, newDeposit);
 
         // when is is the sub going to end now?
@@ -238,10 +251,55 @@ contract Subscription is ISubscription, ERC721 {
     }
 
     /// @notice The owner claims their rewards
-    function claim() external {}
+    function claim() external {
+        require(getCurrentEpoch() > 1, "SUB: cannot handle epoch 0");
+        // TODO update state;
+        // TODO transfer funds;
+    }
 
     function claimable() external view returns (uint256) {
+        (uint256 amount, , ) = processEpochs();
 
+        // TODO when optimizing, define var name in signature
+        return amount;
+    }
 
+    function processEpochs()
+        internal
+        view
+        returns (
+            uint256 amount,
+            uint256 starting,
+            uint256 expiring
+        )
+    {
+        uint256 _currentEpoch = getCurrentEpoch();
+        uint256 _activeSubs = activeSubs;
+
+        uint256 i;
+        // handle the lastProcessedEpoch init value of 0
+        // if claimable is called before epoch 2, it will return 0
+        if (0 == lastProcessedEpoch && _currentEpoch > 1) {
+            i = 0;
+        } else {
+            i = lastProcessedEpoch + 1;
+        }
+
+        for (; i < _currentEpoch; i++) {
+            // remove subs expiring in this epoch
+            _activeSubs -= epochs[i].ending;
+
+            amount +=
+                epochs[i].amountStarting +
+                epochs[i].amountEnding +
+                _activeSubs *
+                epochSize *
+                rate;
+            starting += epochs[i].starting;
+            expiring += epochs[i].ending;
+
+            // add new subs starting in this epoch
+            _activeSubs += epochs[i].starting;
+        }
     }
 }

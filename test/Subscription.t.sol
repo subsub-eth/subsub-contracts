@@ -396,4 +396,29 @@ contract SubscriptionTest is Test {
         subscription.withdrawAll(tokenId);
         assertEq(testToken.balanceOf(address(subscription)), 0, "token balance not changed");
     }
+
+    function testClaimable() public {
+        mintToken(alice, 1_000);
+
+        vm.roll(block.number + (epochSize * 2));
+
+        assertEq(subscription.claimable(), 9 * rate + epochSize * rate);
+    }
+
+    function testClaimable_epoch0() public {
+        mintToken(alice, 1_000);
+
+        vm.roll(block.number + (epochSize * 1));
+
+        // epoch 0 is not processed on its own
+        assertEq(subscription.claimable(), 0);
+    }
+
+    function testClaimable_ending() public {
+        mintToken(alice, 100);
+
+        vm.roll(block.number + (epochSize * 3));
+
+        assertEq(subscription.claimable(), 100);
+    }
 }
