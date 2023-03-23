@@ -36,7 +36,7 @@ contract Subscription is ISubscription, ERC721 {
 
     IERC20 public token;
 
-    mapping(uint256 => SubscriptionData) private subscriptionData;
+    mapping(uint256 => SubscriptionData) private subData;
 
     /// @notice rate per block
     /// @dev the amount of tokens paid per block
@@ -80,10 +80,10 @@ contract Subscription is ISubscription, ERC721 {
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = ++totalSupply;
 
-        subscriptionData[tokenId].start = block.number;
-        subscriptionData[tokenId].lastDeposit = block.number;
-        subscriptionData[tokenId].totalDeposit = amount;
-        subscriptionData[tokenId].currentDeposit = amount;
+        subData[tokenId].start = block.number;
+        subData[tokenId].lastDeposit = block.number;
+        subData[tokenId].totalDeposit = amount;
+        subData[tokenId].currentDeposit = amount;
 
         addNewSubscriptionToEpochs(amount);
 
@@ -97,7 +97,7 @@ contract Subscription is ISubscription, ERC721 {
     function addNewSubscriptionToEpochs(uint256 amount) internal {
         uint256 endingBlock = block.number + (amount / rate);
 
-        // TODO use _subscriptionEnd(tokenId)
+        // TODO use _expiresAt(tokenId)
         // starting
         uint256 _currentEpoch = getCurrentEpoch();
         epochs[_currentEpoch].starting += 1;
@@ -140,20 +140,20 @@ contract Subscription is ISubscription, ERC721 {
     }
 
     /// @notice adds deposits to an existing subscription token
-    function deposit(uint256 tokenId, uint256 amount) external {
+    function renew(uint256 tokenId, uint256 amount) external {
         require(_exists(tokenId), "SUB: subscription does not exist");
 
-        uint256 oldEndingBlock = _subscriptionEnd(tokenId);
+        uint256 oldEndingBlock = _expiresAt(tokenId);
 
         uint256 remainingDeposit = 0;
         if (oldEndingBlock > block.number) {
             // subscription is still active
             remainingDeposit = (oldEndingBlock - block.number) * rate;
 
-            uint256 _currentDeposit = subscriptionData[tokenId].currentDeposit;
+            uint256 _currentDeposit = subData[tokenId].currentDeposit;
             uint256 newDeposit = _currentDeposit + amount;
             moveSubscriptionInEpochs(
-                subscriptionData[tokenId].lastDeposit,
+                subData[tokenId].lastDeposit,
                 _currentDeposit,
                 newDeposit
             );
@@ -163,9 +163,9 @@ contract Subscription is ISubscription, ERC721 {
         }
 
         // TODO add lock
-        subscriptionData[tokenId].currentDeposit = remainingDeposit + amount;
-        subscriptionData[tokenId].lastDeposit = block.number;
-        subscriptionData[tokenId].totalDeposit += amount;
+        subData[tokenId].currentDeposit = remainingDeposit + amount;
+        subData[tokenId].lastDeposit = block.number;
+        subData[tokenId].totalDeposit += amount;
 
         // finally transfer tokens into this contract
         token.safeTransferFrom(msg.sender, address(this), amount);
@@ -175,7 +175,7 @@ contract Subscription is ISubscription, ERC721 {
         _withdraw(tokenId, amount);
     }
 
-    function withdrawAll(uint256 tokenId) external {
+    function cancel(uint256 tokenId) external {
         _withdraw(tokenId, _withdrawable(tokenId));
     }
 
@@ -186,15 +186,15 @@ contract Subscription is ISubscription, ERC721 {
         uint256 withdrawable_ = _withdrawable(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
-        uint256 _currentDeposit = subscriptionData[tokenId].currentDeposit;
-        uint256 _lastDeposit = subscriptionData[tokenId].lastDeposit;
+        uint256 _currentDeposit = subData[tokenId].currentDeposit;
+        uint256 _lastDeposit = subData[tokenId].lastDeposit;
 
         uint256 newDeposit = _currentDeposit - amount;
         moveSubscriptionInEpochs(_lastDeposit, _currentDeposit, newDeposit);
 
         // when is is the sub going to end now?
-        subscriptionData[tokenId].currentDeposit = newDeposit;
-        subscriptionData[tokenId].totalDeposit -= amount;
+        subData[tokenId].currentDeposit = newDeposit;
+        subData[tokenId].totalDeposit -= amount;
 
         token.safeTransfer(msg.sender, amount);
     }
@@ -208,8 +208,8 @@ contract Subscription is ISubscription, ERC721 {
         // a subscription is active form the starting block (including)
         // to the calculated end block (excluding)
         // active = [start, + deposit / rate)
-        uint256 currentDeposit_ = subscriptionData[tokenId].currentDeposit;
-        uint256 lastDeposit = subscriptionData[tokenId].lastDeposit;
+        uint256 currentDeposit_ = subData[tokenId].currentDeposit;
+        uint256 lastDeposit = subData[tokenId].lastDeposit;
 
         uint256 end = lastDeposit + (currentDeposit_ / rate);
 
@@ -218,15 +218,15 @@ contract Subscription is ISubscription, ERC721 {
 
     function currentDeposit(uint256 tokenId) external view returns (uint256) {}
 
-    function subscriptionEnd(uint256 tokenId) external view returns (uint256) {
+    function expiresAt(uint256 tokenId) external view returns (uint256) {
         require(_exists(tokenId), "SUB: subscription does not exist");
 
-        return _subscriptionEnd(tokenId);
+        return _expiresAt(tokenId);
     }
 
-    function _subscriptionEnd(uint256 tokenId) internal view returns (uint256) {
-        uint256 lastDeposit = subscriptionData[tokenId].lastDeposit;
-        uint256 currentDeposit_ = subscriptionData[tokenId].currentDeposit;
+    function _expiresAt(uint256 tokenId) internal view returns (uint256) {
+        uint256 lastDeposit = subData[tokenId].lastDeposit;
+        uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         return lastDeposit + (currentDeposit_ / rate);
     }
 
@@ -243,8 +243,8 @@ contract Subscription is ISubscription, ERC721 {
             return 0;
         }
 
-        uint256 lastDeposit = subscriptionData[tokenId].lastDeposit;
-        uint256 currentDeposit_ = subscriptionData[tokenId].currentDeposit;
+        uint256 lastDeposit = subData[tokenId].lastDeposit;
+        uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 usedBlocks = block.number - lastDeposit;
 
         return currentDeposit_ - (usedBlocks * rate);

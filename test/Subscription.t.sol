@@ -47,7 +47,7 @@ contract SubscriptionTest is Test {
         uint256 tokenId = mintToken(alice, 100);
 
         bool active = subscription.isActive(tokenId);
-        uint256 end = subscription.subscriptionEnd(tokenId);
+        uint256 end = subscription.expiresAt(tokenId);
 
         assertEq(tokenId, 1, "subscription has first token id");
         assertEq(end, block.number + 20, "subscription ends at 20");
@@ -86,7 +86,7 @@ contract SubscriptionTest is Test {
     function testDeposit() public {
         uint256 tokenId = mintToken(alice, 100);
 
-        uint256 initialEnd = subscription.subscriptionEnd(tokenId);
+        uint256 initialEnd = subscription.expiresAt(tokenId);
         assertEq(
             initialEnd,
             block.number + 20,
@@ -96,12 +96,12 @@ contract SubscriptionTest is Test {
         // fast forward
         vm.roll(block.number + 5);
 
-        subscription.deposit(tokenId, 200);
+        subscription.renew(tokenId, 200);
 
         assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
-        uint256 end = subscription.subscriptionEnd(tokenId);
+        uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, initialEnd + 40, "subscription ends at 60");
     }
 
@@ -109,7 +109,7 @@ contract SubscriptionTest is Test {
         uint256 tokenId = 100;
 
         vm.expectRevert("SUB: subscription does not exist");
-        subscription.deposit(tokenId, 200);
+        subscription.renew(tokenId, 200);
 
         assertEq(testToken.balanceOf(address(subscription)), 0, "no tokens sent");
     }
@@ -117,26 +117,26 @@ contract SubscriptionTest is Test {
     function testDeposit_afterMint() public {
         uint256 tokenId = mintToken(alice, 100);
 
-        uint256 initialEnd = subscription.subscriptionEnd(tokenId);
+        uint256 initialEnd = subscription.expiresAt(tokenId);
         assertEq(
             initialEnd,
             block.number + 20,
             "subscription initially ends at 20"
         );
 
-        subscription.deposit(tokenId, 200);
+        subscription.renew(tokenId, 200);
 
         assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
-        uint256 end = subscription.subscriptionEnd(tokenId);
+        uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, initialEnd + 40, "subscription ends at 60");
     }
 
     function testDeposit_inActive() public {
         uint256 tokenId = mintToken(alice, 100);
 
-        uint256 initialEnd = subscription.subscriptionEnd(tokenId);
+        uint256 initialEnd = subscription.expiresAt(tokenId);
         assertEq(
             initialEnd,
             block.number + 20,
@@ -148,19 +148,19 @@ contract SubscriptionTest is Test {
         vm.roll(block.number + ff);
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
 
-        subscription.deposit(tokenId, 200);
+        subscription.renew(tokenId, 200);
 
         assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
-        uint256 end = subscription.subscriptionEnd(tokenId);
+        uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, block.number + 40, "subscription ends at 90");
     }
 
     function testDeposit_notOwner() public {
         uint256 tokenId = mintToken(alice, 100);
 
-        uint256 initialEnd = subscription.subscriptionEnd(tokenId);
+        uint256 initialEnd = subscription.expiresAt(tokenId);
         assertEq(
             initialEnd,
             block.number + 20,
@@ -171,14 +171,14 @@ contract SubscriptionTest is Test {
         vm.startPrank(bob);
 
         testToken.approve(address(subscription), amount);
-        subscription.deposit(tokenId, amount);
+        subscription.renew(tokenId, amount);
 
         vm.stopPrank();
 
         assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
-        uint256 end = subscription.subscriptionEnd(tokenId);
+        uint256 end = subscription.expiresAt(tokenId);
         assertEq(
             end,
             initialEnd + (amount / rate),
@@ -367,7 +367,7 @@ contract SubscriptionTest is Test {
         uint256 aliceBalance = testToken.balanceOf(alice);
 
         vm.prank(alice);
-        subscription.withdrawAll(tokenId);
+        subscription.cancel(tokenId);
 
         assertEq(
             testToken.balanceOf(alice),
@@ -393,7 +393,7 @@ contract SubscriptionTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("SUB: subscription does not exist");
-        subscription.withdrawAll(tokenId);
+        subscription.cancel(tokenId);
         assertEq(testToken.balanceOf(address(subscription)), 0, "token balance not changed");
     }
 
