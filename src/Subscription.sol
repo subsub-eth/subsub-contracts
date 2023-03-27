@@ -2,6 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {ISubscription} from "./ISubscription.sol";
+
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
@@ -9,8 +11,7 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol";
 
-contract Subscription is ISubscription, ERC721 {
-    // TODO add Ownable
+contract Subscription is ISubscription, ERC721, Ownable {
     // should the tokenId 0 == owner?
     // TODO events
     // TODO add messages to deposits
@@ -50,9 +51,11 @@ contract Subscription is ISubscription, ERC721 {
     // uint private creationBlock;
     uint256 private epochSize;
 
-    uint256 private lastProcessedEpoch;
+    uint256 private _lastProcessedEpoch;
 
     mapping(uint256 => Epoch) private epochs;
+
+    // TODO count all claims
 
     constructor(
         IERC20 _token,
@@ -66,11 +69,15 @@ contract Subscription is ISubscription, ERC721 {
         // TODO check _rate > 0
         rate = _rate;
         epochSize = _epochSize;
-        lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
+        _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
     function getCurrentEpoch() internal view returns (uint256) {
         return block.number / epochSize;
+    }
+
+    function activeSubscriptions() external view returns (uint256) {
+        return activeSubs;
     }
 
     /// @notice "Mints" a new subscription token
@@ -250,10 +257,28 @@ contract Subscription is ISubscription, ERC721 {
     }
 
     /// @notice The owner claims their rewards
-    function claim() external {
+    function claim() external onlyOwner {
         require(getCurrentEpoch() > 1, "SUB: cannot handle epoch 0");
-        // TODO update state;
-        // TODO transfer funds;
+
+        (uint256 amount, uint256 starting, uint256 expiring) = processEpochs();
+
+        // delete epochs
+        uint256 _currentEpoch = getCurrentEpoch();
+
+        // TODO: copy claimable function body to decrease gas?
+        for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
+            delete epochs[i];
+        }
+
+        if (starting > expiring) {
+            activeSubs += starting - expiring;
+        } else {
+            activeSubs -= expiring - starting;
+        }
+
+        _lastProcessedEpoch = _currentEpoch - 1;
+
+        token.safeTransfer(owner(), amount);
     }
 
     function claimable() external view returns (uint256) {
@@ -261,6 +286,16 @@ contract Subscription is ISubscription, ERC721 {
 
         // TODO when optimizing, define var name in signature
         return amount;
+    }
+
+    function lastProcessedEpoch() private view returns (uint256 i) {
+        // handle the lastProcessedEpoch init value of 0
+        // if claimable is called before epoch 2, it will return 0
+        if (0 == _lastProcessedEpoch && getCurrentEpoch() > 1) {
+            i = 0;
+        } else {
+            i = _lastProcessedEpoch + 1;
+        }
     }
 
     function processEpochs()
@@ -275,24 +310,11 @@ contract Subscription is ISubscription, ERC721 {
         uint256 _currentEpoch = getCurrentEpoch();
         uint256 _activeSubs = activeSubs;
 
-        uint256 i;
-        // handle the lastProcessedEpoch init value of 0
-        // if claimable is called before epoch 2, it will return 0
-        if (0 == lastProcessedEpoch && _currentEpoch > 1) {
-            i = 0;
-        } else {
-            i = lastProcessedEpoch + 1;
-        }
-
-        for (; i < _currentEpoch; i++) {
+        for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
             // remove subs expiring in this epoch
             _activeSubs -= epochs[i].expiring;
 
-            amount +=
-                epochs[i].partialFunds +
-                _activeSubs *
-                epochSize *
-                rate;
+            amount += epochs[i].partialFunds + _activeSubs * epochSize * rate;
             starting += epochs[i].starting;
             expiring += epochs[i].expiring;
 

@@ -24,6 +24,7 @@ interface Subscribable is SubscriptionEvents {
 
     function withdrawable(uint256 tokenId) external view returns (uint256);
 
+    function activeSubscriptions() external view returns (uint256);
 }
 
 interface ClaimEvents {
