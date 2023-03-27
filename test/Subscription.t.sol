@@ -35,6 +35,21 @@ contract SubscriptionTest is Test {
         testToken.transfer(bob, 20_000);
     }
 
+    function testConstruct_not0token() public {
+        vm.expectRevert("SUB: token cannot be 0 address");
+        new Subscription(IERC20(address(0)), 10, 10);
+    }
+
+    function testConstruct_not0rate() public {
+        vm.expectRevert("SUB: rate cannot be 0");
+        new Subscription(testToken, 0, 10);
+    }
+
+    function testConstruct_not0epochSize() public {
+        vm.expectRevert("SUB: invalid epochSize");
+        new Subscription(testToken, 10, 0);
+    }
+
     function mintToken(address user, uint256 amount)
         private
         returns (uint256 tokenId)
@@ -58,6 +73,7 @@ contract SubscriptionTest is Test {
 
         assertEq(tokenId, 1, "subscription has first token id");
         assertEq(end, block.number + 20, "subscription ends at 20");
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
         assertTrue(active, "subscription active");
     }
 
@@ -99,6 +115,7 @@ contract SubscriptionTest is Test {
             block.number + 20,
             "subscription initially ends at 20"
         );
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
         // fast forward
         vm.roll(block.number + 5);
@@ -114,6 +131,7 @@ contract SubscriptionTest is Test {
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, initialEnd + 40, "subscription ends at 60");
+        assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
     }
 
     function testRenew_revert_nonExisting() public {
@@ -138,6 +156,7 @@ contract SubscriptionTest is Test {
             block.number + 20,
             "subscription initially ends at 20"
         );
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
         subscription.renew(tokenId, 200);
 
@@ -150,6 +169,7 @@ contract SubscriptionTest is Test {
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, initialEnd + 40, "subscription ends at 60");
+        assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
     }
 
     function testRenew_inActive() public {
@@ -166,6 +186,7 @@ contract SubscriptionTest is Test {
         uint256 ff = 50;
         vm.roll(block.number + ff);
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
         subscription.renew(tokenId, 200);
 
@@ -178,6 +199,7 @@ contract SubscriptionTest is Test {
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, block.number + 40, "subscription ends at 90");
+        assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
     }
 
     function testRenew_notOwner() public {
@@ -211,6 +233,7 @@ contract SubscriptionTest is Test {
             initialEnd + (amount / rate),
             "subscription end extended"
         );
+        assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
     }
 
     function testWithdrawable() public {
@@ -232,6 +255,7 @@ contract SubscriptionTest is Test {
             initialDeposit,
             "token balance not changed"
         );
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
     }
 
     function testWithdrawable_inActive() public {
@@ -276,6 +300,7 @@ contract SubscriptionTest is Test {
     function testWithdraw() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
         uint256 passed = 5;
         vm.roll(block.number + passed);
@@ -306,6 +331,7 @@ contract SubscriptionTest is Test {
         );
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
+        assertEq(subscription.deposited(tokenId), initialDeposit - amount, "75 tokens deposited");
     }
 
     function testWithdraw_all() public {
@@ -340,11 +366,14 @@ contract SubscriptionTest is Test {
         );
 
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
+        assertEq(subscription.deposited(tokenId), initialDeposit - amount, "25 tokens deposited");
     }
 
     function testWithdraw_allAfterMint() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertEq(subscription.deposited(tokenId), initialDeposit, "100 tokens deposited");
 
         uint256 amount = initialDeposit;
         assertTrue(subscription.isActive(tokenId), "subscription is active");
@@ -365,6 +394,7 @@ contract SubscriptionTest is Test {
         assertEq(subscription.withdrawable(tokenId), 0, "nothing to withdraw");
 
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
+        assertEq(subscription.deposited(tokenId), 0, "0 tokens deposited");
     }
 
     function testWithdraw_revert_nonExisting() public {
@@ -387,6 +417,7 @@ contract SubscriptionTest is Test {
             initialDeposit,
             "token balance not changed"
         );
+        assertEq(subscription.deposited(tokenId), initialDeposit, "100 tokens deposited");
     }
 
     function testWithdraw_revert_largerAmount() public {
@@ -401,6 +432,7 @@ contract SubscriptionTest is Test {
             initialDeposit,
             "token balance not changed"
         );
+        assertEq(subscription.deposited(tokenId), initialDeposit, "100 tokens deposited");
     }
 
     function testCancel() public {
@@ -432,6 +464,7 @@ contract SubscriptionTest is Test {
         );
 
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
+        assertEq(subscription.deposited(tokenId), passed * rate, "25 tokens deposited");
     }
 
     function testCancel_revert_nonExisting() public {
@@ -479,7 +512,7 @@ contract SubscriptionTest is Test {
     }
 
     function testClaim() public {
-        mintToken(alice, 1_000);
+        uint tokenId = mintToken(alice, 1_000);
 
         assertEq(
             subscription.activeSubscriptions(),
@@ -515,6 +548,8 @@ contract SubscriptionTest is Test {
             0,
             "no funds claimable right after claim"
         );
+
+        assertEq(subscription.deposited(tokenId), 1_000, "1000 tokens deposited");
     }
 
     function testClaim_onlyOwner() public {
@@ -523,7 +558,7 @@ contract SubscriptionTest is Test {
     }
 
     function testClaim_nextEpoch() public {
-        mintToken(alice, 1_000);
+        uint tokenId = mintToken(alice, 1_000);
 
         assertEq(
             subscription.activeSubscriptions(),
@@ -578,6 +613,8 @@ contract SubscriptionTest is Test {
             1,
             "subscriptions updated"
         );
+
+        assertEq(subscription.deposited(tokenId), 1_000, "1000 tokens deposited");
     }
 
     function testClaim_expired() public {
@@ -609,5 +646,7 @@ contract SubscriptionTest is Test {
             0,
             "no funds claimable right after claim"
         );
+
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
     }
 }

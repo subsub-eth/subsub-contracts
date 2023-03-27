@@ -23,7 +23,7 @@ contract Subscription is ISubscription, ERC721, Ownable {
         uint256 mintedAt; // mint date
         uint256 totalDeposited; // amount of tokens ever deposited
         uint256 lastDepositAt; // data of last deposit
-        uint256 currentDeposit; // amount of tokens at lastDeposit
+        uint256 currentDeposit; // amount of tokens at lastDepositAt was updated
     }
 
     struct Epoch {
@@ -62,13 +62,15 @@ contract Subscription is ISubscription, ERC721, Ownable {
         uint256 _rate,
         uint256 _epochSize
     ) ERC721("Subscription", "SUB") {
-        // TODO init with owner properties for proxy: name, symbol, rate
+        // owner is set to msg.sender
         require(_epochSize > 0, "SUB: invalid epochSize");
-        // TODO check _token not 0
+        require(address(_token) != address(0), "SUB: token cannot be 0 address");
+        require(_rate > 0, "SUB: rate cannot be 0");
+
         token = _token;
-        // TODO check _rate > 0
         rate = _rate;
         epochSize = _epochSize;
+
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
@@ -222,7 +224,10 @@ contract Subscription is ISubscription, ERC721, Ownable {
         return block.number < end;
     }
 
-    function currentDeposit(uint256 tokenId) external view returns (uint256) {}
+    function deposited(uint256 tokenId) external view returns (uint256) {
+        require(_exists(tokenId), "SUB: subscription does not exist");
+        return subData[tokenId].totalDeposited;
+    }
 
     function expiresAt(uint256 tokenId) external view returns (uint256) {
         require(_exists(tokenId), "SUB: subscription does not exist");
