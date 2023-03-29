@@ -51,6 +51,8 @@ interface Claimable is ClaimEvents {
     function claim() external;
 
     function claimable() external view returns (uint256);
+
+    function totalClaimed() external view returns (uint256);
 }
 
 interface ISubscription is IERC721, Subscribable, Claimable {

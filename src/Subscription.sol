@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {ISubscription} from "./ISubscription.sol";
 
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Pausable} from "openzeppelin-contracts/contracts/security/Pausable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
@@ -11,7 +12,7 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol";
 
-contract Subscription is ISubscription, ERC721, Ownable {
+contract Subscription is ISubscription, ERC721, Ownable, Pausable {
     // should the tokenId 0 == owner?
     // TODO pause deposits
 
@@ -86,8 +87,16 @@ contract Subscription is ISubscription, ERC721, Ownable {
         return activeSubs;
     }
 
+    function pause() onlyOwner() external {
+      _pause();
+    }
+
+    function unpause() onlyOwner() external {
+      _unpause();
+    }
+
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, string calldata message)
+    function mint(uint256 amount, string calldata message) whenNotPaused()
         external
         returns (uint256)
     {
@@ -161,7 +170,7 @@ contract Subscription is ISubscription, ERC721, Ownable {
         uint256 tokenId,
         uint256 amount,
         string calldata message
-    ) external {
+    ) whenNotPaused() external {
         require(_exists(tokenId), "SUB: subscription does not exist");
 
         uint256 oldEndingBlock = _expiresAt(tokenId);

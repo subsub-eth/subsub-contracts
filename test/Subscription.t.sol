@@ -94,6 +94,19 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertTrue(active, "subscription active");
     }
 
+    function testMint_whenPaused() public {
+        vm.prank(owner);
+        subscription.pause();
+
+        vm.expectRevert("Pausable: paused");
+        subscription.mint(1, "");
+
+        vm.prank(owner);
+        subscription.unpause();
+
+        mintToken(alice, 100);
+    }
+
     function testIsActive() public {
         uint256 tokenId = mintToken(alice, 100);
 
@@ -140,6 +153,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(tokenId, 200, 300, address(this), message);
 
+        assertFalse(subscription.paused(), "contract is not paused");
+
         subscription.renew(tokenId, 200, message);
 
         assertEq(
@@ -152,6 +167,19 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, initialEnd + 40, "subscription ends at 60");
         assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
+    }
+
+    function testRenew_whenPaused() public {
+        uint256 tokenId = mintToken(alice, 100);
+
+        // fast forward
+        vm.roll(block.number + 5);
+
+        vm.prank(owner);
+        subscription.pause();
+
+        vm.expectRevert("Pausable: paused");
+        subscription.renew(tokenId, 100, "");
     }
 
     function testRenew_revert_nonExisting() public {
@@ -504,7 +532,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 amount = initialDeposit - passed * rate;
 
-        assertEq(subscription.withdrawable(tokenId), amount, "withdrawable amount is 75");
+        assertEq(
+            subscription.withdrawable(tokenId),
+            amount,
+            "withdrawable amount is 75"
+        );
 
         vm.expectEmit(true, true, true, true);
         emit SubscriptionWithdrawn(tokenId, amount, initialDeposit - amount);
@@ -738,5 +770,25 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         );
 
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
+    }
+
+    function testPause() public {
+        vm.prank(owner);
+        subscription.pause();
+        assertTrue(subscription.paused(), "contract paused");
+
+        vm.prank(owner);
+        subscription.unpause();
+        assertFalse(subscription.paused(), "contract unpaused");
+    }
+
+    function testPause_notOwner() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        subscription.pause();
+    }
+
+    function testUnpause_notOwner() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        subscription.unpause();
     }
 }
