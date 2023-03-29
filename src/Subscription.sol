@@ -13,8 +13,7 @@ import "forge-std/console.sol";
 
 contract Subscription is ISubscription, ERC721, Ownable {
     // should the tokenId 0 == owner?
-    // TODO events
-    // TODO add messages to deposits
+    // TODO pause deposits
 
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -53,6 +52,8 @@ contract Subscription is ISubscription, ERC721, Ownable {
 
     uint256 private _lastProcessedEpoch;
 
+    uint256 public totalClaimed;
+
     mapping(uint256 => Epoch) private epochs;
 
     // TODO count all claims
@@ -64,7 +65,10 @@ contract Subscription is ISubscription, ERC721, Ownable {
     ) ERC721("Subscription", "SUB") {
         // owner is set to msg.sender
         require(_epochSize > 0, "SUB: invalid epochSize");
-        require(address(_token) != address(0), "SUB: token cannot be 0 address");
+        require(
+            address(_token) != address(0),
+            "SUB: token cannot be 0 address"
+        );
         require(_rate > 0, "SUB: rate cannot be 0");
 
         token = _token;
@@ -83,7 +87,10 @@ contract Subscription is ISubscription, ERC721, Ownable {
     }
 
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount) external returns (uint256) {
+    function mint(uint256 amount, string calldata message)
+        external
+        returns (uint256)
+    {
         // TODO check minimum amount?
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = ++totalSupply;
@@ -98,6 +105,8 @@ contract Subscription is ISubscription, ERC721, Ownable {
         token.safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
+
+        emit SubscriptionRenewed(tokenId, amount, amount, msg.sender, message);
 
         return tokenId;
     }
@@ -148,7 +157,11 @@ contract Subscription is ISubscription, ERC721, Ownable {
     }
 
     /// @notice adds deposits to an existing subscription token
-    function renew(uint256 tokenId, uint256 amount) external {
+    function renew(
+        uint256 tokenId,
+        uint256 amount,
+        string calldata message
+    ) external {
         require(_exists(tokenId), "SUB: subscription does not exist");
 
         uint256 oldEndingBlock = _expiresAt(tokenId);
@@ -177,6 +190,14 @@ contract Subscription is ISubscription, ERC721, Ownable {
 
         // finally transfer tokens into this contract
         token.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit SubscriptionRenewed(
+            tokenId,
+            amount,
+            subData[tokenId].totalDeposited, // TODO use extra var?
+            msg.sender,
+            message
+        );
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external {
@@ -205,6 +226,12 @@ contract Subscription is ISubscription, ERC721, Ownable {
         subData[tokenId].totalDeposited -= amount;
 
         token.safeTransfer(msg.sender, amount);
+
+        emit SubscriptionWithdrawn(
+            tokenId,
+            amount,
+            subData[tokenId].totalDeposited
+        );
     }
 
     function isActive(uint256 tokenId) external view returns (bool) {
@@ -282,8 +309,11 @@ contract Subscription is ISubscription, ERC721, Ownable {
         }
 
         _lastProcessedEpoch = _currentEpoch - 1;
+        totalClaimed += amount;
 
         token.safeTransfer(owner(), amount);
+
+        emit FundsClaimed(amount, totalClaimed);
     }
 
     function claimable() external view returns (uint256) {
