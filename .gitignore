@@ -12,3 +12,9 @@ docs/
 
 # Dotenv file
 .env
+
+# node
+node_modules/
+
+# typechain
+types/

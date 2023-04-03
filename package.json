@@ -1,0 +1,37 @@
+{
+  "name": "@createz/contracts",
+  "version": "0.1.0",
+  "description": "CreateZ contracts",
+  "scripts": {
+    "clean": "rimraf types",
+    "generate-types": "npm run generate-types-ethers-v6",
+    "generate-types-ethers-v6": "typechain --target=ethers-v6 --show-stack-traces --discriminate-types 'out/*.sol/*.json'"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "src/**",
+    "types/**"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suiiii-rip/createz-contracts.git"
+  },
+  "keywords": [
+    "createz",
+    "contracts",
+    "blockchain",
+    "solidity"
+  ],
+  "author": "suiiii",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/suiiii-rip/createz-contracts/issues"
+  },
+  "homepage": "https://github.com/suiiii-rip/createz-contracts#readme",
+  "devDependencies": {
+    "@typechain/ethers-v6": "^0.3.0",
+    "rimraf": "^4.4.1",
+    "typechain": "^8.1.1"
+  }
+}
