@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/Subscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
+import {Creator} from "../src/Creator.sol";
 
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {TestToken} from "./token/TestToken.sol";
@@ -13,10 +14,12 @@ import {TestToken} from "./token/TestToken.sol";
 contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Subscription public subscription;
     IERC20 public testToken;
+    Creator public creator;
     uint256 public rate;
     uint256 public epochSize;
 
     address public owner;
+    uint256 public ownerTokenId;
     address public alice;
     address public bob;
     address public charlie;
@@ -33,9 +36,13 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         rate = 5;
         epochSize = 10;
+        creator = new Creator();
+        vm.prank(owner);
+        ownerTokenId = creator.mint();
+
         testToken = new TestToken(1_000_000, address(this));
-        subscription = new Subscription(testToken, rate, epochSize);
-        subscription.transferOwnership(owner);
+        subscription = new Subscription(testToken, rate, epochSize,
+                                        address(creator), ownerTokenId);
 
         testToken.approve(address(subscription), type(uint256).max);
 
@@ -45,17 +52,22 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
     function testConstruct_not0token() public {
         vm.expectRevert("SUB: token cannot be 0 address");
-        new Subscription(IERC20(address(0)), 10, 10);
+        new Subscription(IERC20(address(0)), 10, 10, address(1), 1);
     }
 
     function testConstruct_not0rate() public {
         vm.expectRevert("SUB: rate cannot be 0");
-        new Subscription(testToken, 0, 10);
+        new Subscription(testToken, 0, 10, address(1), 1);
     }
 
     function testConstruct_not0epochSize() public {
         vm.expectRevert("SUB: invalid epochSize");
-        new Subscription(testToken, 10, 0);
+        new Subscription(testToken, 10, 0, address(1), 1);
+    }
+
+    function testConstruct_not0OwnerContract() public {
+        vm.expectRevert("SUB: creator address not set");
+        new Subscription(testToken, 10, 10, address(0), 1);
     }
 
     function mintToken(address user, uint256 amount)

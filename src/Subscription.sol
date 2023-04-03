@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {ISubscription} from "./ISubscription.sol";
+import {ERC721Ownable} from "./ERC721Ownable.sol";
 
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {Pausable} from "openzeppelin-contracts/contracts/security/Pausable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,7 +12,7 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol";
 
-contract Subscription is ISubscription, ERC721, Ownable, Pausable {
+contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // should the tokenId 0 == owner?
     // TODO pause deposits
 
@@ -62,7 +62,9 @@ contract Subscription is ISubscription, ERC721, Ownable, Pausable {
     constructor(
         IERC20 _token,
         uint256 _rate,
-        uint256 _epochSize
+        uint256 _epochSize,
+        address creatorContract,
+        uint256 creatorTokenId
     ) ERC721("Subscription", "SUB") {
         // owner is set to msg.sender
         require(_epochSize > 0, "SUB: invalid epochSize");
@@ -71,12 +73,16 @@ contract Subscription is ISubscription, ERC721, Ownable, Pausable {
             "SUB: token cannot be 0 address"
         );
         require(_rate > 0, "SUB: rate cannot be 0");
+        require(creatorContract != address(0),
+               "SUB: creator address not set");
 
         token = _token;
         rate = _rate;
         epochSize = _epochSize;
 
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
+
+        _transferOwnership(creatorContract, creatorTokenId);
     }
 
     function getCurrentEpoch() internal view returns (uint256) {
@@ -320,7 +326,7 @@ contract Subscription is ISubscription, ERC721, Ownable, Pausable {
         _lastProcessedEpoch = _currentEpoch - 1;
         totalClaimed += amount;
 
-        token.safeTransfer(owner(), amount);
+        token.safeTransfer(ownerAddress(), amount);
 
         emit FundsClaimed(amount, totalClaimed);
     }
