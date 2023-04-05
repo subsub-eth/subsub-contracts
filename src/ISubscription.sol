@@ -17,6 +17,14 @@ interface SubscriptionEvents {
         uint256 indexed removedAmount,
         uint256 indexed deposited
     );
+
+    event Tipped(
+        uint256 indexed tokenId,
+        uint256 indexed amount,
+        uint256 indexed deposited,
+        address depositor,
+        string message
+    );
 }
 
 interface Subscribable is SubscriptionEvents {
@@ -37,9 +45,18 @@ interface Subscribable is SubscriptionEvents {
 
     function deposited(uint256 tokenId) external view returns (uint256);
 
+    function spent(uint256 tokenId) external view returns (uint256);
+
     function withdrawable(uint256 tokenId) external view returns (uint256);
 
     function activeSubscriptions() external view returns (uint256);
+
+    // adds funds to the subscription, but does not extend an active sub
+    function tip(
+        uint256 tokenId,
+        uint256 amount,
+        string calldata message
+    ) external;
 }
 
 interface ClaimEvents {

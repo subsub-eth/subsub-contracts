@@ -14,7 +14,12 @@ import "forge-std/console.sol";
 
 contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // should the tokenId 0 == owner?
-    // TODO pause deposits
+    // TODO lock % of funds
+    // TODO shares to handle ERC20 decimals below 18
+    // TODO multiplier for Subscriptions
+    // TODO instantiation with proxy
+    // TODO refactor event deposited to spent amount?
+    // TODO define metadata
 
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -22,8 +27,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     struct SubscriptionData {
         uint256 mintedAt; // mint date
         uint256 totalDeposited; // amount of tokens ever deposited
-        uint256 lastDepositAt; // data of last deposit
-        uint256 currentDeposit; // amount of tokens at lastDepositAt was updated
+        uint256 lastDepositAt; // date of last deposit
+        uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
     }
 
     struct Epoch {
@@ -57,7 +62,10 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
 
     mapping(uint256 => Epoch) private epochs;
 
-    // TODO count all claims
+    modifier requireExists(uint256 tokenId) {
+        require(_exists(tokenId), "SUB: subscription does not exist");
+        _;
+    }
 
     constructor(
         IERC20 _token,
@@ -73,8 +81,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
             "SUB: token cannot be 0 address"
         );
         require(_rate > 0, "SUB: rate cannot be 0");
-        require(creatorContract != address(0),
-               "SUB: creator address not set");
+        require(creatorContract != address(0), "SUB: creator address not set");
 
         token = _token;
         rate = _rate;
@@ -93,17 +100,18 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         return activeSubs;
     }
 
-    function pause() onlyOwner() external {
-      _pause();
+    function pause() external onlyOwner {
+        _pause();
     }
 
-    function unpause() onlyOwner() external {
-      _unpause();
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, string calldata message) whenNotPaused()
+    function mint(uint256 amount, string calldata message)
         external
+        whenNotPaused
         returns (uint256)
     {
         // TODO check minimum amount?
@@ -176,8 +184,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 tokenId,
         uint256 amount,
         string calldata message
-    ) whenNotPaused() external {
-        require(_exists(tokenId), "SUB: subscription does not exist");
+    ) external whenNotPaused requireExists(tokenId) {
+        require(amount >= rate, "SUB: amount too small");
 
         uint256 oldEndingBlock = _expiresAt(tokenId);
 
@@ -223,8 +231,10 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         _withdraw(tokenId, _withdrawable(tokenId));
     }
 
-    function _withdraw(uint256 tokenId, uint256 amount) private {
-        require(_exists(tokenId), "SUB: subscription does not exist");
+    function _withdraw(uint256 tokenId, uint256 amount)
+        private
+        requireExists(tokenId)
+    {
         require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
 
         uint256 withdrawable_ = _withdrawable(tokenId);
@@ -249,8 +259,12 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         );
     }
 
-    function isActive(uint256 tokenId) external view returns (bool) {
-        require(_exists(tokenId), "SUB: subscription does not exist");
+    function isActive(uint256 tokenId)
+        external
+        view
+        requireExists(tokenId)
+        returns (bool)
+    {
         return _isActive(tokenId);
     }
 
@@ -266,14 +280,21 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         return block.number < end;
     }
 
-    function deposited(uint256 tokenId) external view returns (uint256) {
-        require(_exists(tokenId), "SUB: subscription does not exist");
+    function deposited(uint256 tokenId)
+        external
+        view
+        requireExists(tokenId)
+        returns (uint256)
+    {
         return subData[tokenId].totalDeposited;
     }
 
-    function expiresAt(uint256 tokenId) external view returns (uint256) {
-        require(_exists(tokenId), "SUB: subscription does not exist");
-
+    function expiresAt(uint256 tokenId)
+        external
+        view
+        requireExists(tokenId)
+        returns (uint256)
+    {
         return _expiresAt(tokenId);
     }
 
@@ -283,9 +304,12 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         return lastDeposit + (currentDeposit_ / rate);
     }
 
-    function withdrawable(uint256 tokenId) external view returns (uint256) {
-        require(_exists(tokenId), "SUB: subscription does not exist");
-
+    function withdrawable(uint256 tokenId)
+        external
+        view
+        requireExists(tokenId)
+        returns (uint256)
+    {
         return _withdrawable(tokenId);
     }
 
@@ -301,6 +325,44 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 usedBlocks = block.number - lastDeposit;
 
         return currentDeposit_ - (usedBlocks * rate);
+    }
+
+    function spent(uint256 tokenId)
+        external
+        view
+        requireExists(tokenId)
+        returns (uint256)
+    {
+        uint256 totalDeposited = subData[tokenId].totalDeposited;
+
+        if (!_isActive(tokenId)) {
+            return totalDeposited;
+        }
+
+        return
+            totalDeposited -
+            subData[tokenId].currentDeposit +
+            ((block.number - subData[tokenId].lastDepositAt) * rate);
+    }
+
+    function tip(
+        uint256 tokenId,
+        uint256 amount,
+        string calldata message
+    ) external requireExists(tokenId) {
+        require(amount > 0, "SUB: amount too small");
+
+        subData[tokenId].totalDeposited += amount;
+
+        token.safeTransferFrom(_msgSender(), address(this), amount);
+
+        emit Tipped(
+            tokenId,
+            amount,
+            subData[tokenId].totalDeposited, // TODO create extra var?
+            _msgSender(),
+            message
+        );
     }
 
     /// @notice The owner claims their rewards

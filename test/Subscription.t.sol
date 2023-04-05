@@ -41,8 +41,13 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         ownerTokenId = creator.mint();
 
         testToken = new TestToken(1_000_000, address(this));
-        subscription = new Subscription(testToken, rate, epochSize,
-                                        address(creator), ownerTokenId);
+        subscription = new Subscription(
+            testToken,
+            rate,
+            epochSize,
+            address(creator),
+            ownerTokenId
+        );
 
         testToken.approve(address(subscription), type(uint256).max);
 
@@ -104,6 +109,18 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(end, block.number + 20, "subscription ends at 20");
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
         assertTrue(active, "subscription active");
+    }
+
+    function testMint_zeroAmount() public {
+        uint256 tokenId = mintToken(alice, 0);
+
+        bool active = subscription.isActive(tokenId);
+        uint256 end = subscription.expiresAt(tokenId);
+
+        assertEq(tokenId, 1, "subscription has first token id");
+        assertEq(end, block.number, "subscription ends at current block");
+        assertEq(subscription.deposited(tokenId), 0, "0 tokens deposited");
+        assertFalse(active, "subscription active");
     }
 
     function testMint_whenPaused() public {
@@ -205,6 +222,24 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             0,
             "no tokens sent"
         );
+    }
+
+    function testRenew_zeroAmount() public {
+        uint256 tokenId = mintToken(alice, 0);
+
+        vm.expectRevert("SUB: amount too small");
+        subscription.renew(tokenId, 0, "too small");
+    }
+
+    function testRenew_minAmount() public {
+        uint256 tokenId = mintToken(alice, 0);
+
+        subscription.renew(tokenId, rate, "just right");
+
+        assertEq(subscription.deposited(tokenId), rate, "min renewal");
+
+        vm.expectRevert("SUB: amount too small");
+        subscription.renew(tokenId, rate - 1, "too small");
     }
 
     function testRenew_afterMint() public {
@@ -373,6 +408,13 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 passed = 5;
         vm.roll(block.number + passed);
+
+        // try withdraw 0 without effect
+        vm.expectEmit(true, true, true, true);
+        emit SubscriptionWithdrawn(tokenId, 0, 100);
+
+        vm.prank(alice);
+        subscription.withdraw(tokenId, 0);
 
         uint256 aliceBalance = testToken.balanceOf(alice);
         uint256 subBalance = testToken.balanceOf(address(subscription));
@@ -593,6 +635,41 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
+    function testSpent() public {
+        uint256 initialDeposit = 100;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertEq(subscription.spent(tokenId), 0, "nothing spent yet");
+
+        vm.roll(block.number + 1);
+
+        assertEq(subscription.spent(tokenId), rate, "1 block spent");
+
+        vm.roll(block.number + 9);
+
+        assertEq(subscription.spent(tokenId), 10 * rate, "10 block spent");
+
+        vm.roll(block.number + 1_000);
+
+        assertEq(
+            subscription.spent(tokenId),
+            initialDeposit,
+            "initial funds spent"
+        );
+        assertEq(
+            subscription.spent(tokenId),
+            subscription.deposited(tokenId),
+            "all deposited funds spent"
+        );
+    }
+
+    function testSpent_nonExisting() public {
+        uint256 tokenId = 1234;
+
+        vm.expectRevert("SUB: subscription does not exist");
+        subscription.spent(tokenId);
+    }
+
     function testClaimable() public {
         mintToken(alice, 1_000);
 
@@ -802,5 +879,63 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     function testUnpause_notOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");
         subscription.unpause();
+    }
+
+    function testTip() public {
+        uint256 tokenId = mintToken(alice, 100);
+
+        uint256 amount = 100;
+        uint256 target = 200;
+        vm.startPrank(alice);
+
+        vm.expectEmit(true, true, true, true);
+        emit Tipped(tokenId, amount, target, alice, "hello world");
+
+        testToken.approve(address(subscription), amount);
+        subscription.tip(tokenId, amount, "hello world");
+
+        assertEq(subscription.deposited(tokenId), target, "deposit increased");
+        assertEq(
+            testToken.balanceOf(address(subscription)),
+            target,
+            "funds transferred"
+        );
+        vm.stopPrank();
+
+        // tip from 'random' account
+        amount = 200;
+        target = 400;
+
+        vm.expectEmit(true, true, true, true);
+        emit Tipped(tokenId, amount, target, address(this), "hello world");
+
+        subscription.tip(tokenId, amount, "hello world");
+        assertEq(subscription.deposited(tokenId), target, "deposit increased");
+        assertEq(
+            testToken.balanceOf(address(subscription)),
+            target,
+            "funds transferred"
+        );
+    }
+
+    function testTip_nonExisiting() public {
+        uint256 tokenId = 1234;
+
+        vm.expectRevert("SUB: subscription does not exist");
+        subscription.tip(tokenId, 1, "bla");
+    }
+
+    function testTip_zeroAmount() public {
+        uint256 tokenId = mintToken(alice, 100);
+
+        vm.expectRevert("SUB: amount too small");
+        subscription.tip(tokenId, 0, "bla");
+    }
+
+    function testTip_minAmount() public {
+        uint256 tokenId = mintToken(alice, 0);
+
+        subscription.tip(tokenId, 1, "min amount");
+        assertEq(subscription.deposited(tokenId), 1, "min amount deposited");
     }
 }
