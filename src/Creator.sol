@@ -6,6 +6,7 @@ import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import "forge-std/console.sol";
 
 // TODO add meta information, name, links, etc
+// TODO max supply?
 contract Creator is ERC721 {
     uint256 public totalSupply;
 

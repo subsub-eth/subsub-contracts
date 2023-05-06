@@ -20,6 +20,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // TODO instantiation with proxy
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
+    // TODO max supply?
+    // TODO max donation / deposit
 
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -115,6 +117,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         returns (uint256)
     {
         // TODO check minimum amount?
+        // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = ++totalSupply;
 
