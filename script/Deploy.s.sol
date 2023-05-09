@@ -27,6 +27,7 @@ contract DeployScript is Script {
                 Subscription subscription = new Subscription(
                     token,
                     1,
+                    0,
                     100,
                     address(creator),
                     creatorId

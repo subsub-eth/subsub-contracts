@@ -10,12 +10,11 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-import "forge-std/console.sol";
-
 contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // should the tokenId 0 == owner?
-    // TODO lock % of funds
-    // TODO shares to handle ERC20 decimals below 18
+
+    // TODO handle dust in claim
+    // TODO shares to handle ERC20 decimals other than 18
     // TODO multiplier for Subscriptions
     // TODO instantiation with proxy
     // TODO refactor event deposited to spent amount?
@@ -31,6 +30,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 totalDeposited; // amount of tokens ever deposited
         uint256 lastDepositAt; // date of last deposit
         uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
+        uint256 lockedAmount; // amount of funds locked
     }
 
     struct Epoch {
@@ -47,8 +47,15 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     /// @dev the amount of tokens paid per block
     uint256 public rate;
 
-    // TODO lock % of the deposit
+    // the accumulated remainder when normalizing incoming amounts
+    // TODO handle this value
+    uint256 public dust;
+
+    // locked % of deposited amount
+    // 0 - 10000
+    // TODO uint32
     uint256 public lock;
+    uint256 public constant LOCK_BASE = 10_000;
 
     mapping(uint256 => SubscriptionData) private subData;
 
@@ -72,6 +79,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     constructor(
         IERC20 _token,
         uint256 _rate,
+        uint256 _lock,
         uint256 _epochSize,
         address creatorContract,
         uint256 creatorTokenId
@@ -82,11 +90,13 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
             address(_token) != address(0),
             "SUB: token cannot be 0 address"
         );
+        require(_lock <= 10_000, "SUB: lock percentage out of range");
         require(_rate > 0, "SUB: rate cannot be 0");
         require(creatorContract != address(0), "SUB: creator address not set");
 
         token = _token;
         rate = _rate;
+        lock = _lock;
         epochSize = _epochSize;
 
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
@@ -100,6 +110,11 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
 
     function activeSubscriptions() external view returns (uint256) {
         return activeSubs;
+    }
+
+    // TODO library function?
+    function normalizeAmount(uint256 amount) internal view returns (uint256) {
+      return (amount / rate) * rate;
     }
 
     function pause() external onlyOwner {
@@ -121,18 +136,25 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = ++totalSupply;
 
+        uint256 normalizedAmount = normalizeAmount(amount);
+        dust += amount - normalizedAmount;
+
         subData[tokenId].mintedAt = block.number;
         subData[tokenId].lastDepositAt = block.number;
-        subData[tokenId].totalDeposited = amount;
-        subData[tokenId].currentDeposit = amount;
+        subData[tokenId].totalDeposited = normalizedAmount;
+        subData[tokenId].currentDeposit = normalizedAmount;
 
-        addNewSubscriptionToEpochs(amount);
+        // set lockedAmount
+        subData[tokenId].lockedAmount = normalizeAmount((normalizedAmount * lock) / LOCK_BASE);
 
+        addNewSubscriptionToEpochs(normalizedAmount);
+
+        // we transfer the ORIGINAL amount into the contract, claiming any overflows
         token.safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
 
-        emit SubscriptionRenewed(tokenId, amount, amount, msg.sender, message);
+        emit SubscriptionRenewed(tokenId, amount, normalizedAmount, msg.sender, message);
 
         return tokenId;
     }
@@ -190,6 +212,9 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     ) external whenNotPaused requireExists(tokenId) {
         require(amount >= rate, "SUB: amount too small");
 
+        uint256 normalizedAmount = normalizeAmount(amount);
+        dust += amount - normalizedAmount;
+
         uint256 oldEndingBlock = _expiresAt(tokenId);
 
         uint256 remainingDeposit = 0;
@@ -198,7 +223,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
             remainingDeposit = (oldEndingBlock - block.number) * rate;
 
             uint256 _currentDeposit = subData[tokenId].currentDeposit;
-            uint256 newDeposit = _currentDeposit + amount;
+            uint256 newDeposit = _currentDeposit + normalizedAmount;
             moveSubscriptionInEpochs(
                 subData[tokenId].lastDepositAt,
                 _currentDeposit,
@@ -206,15 +231,17 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
             );
         } else {
             // subscription is inactive
-            addNewSubscriptionToEpochs(amount);
+            addNewSubscriptionToEpochs(normalizedAmount);
         }
 
-        // TODO add lock
-        subData[tokenId].currentDeposit = remainingDeposit + amount;
+        uint256 deposit = remainingDeposit + normalizedAmount;
+        subData[tokenId].currentDeposit = deposit;
         subData[tokenId].lastDepositAt = block.number;
-        subData[tokenId].totalDeposited += amount;
+        subData[tokenId].totalDeposited += normalizedAmount;
+        subData[tokenId].lockedAmount = normalizeAmount((deposit * lock) / LOCK_BASE);
 
         // finally transfer tokens into this contract
+        // we use the ORIGINAL amount here
         token.safeTransferFrom(msg.sender, address(this), amount);
 
         emit SubscriptionRenewed(
@@ -317,17 +344,19 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     }
 
     function _withdrawable(uint256 tokenId) private view returns (uint256) {
-        // TODO handle lock
-
         if (!_isActive(tokenId)) {
             return 0;
         }
 
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
+        uint256 lockedAmount = subData[tokenId].lockedAmount;
         uint256 usedBlocks = block.number - lastDeposit;
 
-        return currentDeposit_ - (usedBlocks * rate);
+        return
+            (currentDeposit_ - lockedAmount).min(
+                currentDeposit_ - (usedBlocks * rate)
+            );
     }
 
     function spent(uint256 tokenId)

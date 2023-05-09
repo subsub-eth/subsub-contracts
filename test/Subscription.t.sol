@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
 import "../src/Subscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
@@ -16,6 +17,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     IERC20 public testToken;
     Creator public creator;
     uint256 public rate;
+    uint256 public lock;
     uint256 public epochSize;
 
     address public owner;
@@ -35,6 +37,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         message = "Hello World";
 
         rate = 5;
+        lock = 100;
         epochSize = 10;
         creator = new Creator();
         vm.prank(owner);
@@ -44,6 +47,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription = new Subscription(
             testToken,
             rate,
+            lock,
             epochSize,
             address(creator),
             ownerTokenId
@@ -51,28 +55,33 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         testToken.approve(address(subscription), type(uint256).max);
 
-        testToken.transfer(alice, 10_000);
+        testToken.transfer(alice, 100_000);
         testToken.transfer(bob, 20_000);
     }
 
     function testConstruct_not0token() public {
         vm.expectRevert("SUB: token cannot be 0 address");
-        new Subscription(IERC20(address(0)), 10, 10, address(1), 1);
+        new Subscription(IERC20(address(0)), 10, 0, 10, address(1), 1);
     }
 
     function testConstruct_not0rate() public {
         vm.expectRevert("SUB: rate cannot be 0");
-        new Subscription(testToken, 0, 10, address(1), 1);
+        new Subscription(testToken, 0, 0, 10, address(1), 1);
     }
 
     function testConstruct_not0epochSize() public {
         vm.expectRevert("SUB: invalid epochSize");
-        new Subscription(testToken, 10, 0, address(1), 1);
+        new Subscription(testToken, 10, 10_000, 0, address(1), 1);
+    }
+
+    function testConstruct_lockTooLarge() public {
+        vm.expectRevert("SUB: lock percentage out of range");
+        new Subscription(testToken, 10, 10_001, 10, address(0), 1);
     }
 
     function testConstruct_not0OwnerContract() public {
         vm.expectRevert("SUB: creator address not set");
-        new Subscription(testToken, 10, 10, address(0), 1);
+        new Subscription(testToken, 10, 0, 10, address(0), 1);
     }
 
     function mintToken(address user, uint256 amount)
@@ -83,7 +92,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
             amount,
-            amount,
+            (amount / rate) * rate,
             user,
             message
         );
@@ -96,6 +105,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             testToken.balanceOf(address(subscription)),
             amount,
             "amount send to subscription contract"
+        );
+
+        uint256 lockedAmount = (amount * lock) / subscription.LOCK_BASE();
+        lockedAmount = (lockedAmount / rate) * rate;
+        assertEq(
+            subscription.withdrawable(tokenId),
+            (amount / rate) * rate - lockedAmount,
+            "deposited amount partially locked"
         );
     }
 
@@ -166,36 +183,46 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testRenew() public {
-        uint256 tokenId = mintToken(alice, 100);
+        uint256 initialDeposit = 10_000;
+        uint256 tokenId = mintToken(alice, initialDeposit);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
         assertEq(
             initialEnd,
-            block.number + 20,
-            "subscription initially ends at 20"
+            block.number + 2000,
+            "subscription initially ends at 2000"
         );
-        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
+        assertEq(subscription.deposited(tokenId), initialDeposit, "10_000 tokens deposited");
 
         // fast forward
         vm.roll(block.number + 5);
 
         vm.expectEmit(true, true, true, true);
-        emit SubscriptionRenewed(tokenId, 200, 300, address(this), message);
+        emit SubscriptionRenewed(tokenId, 20_000, 30_000, address(this), message);
 
         assertFalse(subscription.paused(), "contract is not paused");
 
-        subscription.renew(tokenId, 200, message);
+        subscription.renew(tokenId, 20_000, message);
 
         assertEq(
             testToken.balanceOf(address(subscription)),
-            300,
+            30_000,
             "all tokens deposited"
         );
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.expiresAt(tokenId);
-        assertEq(end, initialEnd + 40, "subscription ends at 60");
-        assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
+        assertEq(end, initialEnd + 4_000, "subscription expires at 6000");
+        assertEq(subscription.deposited(tokenId), 30_000, "30000 tokens deposited");
+
+        uint256 fundsUsed = 5 * rate;
+        uint256 lockedAmount = ((((30_000 - fundsUsed) * lock) /
+            subscription.LOCK_BASE()) / rate) * rate;
+        assertEq(
+            subscription.withdrawable(tokenId),
+            29975 - lockedAmount,
+            "Locked amount updated to 29975 - 295 = 29680"
+        );
     }
 
     function testRenew_whenPaused() public {
@@ -341,8 +368,45 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testWithdrawable() public {
+        uint256 initialDeposit = 10_000;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertTrue(subscription.isActive(tokenId), "subscription active");
+        assertEq(
+            subscription.withdrawable(tokenId),
+            initialDeposit -
+                ((initialDeposit * lock) / subscription.LOCK_BASE()),
+            "withdrawable deposit 9900"
+        );
+
+        uint256 passed = 50;
+
+        vm.roll(block.number + passed);
+
+        assertTrue(subscription.isActive(tokenId), "subscription active");
+        assertEq(
+            subscription.withdrawable(tokenId),
+            initialDeposit - (passed * rate),
+            "withdrawable deposit 750"
+        );
+        assertEq(
+            testToken.balanceOf(address(subscription)),
+            initialDeposit,
+            "token balance not changed"
+        );
+        assertEq(subscription.deposited(tokenId), initialDeposit, "10000 tokens deposited");
+    }
+
+    function testWithdrawable_smallDeposit() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertTrue(subscription.isActive(tokenId), "subscription active");
+        assertEq(
+            subscription.withdrawable(tokenId),
+            initialDeposit,
+            "withdrawable deposit 100 as the deposit is too low"
+        );
 
         uint256 passed = 5;
 
@@ -359,7 +423,23 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             initialDeposit,
             "token balance not changed"
         );
-        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
+        assertEq(subscription.deposited(tokenId), initialDeposit, "100 tokens deposited");
+    }
+
+    function testWithdrawable_locked() public {
+        uint256 initialDeposit = 1234;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        vm.startPrank(alice);
+        testToken.approve(address(subscription), type(uint256).max);
+
+        // 1234 * 1% => 12 => 10
+        assertEq(subscription.withdrawable(tokenId), 1230 - 10);
+
+        uint256 newAmount = 321;
+        subscription.renew(tokenId, newAmount, "");
+
+        assertEq(subscription.withdrawable(tokenId), 1230 + 320 - 15);
     }
 
     function testWithdrawable_inActive() public {
@@ -376,24 +456,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             0,
             "withdrawable deposit 0"
         );
-        assertEq(
-            testToken.balanceOf(address(subscription)),
-            initialDeposit,
-            "token balance not changed"
-        );
-    }
-
-    function testWithdrawable_afterMint() public {
-        uint256 initialDeposit = 100;
-        uint256 tokenId = mintToken(alice, initialDeposit);
-
-        assertTrue(subscription.isActive(tokenId), "subscription active");
-        assertEq(
-            subscription.withdrawable(tokenId),
-            initialDeposit,
-            "withdrawable deposit 100"
-        );
-
         assertEq(
             testToken.balanceOf(address(subscription)),
             initialDeposit,
@@ -495,6 +557,33 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testWithdraw_allAfterMint() public {
+        uint256 initialDeposit = 10_000;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertEq(
+            subscription.deposited(tokenId),
+            initialDeposit,
+            "10000 tokens deposited"
+        );
+
+        assertTrue(subscription.isActive(tokenId), "subscription is active");
+
+        vm.prank(alice);
+        vm.expectRevert("SUB: amount exceeds withdrawable");
+        subscription.withdraw(tokenId, initialDeposit);
+        assertEq(
+            testToken.balanceOf(address(subscription)),
+            initialDeposit,
+            "token balance not changed"
+        );
+        assertEq(
+            subscription.deposited(tokenId),
+            initialDeposit,
+            "100 tokens deposited"
+        );
+    }
+
+    function testWithdraw_allAfterMint_lowAmount() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
 
@@ -504,29 +593,20 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "100 tokens deposited"
         );
 
-        uint256 amount = initialDeposit;
         assertTrue(subscription.isActive(tokenId), "subscription is active");
 
-        vm.expectEmit(true, true, true, true);
-        emit SubscriptionWithdrawn(tokenId, initialDeposit, 0);
-
         vm.prank(alice);
-        subscription.withdraw(tokenId, amount);
-
-        assertEq(
-            testToken.balanceOf(alice),
-            10_000,
-            "alice retrieved all funds"
-        );
+        subscription.withdraw(tokenId, initialDeposit);
         assertEq(
             testToken.balanceOf(address(subscription)),
             0,
-            "contract is empty"
+            "all tokens withdrawn"
         );
-        assertEq(subscription.withdrawable(tokenId), 0, "nothing to withdraw");
-
-        assertFalse(subscription.isActive(tokenId), "subscription is inactive");
-        assertEq(subscription.deposited(tokenId), 0, "0 tokens deposited");
+        assertEq(
+            subscription.deposited(tokenId),
+            0,
+            "all tokens withdrawn"
+        );
     }
 
     function testWithdraw_revert_nonExisting() public {
@@ -620,6 +700,33 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             initialDeposit - amount,
             "25 tokens deposited"
         );
+    }
+
+    function testCancel_afterMint() public {
+        uint256 initialDeposit = 10_000;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertEq(
+            subscription.deposited(tokenId),
+            initialDeposit,
+            "10000 tokens deposited"
+        );
+
+        assertTrue(subscription.isActive(tokenId), "subscription is active");
+        assertEq(
+            subscription.withdrawable(tokenId),
+            9900,
+            "9900 tokens withdrawable due to lock"
+        );
+
+        vm.prank(alice);
+        subscription.cancel(tokenId);
+        assertEq(
+            testToken.balanceOf(address(subscription)),
+            100,
+            "token balance not changed"
+        );
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
     }
 
     function testCancel_revert_nonExisting() public {
