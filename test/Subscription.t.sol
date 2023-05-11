@@ -8,14 +8,14 @@ import "../src/Subscription.sol";
 import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
 import {Creator} from "../src/Creator.sol";
 
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {TestToken} from "./token/TestToken.sol";
 
 // TODO test mint/renew with amount==0
 // TODO test lock 0% and 100%
 contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Subscription public subscription;
-    IERC20 public testToken;
+    IERC20Metadata public testToken;
     Creator public creator;
     uint256 public rate;
     uint256 public lock;
@@ -62,7 +62,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
     function testConstruct_not0token() public {
         vm.expectRevert("SUB: token cannot be 0 address");
-        new Subscription(IERC20(address(0)), 10, 0, 10, address(1), 1);
+        new Subscription(IERC20Metadata(address(0)), 10, 0, 10, address(1), 1);
     }
 
     function testConstruct_not0rate() public {
