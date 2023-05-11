@@ -47,10 +47,6 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     /// @dev the amount of tokens paid per block
     uint256 public rate;
 
-    // the accumulated remainder when normalizing incoming amounts
-    // TODO handle this value
-    uint256 public dust;
-
     // locked % of deposited amount
     // 0 - 10000
     // TODO uint32
@@ -137,7 +133,6 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 tokenId = ++totalSupply;
 
         uint256 normalizedAmount = normalizeAmount(amount);
-        dust += amount - normalizedAmount;
 
         subData[tokenId].mintedAt = block.number;
         subData[tokenId].lastDepositAt = block.number;
@@ -221,7 +216,6 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         require(amount >= rate, "SUB: amount too small");
 
         uint256 normalizedAmount = normalizeAmount(amount);
-        dust += amount - normalizedAmount;
 
         uint256 oldEndingBlock = _expiresAt(tokenId);
 
@@ -429,10 +423,6 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
 
         _lastProcessedEpoch = _currentEpoch - 1;
 
-        // handle dust
-        amount += dust;
-        dust = 0;
-
         totalClaimed += amount;
 
         token.safeTransfer(ownerAddress(), amount);
@@ -444,7 +434,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         (uint256 amount, , ) = processEpochs();
 
         // TODO when optimizing, define var name in signature
-        return amount + dust;
+        return amount;
     }
 
     function lastProcessedEpoch() private view returns (uint256 i) {

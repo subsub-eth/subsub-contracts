@@ -809,28 +809,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
-    function testClaimable_justRemainder() public {
-        uint256 dust = rate - 1;
-        mintToken(alice, 1_000 + dust);
+    function testClaimable_instantly() public {
+        vm.roll(10_000);
+        mintToken(alice, 1_000);
 
         assertEq(
             subscription.claimable(),
-            dust,
-            "dusted remainder of deposit is instantly claimable"
-        );
-    }
-
-    function testClaimable_remainder() public {
-        uint256 dust = rate - 1;
-        mintToken(alice, 1_000 + dust);
-
-        vm.roll(block.number + (epochSize * 2));
-
-        // partial epoch + complete epoch
-        assertEq(
-            subscription.claimable(),
-            9 * rate + epochSize * rate + dust,
-            "claimable partial epoch"
+            0,
+            "0 of deposit is instantly claimable"
         );
     }
 
@@ -934,47 +920,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
-    function testClaim_instantlyDusted() public {
-        vm.roll(10_000);
-
-        uint256 dust = rate - 2;
-        uint256 tokenId = mintToken(alice, 1_000 + dust);
-
-        // partial epoch + complete epoch
-        uint256 claimable = subscription.claimable();
-
-        assertEq(claimable, dust, "only dust value is claimable right away");
-
-        vm.expectEmit(true, true, true, true);
-        emit FundsClaimed(claimable, claimable);
-
-        vm.prank(owner);
-        subscription.claim();
-
-        assertEq(
-            testToken.balanceOf(owner),
-            claimable,
-            "claimable funds transferred to owner"
-        );
-        assertEq(
-            subscription.activeSubscriptions(),
-            0,
-            "active subscriptions not updated"
-        );
-
-        assertEq(
-            subscription.deposited(tokenId),
-            1_000,
-            "1000 tokens deposited, dust get shoveled under the rug"
-        );
-
-        assertEq(
-            subscription.claimable(),
-            0,
-            "no funds claimable right after claim, dust reset"
-        );
-    }
-
     function testClaim_onlyOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");
         subscription.claim();
@@ -1052,8 +997,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testClaim_expired() public {
-        uint256 dust = rate - 1;
-        uint256 funds = 100 + dust;
+        uint256 funds = 100;
         uint256 tokenId = mintToken(alice, funds);
 
         assertEq(
@@ -1088,7 +1032,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(
             subscription.deposited(tokenId),
             100,
-            "100 tokens deposited without dust"
+            "100 tokens deposited"
         );
     }
 
