@@ -13,7 +13,6 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // should the tokenId 0 == owner?
 
-    // TODO handle dust in claim
     // TODO shares to handle ERC20 decimals other than 18
     // TODO multiplier for Subscriptions
     // TODO instantiation with proxy
@@ -21,6 +20,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // TODO define metadata
     // TODO max supply?
     // TODO max donation / deposit
+    // TODO improve active subscriptions to include current epoch changes
 
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -114,7 +114,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
 
     // TODO library function?
     function normalizeAmount(uint256 amount) internal view returns (uint256) {
-      return (amount / rate) * rate;
+        return (amount / rate) * rate;
     }
 
     function pause() external onlyOwner {
@@ -145,7 +145,9 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         subData[tokenId].currentDeposit = normalizedAmount;
 
         // set lockedAmount
-        subData[tokenId].lockedAmount = normalizeAmount((normalizedAmount * lock) / LOCK_BASE);
+        subData[tokenId].lockedAmount = normalizeAmount(
+            (normalizedAmount * lock) / LOCK_BASE
+        );
 
         addNewSubscriptionToEpochs(normalizedAmount);
 
@@ -154,7 +156,13 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
 
         _safeMint(msg.sender, tokenId);
 
-        emit SubscriptionRenewed(tokenId, amount, normalizedAmount, msg.sender, message);
+        emit SubscriptionRenewed(
+            tokenId,
+            amount,
+            normalizedAmount,
+            msg.sender,
+            message
+        );
 
         return tokenId;
     }
@@ -238,7 +246,9 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         subData[tokenId].currentDeposit = deposit;
         subData[tokenId].lastDepositAt = block.number;
         subData[tokenId].totalDeposited += normalizedAmount;
-        subData[tokenId].lockedAmount = normalizeAmount((deposit * lock) / LOCK_BASE);
+        subData[tokenId].lockedAmount = normalizeAmount(
+            (deposit * lock) / LOCK_BASE
+        );
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
@@ -406,7 +416,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         // delete epochs
         uint256 _currentEpoch = getCurrentEpoch();
 
-        // TODO: copy claimable function body to decrease gas?
+        // TODO: copy processEpochs function body to decrease gas?
         for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
             delete epochs[i];
         }
@@ -418,6 +428,11 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         }
 
         _lastProcessedEpoch = _currentEpoch - 1;
+
+        // handle dust
+        amount += dust;
+        dust = 0;
+
         totalClaimed += amount;
 
         token.safeTransfer(ownerAddress(), amount);
@@ -429,7 +444,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         (uint256 amount, , ) = processEpochs();
 
         // TODO when optimizing, define var name in signature
-        return amount;
+        return amount + dust;
     }
 
     function lastProcessedEpoch() private view returns (uint256 i) {

@@ -12,6 +12,7 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {TestToken} from "./token/TestToken.sol";
 
 // TODO test mint/renew with amount==0
+// TODO test lock 0% and 100%
 contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Subscription public subscription;
     IERC20 public testToken;
@@ -192,13 +193,23 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             block.number + 2000,
             "subscription initially ends at 2000"
         );
-        assertEq(subscription.deposited(tokenId), initialDeposit, "10_000 tokens deposited");
+        assertEq(
+            subscription.deposited(tokenId),
+            initialDeposit,
+            "10_000 tokens deposited"
+        );
 
         // fast forward
         vm.roll(block.number + 5);
 
         vm.expectEmit(true, true, true, true);
-        emit SubscriptionRenewed(tokenId, 20_000, 30_000, address(this), message);
+        emit SubscriptionRenewed(
+            tokenId,
+            20_000,
+            30_000,
+            address(this),
+            message
+        );
 
         assertFalse(subscription.paused(), "contract is not paused");
 
@@ -213,7 +224,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.expiresAt(tokenId);
         assertEq(end, initialEnd + 4_000, "subscription expires at 6000");
-        assertEq(subscription.deposited(tokenId), 30_000, "30000 tokens deposited");
+        assertEq(
+            subscription.deposited(tokenId),
+            30_000,
+            "30000 tokens deposited"
+        );
 
         uint256 fundsUsed = 5 * rate;
         uint256 lockedAmount = ((((30_000 - fundsUsed) * lock) /
@@ -394,7 +409,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             initialDeposit,
             "token balance not changed"
         );
-        assertEq(subscription.deposited(tokenId), initialDeposit, "10000 tokens deposited");
+        assertEq(
+            subscription.deposited(tokenId),
+            initialDeposit,
+            "10000 tokens deposited"
+        );
     }
 
     function testWithdrawable_smallDeposit() public {
@@ -423,7 +442,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             initialDeposit,
             "token balance not changed"
         );
-        assertEq(subscription.deposited(tokenId), initialDeposit, "100 tokens deposited");
+        assertEq(
+            subscription.deposited(tokenId),
+            initialDeposit,
+            "100 tokens deposited"
+        );
     }
 
     function testWithdrawable_locked() public {
@@ -602,11 +625,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             0,
             "all tokens withdrawn"
         );
-        assertEq(
-            subscription.deposited(tokenId),
-            0,
-            "all tokens withdrawn"
-        );
+        assertEq(subscription.deposited(tokenId), 0, "all tokens withdrawn");
     }
 
     function testWithdraw_revert_nonExisting() public {
@@ -790,6 +809,31 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
+    function testClaimable_justRemainder() public {
+        uint256 dust = rate - 1;
+        mintToken(alice, 1_000 + dust);
+
+        assertEq(
+            subscription.claimable(),
+            dust,
+            "dusted remainder of deposit is instantly claimable"
+        );
+    }
+
+    function testClaimable_remainder() public {
+        uint256 dust = rate - 1;
+        mintToken(alice, 1_000 + dust);
+
+        vm.roll(block.number + (epochSize * 2));
+
+        // partial epoch + complete epoch
+        assertEq(
+            subscription.claimable(),
+            9 * rate + epochSize * rate + dust,
+            "claimable partial epoch"
+        );
+    }
+
     function testClaimable_epoch0() public {
         mintToken(alice, 1_000);
 
@@ -853,6 +897,81 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             subscription.deposited(tokenId),
             1_000,
             "1000 tokens deposited"
+        );
+    }
+
+    function testClaim_instantly() public {
+        vm.roll(10_000);
+
+        uint256 tokenId = mintToken(alice, 1_000);
+
+        // partial epoch + complete epoch
+        uint256 claimable = subscription.claimable();
+
+        assertEq(claimable, 0, "no funds claimable right after claim");
+
+        vm.expectEmit(true, true, true, true);
+        emit FundsClaimed(claimable, claimable);
+
+        vm.prank(owner);
+        subscription.claim();
+
+        assertEq(
+            testToken.balanceOf(owner),
+            claimable,
+            "claimable funds transferred to owner"
+        );
+        assertEq(
+            subscription.activeSubscriptions(),
+            0,
+            "active subscriptions not updated"
+        );
+
+        assertEq(
+            subscription.deposited(tokenId),
+            1_000,
+            "1000 tokens deposited"
+        );
+    }
+
+    function testClaim_instantlyDusted() public {
+        vm.roll(10_000);
+
+        uint256 dust = rate - 2;
+        uint256 tokenId = mintToken(alice, 1_000 + dust);
+
+        // partial epoch + complete epoch
+        uint256 claimable = subscription.claimable();
+
+        assertEq(claimable, dust, "only dust value is claimable right away");
+
+        vm.expectEmit(true, true, true, true);
+        emit FundsClaimed(claimable, claimable);
+
+        vm.prank(owner);
+        subscription.claim();
+
+        assertEq(
+            testToken.balanceOf(owner),
+            claimable,
+            "claimable funds transferred to owner"
+        );
+        assertEq(
+            subscription.activeSubscriptions(),
+            0,
+            "active subscriptions not updated"
+        );
+
+        assertEq(
+            subscription.deposited(tokenId),
+            1_000,
+            "1000 tokens deposited, dust get shoveled under the rug"
+        );
+
+        assertEq(
+            subscription.claimable(),
+            0,
+            "no funds claimable right after claim, dust reset"
         );
     }
 
@@ -933,7 +1052,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testClaim_expired() public {
-        uint256 funds = 100;
+        uint256 dust = rate - 1;
+        uint256 funds = 100 + dust;
         uint256 tokenId = mintToken(alice, funds);
 
         assertEq(
@@ -965,7 +1085,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "no funds claimable right after claim"
         );
 
-        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
+        assertEq(
+            subscription.deposited(tokenId),
+            100,
+            "100 tokens deposited without dust"
+        );
     }
 
     function testPause() public {
