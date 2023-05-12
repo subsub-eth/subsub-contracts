@@ -49,7 +49,7 @@ interface Subscribable is SubscriptionEvents {
 
     function withdrawable(uint256 tokenId) external view returns (uint256);
 
-    function activeSubscriptions() external view returns (uint256);
+    function activeSubShares() external view returns (uint256);
 
     // adds funds to the subscription, but does not extend an active sub
     function tip(
@@ -74,7 +74,7 @@ interface Claimable is ClaimEvents {
 
 interface ISubscription is IERC721, Subscribable, Claimable {
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, string calldata message)
+    function mint(uint256 amount, uint256 multiplier, string calldata message)
         external
         returns (uint256);
 }

@@ -34,6 +34,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 lastDepositAt; // date of last deposit
         uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
         uint256 lockedAmount; // amount of funds locked
+        // TODO change type
+        uint256 multiplier;
     }
 
     struct Epoch {
@@ -41,6 +43,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 starting; // number of starting subscriptions
         uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
     }
+
+    uint256 public constant MULTIPLIER_BASE = 100;
 
     uint256 public totalSupply;
 
@@ -58,7 +62,11 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
 
     mapping(uint256 => SubscriptionData) private subData;
 
-    uint256 private activeSubs;
+    // number of active subscriptions with a multiplier represented as shares
+    // base 100:
+    // 1 Sub * 1x == 100 shares
+    // 1 Sub * 2.5x == 250 shares
+    uint256 public activeSubShares;
 
     // time of contract's inception
     // uint private creationBlock;
@@ -108,10 +116,6 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         return block.number / epochSize;
     }
 
-    function activeSubscriptions() external view returns (uint256) {
-        return activeSubs;
-    }
-
     function pause() external onlyOwner {
         _pause();
     }
@@ -121,28 +125,36 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     }
 
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, string calldata message)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
+    function mint(
+        uint256 amount,
+        uint256 multiplier,
+        string calldata message
+    ) external whenNotPaused returns (uint256) {
+        // multiplier must be larger that 1x and less than 1000x
+        // TODO in one call
+        require(
+            multiplier >= 100 && multiplier <= 100_000,
+            "SUB: multiplier invalid"
+        );
         // TODO check minimum amount?
         // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = ++totalSupply;
+        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
 
-        uint256 internalAmount = amount.toInternal(token).adjustToRate(rate);
+        uint256 internalAmount = amount.toInternal(token).adjustToRate(mRate);
 
         subData[tokenId].mintedAt = block.number;
         subData[tokenId].lastDepositAt = block.number;
         subData[tokenId].totalDeposited = internalAmount;
         subData[tokenId].currentDeposit = internalAmount;
+        subData[tokenId].multiplier = multiplier;
 
         // set lockedAmount
         subData[tokenId].lockedAmount = ((internalAmount * lock) / LOCK_BASE)
-            .adjustToRate(rate);
+            .adjustToRate(mRate);
 
-        addNewSubscriptionToEpochs(internalAmount);
+        addNewSubscriptionToEpochs(internalAmount, multiplier);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
         token.safeTransferFrom(msg.sender, address(this), amount);
@@ -160,49 +172,54 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         return tokenId;
     }
 
-    function addNewSubscriptionToEpochs(uint256 amount) internal {
-        uint256 endingBlock = block.number + (amount / rate);
+    function addNewSubscriptionToEpochs(uint256 amount, uint256 multiplier)
+        internal
+    {
+        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
+        uint256 expiresAt_ = block.number + (amount / mRate);
 
         // TODO use _expiresAt(tokenId)
         // starting
         uint256 _currentEpoch = getCurrentEpoch();
-        epochs[_currentEpoch].starting += 1;
+        epochs[_currentEpoch].starting += multiplier;
         uint256 remaining = (epochSize - (block.number % epochSize)).min(
-            endingBlock - block.number // subscription ends within current block
+            expiresAt_ - block.number // subscription ends within current block
         );
-        epochs[_currentEpoch].partialFunds += (remaining * rate);
+        epochs[_currentEpoch].partialFunds += (remaining * mRate);
 
         // ending
-        uint256 endingEpoch = endingBlock / epochSize;
-        epochs[endingEpoch].expiring += 1;
-        epochs[endingEpoch].partialFunds +=
-            (endingBlock - (endingEpoch * epochSize)).min(
-                endingBlock - block.number // subscription ends within current block
+        uint256 expiringEpoch = expiresAt_ / epochSize;
+        epochs[expiringEpoch].expiring += multiplier;
+        epochs[expiringEpoch].partialFunds +=
+            (expiresAt_ - (expiringEpoch * epochSize)).min(
+                expiresAt_ - block.number // subscription ends within current block
             ) *
-            rate;
+            mRate;
     }
 
     function moveSubscriptionInEpochs(
-        uint256 _lastDeposit,
+        uint256 _lastDepositAt,
         uint256 _oldDeposit,
-        uint256 _newDeposit
+        uint256 _newDeposit,
+        uint256 multiplier
     ) internal {
+        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
         // when does the sub currently end?
-        uint256 oldEndingBlock = _lastDeposit + (_oldDeposit / rate);
+        uint256 oldExpiringAt = _lastDepositAt + (_oldDeposit / mRate);
         // update old epoch
-        uint256 oldEpoch = oldEndingBlock / epochSize;
-        epochs[oldEpoch].expiring -= 1;
-        uint256 removable = (oldEndingBlock -
-            ((oldEpoch * epochSize).max(block.number))) * rate;
+        uint256 oldEpoch = oldExpiringAt / epochSize;
+        epochs[oldEpoch].expiring -= multiplier;
+        uint256 removable = (oldExpiringAt -
+            ((oldEpoch * epochSize).max(block.number))) * mRate;
         epochs[oldEpoch].partialFunds -= removable;
 
         // update new epoch
-        uint256 newEndingBlock = _lastDeposit + (_newDeposit / rate);
+        uint256 newEndingBlock = _lastDepositAt + (_newDeposit / mRate);
         uint256 newEpoch = newEndingBlock / epochSize;
-        epochs[newEpoch].expiring += 1;
+        epochs[newEpoch].expiring += multiplier;
         epochs[newEpoch].partialFunds +=
             (newEndingBlock - ((newEpoch * epochSize).max(block.number))) *
-            rate;
+            mRate;
     }
 
     /// @notice adds deposits to an existing subscription token
@@ -211,26 +228,29 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 amount,
         string calldata message
     ) external whenNotPaused requireExists(tokenId) {
-        uint256 internalAmount = amount.toInternal(token).adjustToRate(rate);
-        require(internalAmount >= rate, "SUB: amount too small");
+        uint256 multiplier = subData[tokenId].multiplier;
+        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
+        uint256 internalAmount = amount.toInternal(token).adjustToRate(mRate);
+        require(internalAmount >= mRate, "SUB: amount too small");
 
-        uint256 oldEndingBlock = _expiresAt(tokenId);
+        uint256 oldExpiresAt = _expiresAt(tokenId);
 
         uint256 remainingDeposit = 0;
-        if (oldEndingBlock > block.number) {
+        if (oldExpiresAt > block.number) {
             // subscription is still active
-            remainingDeposit = (oldEndingBlock - block.number) * rate;
+            remainingDeposit = (oldExpiresAt - block.number) * mRate;
 
             uint256 _currentDeposit = subData[tokenId].currentDeposit;
             uint256 newDeposit = _currentDeposit + internalAmount;
             moveSubscriptionInEpochs(
                 subData[tokenId].lastDepositAt,
                 _currentDeposit,
-                newDeposit
+                newDeposit,
+                multiplier
             );
         } else {
             // subscription is inactive
-            addNewSubscriptionToEpochs(internalAmount);
+            addNewSubscriptionToEpochs(internalAmount, multiplier);
         }
 
         uint256 deposit = remainingDeposit + internalAmount;
@@ -238,7 +258,7 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         subData[tokenId].lastDepositAt = block.number;
         subData[tokenId].totalDeposited += internalAmount;
         subData[tokenId].lockedAmount = ((deposit * lock) / LOCK_BASE)
-            .adjustToRate(rate);
+            .adjustToRate(mRate);
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
@@ -253,28 +273,33 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         );
     }
 
-    function withdraw(uint256 tokenId, uint256 amount) external {
+    function withdraw(uint256 tokenId, uint256 amount)
+        external
+        requireExists(tokenId)
+    {
         _withdraw(tokenId, amount.toInternal(token));
     }
 
-    function cancel(uint256 tokenId) external {
+    function cancel(uint256 tokenId) external requireExists(tokenId) {
         _withdraw(tokenId, _withdrawable(tokenId));
     }
 
-    function _withdraw(uint256 tokenId, uint256 amount)
-        private
-        requireExists(tokenId)
-    {
+    function _withdraw(uint256 tokenId, uint256 amount) private {
         require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
 
         uint256 withdrawable_ = _withdrawable(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
         uint256 _currentDeposit = subData[tokenId].currentDeposit;
-        uint256 _lastDeposit = subData[tokenId].lastDepositAt;
+        uint256 _lastDepositAt = subData[tokenId].lastDepositAt;
 
         uint256 newDeposit = _currentDeposit - amount;
-        moveSubscriptionInEpochs(_lastDeposit, _currentDeposit, newDeposit);
+        moveSubscriptionInEpochs(
+            _lastDepositAt,
+            _currentDeposit,
+            newDeposit,
+            subData[tokenId].multiplier
+        );
 
         // when is is the sub going to end now?
         subData[tokenId].currentDeposit = newDeposit;
@@ -305,8 +330,9 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         // active = [start, + deposit / rate)
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
+        uint256 mRate = (rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
 
-        uint256 end = lastDeposit + (currentDeposit_ / rate);
+        uint256 end = lastDeposit + (currentDeposit_ / mRate);
 
         return block.number < end;
     }
@@ -333,7 +359,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     function _expiresAt(uint256 tokenId) internal view returns (uint256) {
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        return lastDeposit + (currentDeposit_ / rate);
+        uint256 mRate = (rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
+        return lastDeposit + (currentDeposit_ / mRate);
     }
 
     function withdrawable(uint256 tokenId)
@@ -353,11 +380,12 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 lockedAmount = subData[tokenId].lockedAmount;
+        uint256 mRate = (rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
         uint256 usedBlocks = block.number - lastDeposit;
 
         return
             (currentDeposit_ - lockedAmount).min(
-                currentDeposit_ - (usedBlocks * rate)
+                currentDeposit_ - (usedBlocks * mRate)
             );
     }
 
@@ -374,10 +402,12 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         if (!_isActive(tokenId)) {
             spentAmount = totalDeposited;
         } else {
+            uint256 mRate = (rate * subData[tokenId].multiplier) /
+                MULTIPLIER_BASE;
             spentAmount =
                 totalDeposited -
                 subData[tokenId].currentDeposit +
-                ((block.number - subData[tokenId].lastDepositAt) * rate);
+                ((block.number - subData[tokenId].lastDepositAt) * mRate);
         }
 
         return spentAmount.toExternal(token);
@@ -418,9 +448,9 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         }
 
         if (starting > expiring) {
-            activeSubs += starting - expiring;
+            activeSubShares += starting - expiring;
         } else {
-            activeSubs -= expiring - starting;
+            activeSubShares -= expiring - starting;
         }
 
         _lastProcessedEpoch = _currentEpoch - 1;
@@ -461,13 +491,18 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         )
     {
         uint256 _currentEpoch = getCurrentEpoch();
-        uint256 _activeSubs = activeSubs;
+        uint256 _activeSubs = activeSubShares;
 
         for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
             // remove subs expiring in this epoch
             _activeSubs -= epochs[i].expiring;
 
-            amount += epochs[i].partialFunds + _activeSubs * epochSize * rate;
+            // we do not apply the individual multiplier to `rate` as it is
+            // included in _activeSubs, expiring, and starting subs
+            amount +=
+                epochs[i].partialFunds +
+                (_activeSubs * epochSize * rate) /
+                MULTIPLIER_BASE;
             starting += epochs[i].starting;
             expiring += epochs[i].expiring;
 

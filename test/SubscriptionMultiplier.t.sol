@@ -11,21 +11,21 @@ import {Creator} from "../src/Creator.sol";
 
 import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
 
-contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
+contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     using SubscriptionLib for uint256;
 
     Subscription public subscription;
-    ERC20DecimalsMock public testToken;
+    ERC20DecimalsMock private testToken;
     Creator public creator;
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
 
+    uint8 public decimals;
+
     address public owner;
     uint256 public ownerTokenId;
     address public alice;
-    address public bob;
-    address public charlie;
 
     string public message;
 
@@ -38,12 +38,11 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;
         epochSize = 100;
+        decimals = 6;
         creator = new Creator();
         vm.prank(owner);
         ownerTokenId = creator.mint();
-    }
 
-    function createContracts(uint8 decimals) private {
         testToken = new ERC20DecimalsMock("Test", "TEST", decimals);
         subscription = new Subscription(
             testToken,
@@ -59,22 +58,24 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         testToken.mint(alice, UINT256_MAX);
     }
 
-    function mintToken(address user, uint256 amount)
-        private
-        returns (uint256 tokenId)
-    {
+    function mintToken(
+        address user,
+        uint256 amount,
+        uint256 multiplier
+    ) private returns (uint256 tokenId) {
+        uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
             amount,
-            amount.toInternal(testToken).adjustToRate(rate),
+            amount.toInternal(testToken).adjustToRate(mRate),
             user,
             message
         );
 
         vm.startPrank(user);
         testToken.approve(address(subscription), amount);
-        tokenId = subscription.mint(amount, 100, message);
+        tokenId = subscription.mint(amount, multiplier, message);
         vm.stopPrank();
         assertEq(
             testToken.balanceOf(address(subscription)),
@@ -84,23 +85,24 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 lockedAmount = (amount.toInternal(testToken) * lock) /
             subscription.LOCK_BASE();
-        lockedAmount = lockedAmount.adjustToRate(rate);
+        lockedAmount = lockedAmount.adjustToRate(mRate);
         assertEq(
             subscription.withdrawable(tokenId),
-            (amount.toInternal(testToken).adjustToRate(rate) - lockedAmount)
+            (amount.toInternal(testToken).adjustToRate(mRate) - lockedAmount)
                 .toExternal(testToken),
             "deposited amount partially locked"
         );
     }
 
-    function testFlow(uint8 decimals) public {
-        vm.assume(decimals <= 64);
+    function testFlow(uint256 multiplier) public {
+        multiplier = bound(multiplier, 100, 100_000);
 
         vm.roll(100_000);
-        uint256 amount = 10 * (10**decimals);
+        uint256 amount = (10 * (10**decimals) * multiplier) /
+            subscription.MULTIPLIER_BASE();
+        uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
 
-        createContracts(decimals);
-        uint256 tokenId = mintToken(alice, amount);
+        uint256 tokenId = mintToken(alice, amount, multiplier);
 
         vm.roll(100_001);
         assertTrue(subscription.isActive(tokenId), "sub active");
@@ -115,7 +117,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         assertEq(
             subscription.claimable(),
-            (2_000 * rate).toExternal(testToken),
+            (2_000 * mRate).toExternal(testToken),
             "claimable"
         );
 
@@ -137,7 +139,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 claimable = subscription.claimable();
         assertEq(
             claimable,
-            (amount * 2).toInternal(testToken).adjustToRate(rate).toExternal(
+            (amount * 2).toInternal(testToken).adjustToRate(mRate).toExternal(
                 testToken
             ),
             "full sub amount claimable"
@@ -151,14 +153,15 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
-    function testFlow_withdraw(uint8 decimals) public {
-        vm.assume(decimals <= 64);
+    function testFlow_withdraw(uint256 multiplier) public {
+        multiplier = bound(multiplier, 100, 100_000);
 
         vm.roll(100_000);
-        uint256 amount = 10 * (10**decimals);
+        uint256 amount = (10 * (10**decimals) * multiplier) /
+            subscription.MULTIPLIER_BASE();
+        uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
 
-        createContracts(decimals);
-        uint256 tokenId = mintToken(alice, amount);
+        uint256 tokenId = mintToken(alice, amount, multiplier);
 
         vm.roll(100_001);
         assertTrue(subscription.isActive(tokenId), "sub active");
@@ -174,7 +177,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 withdrawable = subscription.withdrawable(tokenId);
         assertEq(
             withdrawable,
-            (1_333 * rate).toExternal(testToken),
+            (1_333 * mRate).toExternal(testToken),
             "partial withdrawable"
         );
 
@@ -183,7 +186,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription.cancel(tokenId);
         assertEq(
             testToken.balanceOf(alice),
-            b + (1_333 * rate).toExternal(testToken),
+            b + (1_333 * mRate).toExternal(testToken),
             "funds returned"
         );
 
@@ -191,7 +194,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         vm.startPrank(owner);
         uint256 claimable = subscription.claimable();
-        assertEq(claimable, (2_000 * rate).toExternal(testToken), "claimable");
+        assertEq(claimable, (2_000 * mRate).toExternal(testToken), "claimable");
 
         subscription.claim();
         assertEq(

@@ -100,7 +100,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         vm.startPrank(user);
         testToken.approve(address(subscription), amount);
-        tokenId = subscription.mint(amount, message);
+        tokenId = subscription.mint(amount, 100, message);
         vm.stopPrank();
         assertEq(
             testToken.balanceOf(address(subscription)),
@@ -129,6 +129,16 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertTrue(active, "subscription active");
     }
 
+    function testMint_multiplierTooSmall() public {
+        vm.expectRevert("SUB: multiplier invalid");
+        subscription.mint(0, 99, "");
+    }
+
+    function testMint_multiplierTooLarge() public {
+        vm.expectRevert("SUB: multiplier invalid");
+        subscription.mint(0, 100_001, "");
+    }
+
     function testMint_zeroAmount() public {
         uint256 tokenId = mintToken(alice, 0);
 
@@ -146,7 +156,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription.pause();
 
         vm.expectRevert("Pausable: paused");
-        subscription.mint(1, "");
+        subscription.mint(1, 100, "");
 
         vm.prank(owner);
         subscription.unpause();
@@ -842,7 +852,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 1_000);
 
         assertEq(
-            subscription.activeSubscriptions(),
+            subscription.activeSubShares(),
             0,
             "active subs not updated in current epoch"
         );
@@ -868,8 +878,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "claimable funds transferred to owner"
         );
         assertEq(
-            subscription.activeSubscriptions(),
-            1,
+            subscription.activeSubShares(),
+            1 * subscription.MULTIPLIER_BASE(),
             "subscriptions updated"
         );
 
@@ -908,7 +918,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "claimable funds transferred to owner"
         );
         assertEq(
-            subscription.activeSubscriptions(),
+            subscription.activeSubShares(),
             0,
             "active subscriptions not updated"
         );
@@ -929,7 +939,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 1_000);
 
         assertEq(
-            subscription.activeSubscriptions(),
+            subscription.activeSubShares(),
             0,
             "active subs not updated in current epoch"
         );
@@ -956,8 +966,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "claimable funds transferred to owner"
         );
         assertEq(
-            subscription.activeSubscriptions(),
-            1,
+            subscription.activeSubShares(),
+            1 * subscription.MULTIPLIER_BASE(),
             "subscriptions updated"
         );
 
@@ -984,8 +994,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "new funds transferred to owner"
         );
         assertEq(
-            subscription.activeSubscriptions(),
-            1,
+            subscription.activeSubShares(),
+            1 * subscription.MULTIPLIER_BASE(),
             "subscriptions updated"
         );
 
@@ -1001,7 +1011,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, funds);
 
         assertEq(
-            subscription.activeSubscriptions(),
+            subscription.activeSubShares(),
             0,
             "active subs not updated in current epoch"
         );
@@ -1022,18 +1032,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "all funds transferred to owner"
         );
 
-        assertEq(subscription.activeSubscriptions(), 0, "active subs updated");
+        assertEq(subscription.activeSubShares(), 0, "active subs updated");
         assertEq(
             subscription.claimable(),
             0,
             "no funds claimable right after claim"
         );
 
-        assertEq(
-            subscription.deposited(tokenId),
-            100,
-            "100 tokens deposited"
-        );
+        assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
     }
 
     function testPause() public {

@@ -9,7 +9,7 @@ import {SubscriptionLib} from "../src/SubscriptionLib.sol";
 
 import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
 
-contract SubscriptionTest is Test {
+contract SubscriptionLibTest is Test {
     using SubscriptionLib for uint256;
 
     function setUp() public {}
@@ -103,10 +103,6 @@ contract SubscriptionTest is Test {
         uint256 internalAmount = 10_000_000_000_000_000_000_000;
         uint256 externalAmount = internalAmount.toExternal(token);
 
-        assertEq(
-            10_000,
-            externalAmount,
-            "remove 18 decimals"
-        );
+        assertEq(10_000, externalAmount, "remove 18 decimals");
     }
 }
