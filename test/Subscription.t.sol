@@ -8,14 +8,13 @@ import "../src/Subscription.sol";
 import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
 import {Creator} from "../src/Creator.sol";
 
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {TestToken} from "./token/TestToken.sol";
+import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
 
 // TODO test mint/renew with amount==0
 // TODO test lock 0% and 100%
 contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Subscription public subscription;
-    IERC20Metadata public testToken;
+    ERC20DecimalsMock private testToken;
     Creator public creator;
     uint256 public rate;
     uint256 public lock;
@@ -44,7 +43,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(owner);
         ownerTokenId = creator.mint();
 
-        testToken = new TestToken(1_000_000, address(this));
+        testToken = new ERC20DecimalsMock("Test", "TEST", 18);
         subscription = new Subscription(
             testToken,
             rate,
@@ -56,8 +55,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         testToken.approve(address(subscription), type(uint256).max);
 
-        testToken.transfer(alice, 100_000);
-        testToken.transfer(bob, 20_000);
+        testToken.mint(address(this), 1_000_000);
+        testToken.mint(alice, 100_000);
+        testToken.mint(bob, 20_000);
     }
 
     function testConstruct_not0token() public {

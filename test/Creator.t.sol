@@ -4,9 +4,6 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Creator.sol";
 
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {TestToken} from "./token/TestToken.sol";
-
 // TODO test mint/renew with amount==0
 contract CreatorTest is Test {
     Creator public creator;
