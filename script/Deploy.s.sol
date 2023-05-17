@@ -6,6 +6,9 @@ import "forge-std/console.sol";
 
 import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
 
+import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+
 import "../src/Creator.sol";
 import "../src/Subscription.sol";
 
@@ -17,7 +20,15 @@ contract DeployScript is Script {
 
         // simple Test Deployment
 
-        Creator creator = new Creator();
+        Creator creatorImplementation = new Creator();
+        ProxyAdmin creatorAdmin = new ProxyAdmin();
+        TransparentUpgradeableProxy creatorProxy =
+        new TransparentUpgradeableProxy(
+            address(creatorImplementation),
+            address(creatorAdmin),
+            abi.encodeWithSignature("initialize()")
+        );
+        Creator creator = Creator(address(creatorProxy));
         uint256 creatorId = creator.mint();
 
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {

@@ -4,9 +4,15 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Creator.sol";
 
+import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+
 // TODO test mint/renew with amount==0
 contract CreatorTest is Test {
     Creator public creator;
+    Creator public implementation;
+    TransparentUpgradeableProxy public proxy;
+    ProxyAdmin public admin;
 
     address public alice;
     address public bob;
@@ -15,7 +21,22 @@ contract CreatorTest is Test {
         alice = address(10);
         bob = address(20);
 
-        creator = new Creator();
+        admin = new ProxyAdmin();
+        implementation = new Creator();
+        proxy = new TransparentUpgradeableProxy(
+            address(implementation),
+            address(admin),
+            abi.encodeWithSignature("initialize()")
+        );
+        creator = Creator(address(proxy));
+    }
+
+    function testMetadata() public {
+        assertEq(implementation.name(), "", "name is not set on implementation");
+        assertEq(implementation.symbol(), "", "symbol is not set on implementation");
+
+        assertEq(creator.name(), "Creator", "name is set");
+        assertEq(creator.symbol(), "CRE", "symbol is set");
     }
 
     function testMint() public {
