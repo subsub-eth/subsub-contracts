@@ -89,6 +89,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         private
         returns (uint256 tokenId)
     {
+        vm.startPrank(user);
+        testToken.approve(address(subscription), amount);
+
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
@@ -98,8 +101,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             message
         );
 
-        vm.startPrank(user);
-        testToken.approve(address(subscription), amount);
         tokenId = subscription.mint(amount, 100, message);
         vm.stopPrank();
         assertEq(
@@ -368,10 +369,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 amount = 200;
         vm.startPrank(bob);
 
+        testToken.approve(address(subscription), amount);
+
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(tokenId, 200, 300, bob, message);
 
-        testToken.approve(address(subscription), amount);
         subscription.renew(tokenId, amount, message);
 
         vm.stopPrank();
@@ -1069,10 +1071,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 target = 200;
         vm.startPrank(alice);
 
+        testToken.approve(address(subscription), amount);
+
         vm.expectEmit(true, true, true, true);
         emit Tipped(tokenId, amount, target, alice, "hello world");
 
-        testToken.approve(address(subscription), amount);
         subscription.tip(tokenId, amount, "hello world");
 
         assertEq(subscription.deposited(tokenId), target, "deposit increased");

@@ -64,6 +64,9 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 multiplier
     ) private returns (uint256 tokenId) {
         uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
+        vm.startPrank(user);
+        testToken.approve(address(subscription), amount);
+
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
@@ -73,8 +76,6 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
             message
         );
 
-        vm.startPrank(user);
-        testToken.approve(address(subscription), amount);
         tokenId = subscription.mint(amount, multiplier, message);
         vm.stopPrank();
         assertEq(

@@ -63,6 +63,9 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         private
         returns (uint256 tokenId)
     {
+        vm.startPrank(user);
+        testToken.approve(address(subscription), amount);
+
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
@@ -72,8 +75,6 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
             message
         );
 
-        vm.startPrank(user);
-        testToken.approve(address(subscription), amount);
         tokenId = subscription.mint(amount, 100, message);
         vm.stopPrank();
         assertEq(
