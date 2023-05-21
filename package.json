@@ -30,8 +30,8 @@
   },
   "homepage": "https://github.com/suiiii-rip/createz-contracts#readme",
   "devDependencies": {
-    "@typechain/ethers-v6": "^0.3.0",
-    "rimraf": "^5.0.0",
+    "@typechain/ethers-v6": "^0.3.2",
+    "rimraf": "^5.0.1",
     "typechain": "^8.1.1"
   }
 }
