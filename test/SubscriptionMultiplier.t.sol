@@ -10,10 +10,13 @@ import {SubscriptionLib} from "../src/SubscriptionLib.sol";
 import {Creator} from "../src/Creator.sol";
 
 import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     using SubscriptionLib for uint256;
 
+    ERC1967Proxy public subscriptionProxy;
+    Subscription public subscriptionImplementation;
     Subscription public subscription;
     ERC20DecimalsMock private testToken;
     Creator public creator;
@@ -44,7 +47,14 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         ownerTokenId = creator.mint();
 
         testToken = new ERC20DecimalsMock("Test", "TEST", decimals);
-        subscription = new Subscription(
+        // init simple proxy setup
+        subscriptionImplementation = new Subscription();
+        subscriptionProxy = new ERC1967Proxy(
+            address(subscriptionImplementation),
+            ""
+        );
+        subscription = Subscription(address(subscriptionProxy));
+        subscription.initialize(
             testToken,
             rate,
             lock,

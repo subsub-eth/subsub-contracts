@@ -36,7 +36,8 @@ contract DeployScript is Script {
             token.mint(address(10), 100_000);
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
-                Subscription subscription = new Subscription(
+                Subscription subscription = new Subscription();
+                subscription.initialize(
                     token,
                     1,
                     0,

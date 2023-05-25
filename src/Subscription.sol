@@ -2,16 +2,21 @@
 pragma solidity ^0.8.20;
 
 import {ISubscription} from "./ISubscription.sol";
-import {ERC721Ownable} from "./ERC721Ownable.sol";
+import {OwnableByERC721Upgradeable} from "./OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 
-import {Pausable} from "openzeppelin-contracts/contracts/security/Pausable.sol";
+import {PausableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
+contract Subscription is
+    ISubscription,
+    ERC721Upgradeable,
+    OwnableByERC721Upgradeable,
+    PausableUpgradeable
+{
     // should the tokenId 0 == owner?
 
     // TODO multiplier for Subscriptions
@@ -23,6 +28,8 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
     // TODO improve active subscriptions to include current epoch changes
     // TODO interchangable implementation for time tracking: blocks vs timestamp
     // TODO retire function, sends token.balance to owner
+    // TODO ownable interface?
+    // TODO pausable interface?
 
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
@@ -84,14 +91,18 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         _;
     }
 
-    constructor(
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         IERC20Metadata _token,
         uint256 _rate,
         uint256 _lock,
         uint256 _epochSize,
         address creatorContract,
         uint256 creatorTokenId
-    ) ERC721("Subscription", "SUB") {
+    ) external initializer {
         // owner is set to msg.sender
         require(_epochSize > 0, "SUB: invalid epochSize");
         require(
@@ -102,14 +113,18 @@ contract Subscription is ISubscription, ERC721, ERC721Ownable, Pausable {
         require(_rate > 0, "SUB: rate cannot be 0");
         require(creatorContract != address(0), "SUB: creator address not set");
 
+        // call initializers of inherited contracts
+        // TODO set metadata
+        __ERC721_init_unchained("Subscription", "SUB");
+        __OwnableByERC721_init_unchained(creatorContract, creatorTokenId);
+        __Pausable_init_unchained();
+
         token = _token;
         rate = _rate;
         lock = _lock;
         epochSize = _epochSize;
 
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
-
-        _transferOwnership(creatorContract, creatorTokenId);
     }
 
     function getCurrentEpoch() internal view returns (uint256) {

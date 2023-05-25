@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
+import {IERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
+import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
 interface SubscriptionEvents {
     event SubscriptionRenewed(
@@ -72,9 +73,16 @@ interface Claimable is ClaimEvents {
     function totalClaimed() external view returns (uint256);
 }
 
-interface ISubscription is IERC721, Subscribable, Claimable {
+interface ISubscription is
+    IERC721Upgradeable,
+    IERC721MetadataUpgradeable,
+    Subscribable,
+    Claimable
+{
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, uint256 multiplier, string calldata message)
-        external
-        returns (uint256);
+    function mint(
+        uint256 amount,
+        uint256 multiplier,
+        string calldata message
+    ) external returns (uint256);
 }
