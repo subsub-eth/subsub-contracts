@@ -92,33 +92,6 @@ abstract contract OwnableByERC721Upgradeable is
     }
 
     /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby disabling any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        _transferOwnership(address(0), 0);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(
-        address newOwnerContract,
-        uint256 newOwnerTokenId
-    ) public virtual onlyOwner {
-        // TODO check supportsInterface
-        require(
-            newOwnerContract != address(0),
-            "Ownable: new owner contract is the zero address"
-        );
-        _transferOwnership(newOwnerContract, newOwnerTokenId);
-    }
-
-    /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */
@@ -144,4 +117,34 @@ abstract contract OwnableByERC721Upgradeable is
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[48] private __gap;
+}
+
+abstract contract TransferableOwnableByERC721Upgradeable is OwnableByERC721Upgradeable {
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0), 0);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(
+        address newOwnerContract,
+        uint256 newOwnerTokenId
+    ) public virtual onlyOwner {
+        // TODO check supportsInterface
+        require(
+            newOwnerContract != address(0),
+            "Ownable: new owner contract is the zero address"
+        );
+        _transferOwnership(newOwnerContract, newOwnerTokenId);
+    }
 }

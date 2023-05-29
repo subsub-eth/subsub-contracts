@@ -19,8 +19,6 @@ contract Subscription is
 {
     // should the tokenId 0 == owner?
 
-    // TODO multiplier for Subscriptions
-    // TODO instantiation with proxy
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
     // TODO max supply?
@@ -96,14 +94,13 @@ contract Subscription is
     }
 
     function initialize(
-        IERC20Metadata _token,
+        address _token,
         uint256 _rate,
         uint256 _lock,
         uint256 _epochSize,
         address creatorContract,
         uint256 creatorTokenId
     ) external initializer {
-        // owner is set to msg.sender
         require(_epochSize > 0, "SUB: invalid epochSize");
         require(
             address(_token) != address(0),
@@ -111,6 +108,7 @@ contract Subscription is
         );
         require(_lock <= 10_000, "SUB: lock percentage out of range");
         require(_rate > 0, "SUB: rate cannot be 0");
+        // check that creatorContract is a contract of ERC721 and does have a tokenId
         require(creatorContract != address(0), "SUB: creator address not set");
 
         // call initializers of inherited contracts
@@ -119,7 +117,8 @@ contract Subscription is
         __OwnableByERC721_init_unchained(creatorContract, creatorTokenId);
         __Pausable_init_unchained();
 
-        token = _token;
+        // TODO check validity of token
+        token = IERC20Metadata(_token);
         rate = _rate;
         lock = _lock;
         epochSize = _epochSize;

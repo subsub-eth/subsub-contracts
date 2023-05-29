@@ -56,7 +56,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         );
         subscription = Subscription(address(subscriptionProxy));
         subscription.initialize(
-            testToken,
+            address(testToken),
             rate,
             lock,
             epochSize,

@@ -6,7 +6,7 @@ import "../src/OwnableByERC721Upgradeable.sol";
 
 import {ERC721Mock} from "openzeppelin-contracts/contracts/mocks/ERC721Mock.sol";
 
-contract MyOwnable is OwnableByERC721Upgradeable {
+contract MyOwnable is TransferableOwnableByERC721Upgradeable {
 
   // simple default implementation
   function init(address kontract, uint256 tokenId) initializer public {

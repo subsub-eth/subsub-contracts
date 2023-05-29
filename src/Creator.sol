@@ -7,6 +7,7 @@ import "forge-std/console.sol";
 
 // TODO add meta information, name, links, etc
 // TODO max supply?
+// TODO bind to another ERC721 for identity verification
 contract Creator is ERC721Upgradeable {
     uint256 public totalSupply;
 

@@ -56,7 +56,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         );
         subscription = Subscription(address(subscriptionProxy));
         subscription.initialize(
-            testToken,
+            address(testToken),
             rate,
             lock,
             epochSize,
@@ -80,31 +80,31 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     function testConstruct_not0token() public {
         Subscription sub = createSubWithProxy();
         vm.expectRevert("SUB: token cannot be 0 address");
-        sub.initialize(IERC20Metadata(address(0)), 10, 0, 10, address(1), 1);
+        sub.initialize(address(0), 10, 0, 10, address(1), 1);
     }
 
     function testConstruct_not0rate() public {
         Subscription sub = createSubWithProxy();
         vm.expectRevert("SUB: rate cannot be 0");
-        sub.initialize(testToken, 0, 0, 10, address(1), 1);
+        sub.initialize(address(testToken), 0, 0, 10, address(1), 1);
     }
 
     function testConstruct_not0epochSize() public {
         Subscription sub = createSubWithProxy();
         vm.expectRevert("SUB: invalid epochSize");
-        sub.initialize(testToken, 10, 10_000, 0, address(1), 1);
+        sub.initialize(address(testToken), 10, 10_000, 0, address(1), 1);
     }
 
     function testConstruct_lockTooLarge() public {
         Subscription sub = createSubWithProxy();
         vm.expectRevert("SUB: lock percentage out of range");
-        sub.initialize(testToken, 10, 10_001, 10, address(0), 1);
+        sub.initialize(address(testToken), 10, 10_001, 10, address(0), 1);
     }
 
     function testConstruct_not0OwnerContract() public {
         Subscription sub = createSubWithProxy();
         vm.expectRevert("SUB: creator address not set");
-        sub.initialize(testToken, 10, 0, 10, address(0), 1);
+        sub.initialize(address(testToken), 10, 0, 10, address(0), 1);
     }
 
     function mintToken(address user, uint256 amount)
