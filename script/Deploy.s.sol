@@ -37,6 +37,8 @@ contract DeployScript is Script {
                 abi.encodeWithSignature("initialize()")
             );
         Creator creator = Creator(address(creatorProxy));
+        console.log("Creator Contract", address(creator));
+
         uint256 creatorId = creator.mint();
 
         SubscriptionManager managerImpl = new SubscriptionManager();
@@ -51,8 +53,14 @@ contract DeployScript is Script {
                 )
             );
 
+        SubscriptionManager manager = SubscriptionManager(
+            address(managerProxy)
+        );
+        console.log("Manager Contract", address(manager));
+
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
             ERC20DecimalsMock token = new ERC20DecimalsMock("Test", "TEST", 18);
+            console.log("Test ERC20 Token Contract", address(token));
             token.mint(address(10), 100_000);
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
@@ -70,6 +78,7 @@ contract DeployScript is Script {
                 );
 
                 Subscription subscription = Subscription(address(proxy));
+                console.log("Subscription Contract", address(subscription));
             }
         }
 
