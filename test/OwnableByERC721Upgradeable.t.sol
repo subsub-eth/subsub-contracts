@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/OwnableByERC721Upgradeable.sol";
 
-import {ERC721Mock} from "openzeppelin-contracts/contracts/mocks/ERC721Mock.sol";
+import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 
 contract MyOwnable is TransferableOwnableByERC721Upgradeable {
 

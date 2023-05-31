@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 
-import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
+import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
 
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -59,7 +59,7 @@ contract DeployScript is Script {
         console.log("Manager Contract", address(manager));
 
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
-            ERC20DecimalsMock token = new ERC20DecimalsMock("Test", "TEST", 18);
+            ERC20DecimalsMock token = new ERC20DecimalsMock(18);
             console.log("Test ERC20 Token Contract", address(token));
             token.mint(address(10), 100_000);
 

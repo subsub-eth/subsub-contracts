@@ -9,7 +9,7 @@ import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
 import {SubscriptionLib} from "../src/SubscriptionLib.sol";
 import {Creator} from "../src/Creator.sol";
 
-import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
+import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
@@ -47,7 +47,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function createContracts(uint8 decimals) private {
-        testToken = new ERC20DecimalsMock("Test", "TEST", decimals);
+        testToken = new ERC20DecimalsMock(decimals);
         // init simple proxy setup
         subscriptionImplementation = new Subscription();
         subscriptionProxy = new ERC1967Proxy(

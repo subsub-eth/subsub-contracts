@@ -7,7 +7,7 @@ import "../src/Subscription.sol";
 
 import {SubscriptionLib} from "../src/SubscriptionLib.sol";
 
-import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
+import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
 
 contract SubscriptionLibTest is Test {
     using SubscriptionLib for uint256;
@@ -15,7 +15,7 @@ contract SubscriptionLibTest is Test {
     function setUp() public {}
 
     function createToken(uint8 decimals) private returns (ERC20DecimalsMock) {
-        return new ERC20DecimalsMock("Test", "TEST", decimals);
+        return new ERC20DecimalsMock(decimals);
     }
 
     function testToInternal_18() public {

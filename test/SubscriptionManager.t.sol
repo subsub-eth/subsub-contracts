@@ -6,7 +6,7 @@ import "../src/ISubscriptionManager.sol";
 import "../src/SubscriptionManager.sol";
 import "../src/Subscription.sol";
 
-import {ERC721Mock} from "openzeppelin-contracts/contracts/mocks/ERC721Mock.sol";
+import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 

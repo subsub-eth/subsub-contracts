@@ -8,7 +8,7 @@ import "../src/Subscription.sol";
 import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
 import {Creator} from "../src/Creator.sol";
 
-import {ERC20DecimalsMock} from "openzeppelin-contracts/contracts/mocks/ERC20DecimalsMock.sol";
+import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // TODO test mint/renew with amount==0
@@ -46,7 +46,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(owner);
         ownerTokenId = creator.mint();
 
-        testToken = new ERC20DecimalsMock("Test", "TEST", 18);
+        testToken = new ERC20DecimalsMock(18);
 
         // init simple proxy setup
         subscriptionImplementation = new Subscription();
