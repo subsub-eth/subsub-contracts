@@ -9,6 +9,8 @@ import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/Pro
 
 // TODO test mint/renew with amount==0
 contract CreatorTest is Test {
+    event Minted(address indexed to, uint256 indexed tokenId);
+
     Creator public creator;
     Creator public implementation;
     TransparentUpgradeableProxy public proxy;
@@ -40,13 +42,19 @@ contract CreatorTest is Test {
     }
 
     function testMint() public {
-        vm.prank(alice);
+        vm.startPrank(alice);
+
+        vm.expectEmit(true, true, true, true);
+        emit Minted(alice, 1);
         uint256 aliceTokenId = creator.mint();
 
         assertEq(creator.ownerOf(aliceTokenId), alice, "alice minted a token");
         assertEq(creator.totalSupply(), 1, "1 token minted");
 
-        vm.prank(bob);
+        vm.startPrank(bob);
+
+        vm.expectEmit(true, true, true, true);
+        emit Minted(bob, 2);
         uint256 bobTokenId = creator.mint();
         assertEq(creator.ownerOf(bobTokenId), bob, "bob minted a token");
 
