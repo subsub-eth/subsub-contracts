@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "description": "CreateZ contracts",
   "scripts": {
-    "clean": "rimraf types",
-    "generate-types": "npm run generate-types-ethers-v6",
+    "clean": "rimraf types dist",
+    "pack-unpack": "rimraf dist && pnpm pack && mkdir dist && tar --strip-components=1 -xvzf createz-contracts-*.tgz -C dist && rimraf createz-contracts-*.tgz",
+    "generate-types": "pnpm run generate-types-ethers-v6",
     "generate-types-ethers-v6": "typechain --target=ethers-v6 --show-stack-traces --discriminate-types 'out/*.sol/*.json'"
   },
   "files": [
@@ -33,5 +34,8 @@
     "@typechain/ethers-v6": "^0.3.2",
     "rimraf": "^5.0.1",
     "typechain": "^8.1.1"
+  },
+  "dependencies": {
+    "@createz/contracts": "^0.0.1"
   }
 }

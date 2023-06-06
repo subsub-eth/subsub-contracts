@@ -19,3 +19,9 @@ node_modules/
 
 # typechain
 types/
+
+# node packages
+createz-contracts*.tgz
+
+# temp node dist folder for pnpm link
+dist/
