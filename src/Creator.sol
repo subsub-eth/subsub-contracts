@@ -5,6 +5,8 @@ import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/to
 
 import "forge-std/console.sol";
 
+// TODO change token id generation
+// TODO list tokens of user X
 // TODO add meta information, name, links, etc
 // TODO max supply?
 // TODO bind to another ERC721 for identity verification
