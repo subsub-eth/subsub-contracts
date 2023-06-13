@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-dependencies:
-  '@createz/contracts':
-    specifier: ^0.0.1
-    version: link:dist
-
 devDependencies:
   '@typechain/ethers-v6':
     specifier: ^0.3.2

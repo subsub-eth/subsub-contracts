@@ -1,6 +1,6 @@
 {
   "name": "@createz/contracts",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "CreateZ contracts",
   "scripts": {
     "clean": "rimraf types dist",
@@ -34,8 +34,5 @@
     "@typechain/ethers-v6": "^0.3.2",
     "rimraf": "^5.0.1",
     "typechain": "^8.1.1"
-  },
-  "dependencies": {
-    "@createz/contracts": "^0.0.1"
   }
 }
