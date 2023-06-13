@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {CountersUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
 
 import "forge-std/console.sol";
 
 // TODO change token id generation
-// TODO list tokens of user X
+// TODO add burn
+// TODO add gap?
+// TODO fix supportsInterface
 // TODO add meta information, name, links, etc
 // TODO max supply?
 // TODO bind to another ERC721 for identity verification
-contract Creator is ERC721Upgradeable {
+contract Creator is ERC721EnumerableUpgradeable {
     event Minted(address indexed to, uint256 indexed tokenId);
 
-    uint256 public totalSupply;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    CountersUpgradeable.Counter private _tokenIdTracker;
 
     constructor() {
         // disable direct usage of implementation contract
@@ -26,7 +30,8 @@ contract Creator is ERC721Upgradeable {
     }
 
     function mint() external returns (uint256) {
-        uint256 tokenId = ++totalSupply;
+        _tokenIdTracker.increment();
+        uint256 tokenId = _tokenIdTracker.current();
 
         _safeMint(_msgSender(), tokenId);
 
