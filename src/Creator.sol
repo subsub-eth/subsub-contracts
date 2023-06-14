@@ -4,6 +4,9 @@ pragma solidity ^0.8.20;
 import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {CountersUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
 
+import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+
 import "forge-std/console.sol";
 
 // TODO change token id generation
@@ -16,6 +19,7 @@ import "forge-std/console.sol";
 contract Creator is ERC721EnumerableUpgradeable {
     event Minted(address indexed to, uint256 indexed tokenId);
 
+    using Strings for uint256;
     using CountersUpgradeable for CountersUpgradeable.Counter;
     CountersUpgradeable.Counter private _tokenIdTracker;
 
@@ -38,5 +42,34 @@ contract Creator is ERC721EnumerableUpgradeable {
         emit Minted(_msgSender(), tokenId);
 
         return tokenId;
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        _requireMinted(tokenId);
+
+        string memory output = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name": "Creator: ',
+                        tokenId.toString(),
+                        '", "description": "Creator token"',
+                        '}'
+                    )
+                )
+            )
+        );
+
+        output = string(
+            abi.encodePacked("data:application/json;base64,", output)
+        );
+
+        return output;
     }
 }
