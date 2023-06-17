@@ -21,11 +21,20 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 // TODO max supply?
 // TODO bind to another ERC721 for identity verification
 contract Creator is ICreator, ERC721EnumerableUpgradeable {
-    event Minted(address indexed to, uint256 indexed tokenId);
-
     using Strings for uint256;
     using CountersUpgradeable for CountersUpgradeable.Counter;
+
+    event Minted(address indexed to, uint256 indexed tokenId);
+
+    struct CreatorData {
+        string name;
+        string description;
+        string image;
+        string externalUrl;
+    }
+
     CountersUpgradeable.Counter private _tokenIdTracker;
+    mapping(uint256 => CreatorData) private creatorData;
 
     constructor() {
         // disable direct usage of implementation contract
@@ -36,10 +45,22 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
         __ERC721_init("CreateZ Creator Profile", "crzP");
     }
 
-    function mint() external returns (uint256) {
+    function mint(
+        string memory _name,
+        string memory _description,
+        string memory _image,
+        string memory _externalUrl
+    ) external returns (uint256) {
+        require(bytes(_name).length > 2, "crzP: name too short");
         _tokenIdTracker.increment();
         uint256 tokenId = _tokenIdTracker.current();
 
+        creatorData[tokenId] = CreatorData(
+            _name,
+            _description,
+            _image,
+            _externalUrl
+        );
         _safeMint(_msgSender(), tokenId);
 
         emit Minted(_msgSender(), tokenId);
@@ -60,10 +81,16 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
             bytes(
                 string(
                     abi.encodePacked(
-                        '{"name": "Creator: ',
-                        tokenId.toString(),
-                        '", "description": "Creator token"',
-                        '}'
+                        '{"name":"',
+                        creatorData[tokenId].name,
+                        '","description":"',
+                        creatorData[tokenId].description,
+                        '","image":"',
+                        creatorData[tokenId].image,
+                        '","external_url":"',
+                        creatorData[tokenId].externalUrl,
+                        '"',
+                        "}"
                     )
                 )
             )
@@ -77,6 +104,7 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
     }
 
     function contractURI() external pure returns (string memory) {
-      return '{"name": "Creator Profile", "description": "Creator Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }';
+        return
+            '{"name": "Creator Profile", "description": "Creator Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }';
     }
 }

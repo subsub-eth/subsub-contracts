@@ -44,7 +44,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         decimals = 6;
         creator = new Creator();
         vm.prank(owner);
-        ownerTokenId = creator.mint();
+        ownerTokenId = creator.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(decimals);
         // init simple proxy setup

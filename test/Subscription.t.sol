@@ -44,7 +44,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         epochSize = 10;
         creator = new Creator();
         vm.prank(owner);
-        ownerTokenId = creator.mint();
+        ownerTokenId = creator.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(18);
 

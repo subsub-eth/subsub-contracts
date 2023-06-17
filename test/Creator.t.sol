@@ -46,7 +46,7 @@ contract CreatorTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit Minted(alice, 1);
-        uint256 aliceTokenId = creator.mint();
+        uint256 aliceTokenId = creator.mint("test", "test", "test", "test");
 
         assertEq(creator.ownerOf(aliceTokenId), alice, "alice minted a token");
         assertEq(creator.totalSupply(), 1, "1 token minted");
@@ -55,7 +55,7 @@ contract CreatorTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit Minted(bob, 2);
-        uint256 bobTokenId = creator.mint();
+        uint256 bobTokenId = creator.mint("test", "test", "test", "test");
         assertEq(creator.ownerOf(bobTokenId), bob, "bob minted a token");
 
         assertLt(aliceTokenId, bobTokenId, "token ids are unique");

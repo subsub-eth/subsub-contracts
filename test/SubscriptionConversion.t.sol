@@ -43,7 +43,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         epochSize = 100;
         creator = new Creator();
         vm.prank(owner);
-        ownerTokenId = creator.mint();
+        ownerTokenId = creator.mint("test", "test", "test", "test");
     }
 
     function createContracts(uint8 decimals) private {

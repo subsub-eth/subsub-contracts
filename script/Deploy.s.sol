@@ -39,7 +39,7 @@ contract DeployScript is Script {
         Creator creator = Creator(address(creatorProxy));
         console.log("Creator Contract", address(creator));
 
-        uint256 creatorId = creator.mint();
+        uint256 creatorId = creator.mint("test", "test", "test", "test");
 
         SubscriptionManager managerImpl = new SubscriptionManager();
         ProxyAdmin managerAdmin = new ProxyAdmin();
