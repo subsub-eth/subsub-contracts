@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/ISubscriptionManager.sol";
 import "../src/SubscriptionManager.sol";
-import "../src/Subscription.sol";
+import "../src/subscription/Subscription.sol";
 
 import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 

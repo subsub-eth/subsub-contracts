@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/Creator.sol";
+import "../src/creator/Creator.sol";
 
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
@@ -37,8 +37,8 @@ contract CreatorTest is Test {
         assertEq(implementation.name(), "", "name is not set on implementation");
         assertEq(implementation.symbol(), "", "symbol is not set on implementation");
 
-        assertEq(creator.name(), "Creator", "name is set");
-        assertEq(creator.symbol(), "CRE", "symbol is set");
+        assertEq(creator.name(), "CreateZ Creator Profile", "name is set");
+        assertEq(creator.symbol(), "crzP", "symbol is set");
     }
 
     function testMint() public {

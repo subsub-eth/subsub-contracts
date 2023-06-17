@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {ISubscriptionManager} from "./ISubscriptionManager.sol";
 
-import {Subscription} from "./Subscription.sol";
+import {Subscription} from "./subscription/Subscription.sol";
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";

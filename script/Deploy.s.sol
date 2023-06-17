@@ -12,8 +12,8 @@ import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/U
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
-import "../src/Creator.sol";
-import "../src/Subscription.sol";
+import "../src/creator/Creator.sol";
+import "../src/subscription/Subscription.sol";
 import "../src/SubscriptionManager.sol";
 
 contract DeployScript is Script {

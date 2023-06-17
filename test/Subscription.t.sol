@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import "../src/Subscription.sol";
+import "../src/subscription/Subscription.sol";
 
-import {SubscriptionEvents, ClaimEvents} from "../src/ISubscription.sol";
-import {Creator} from "../src/Creator.sol";
+import {SubscriptionEvents, ClaimEvents} from "../src/subscription/ISubscription.sol";
+import {Creator} from "../src/creator/Creator.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";

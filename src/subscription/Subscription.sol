@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ISubscription} from "./ISubscription.sol";
-import {OwnableByERC721Upgradeable} from "./OwnableByERC721Upgradeable.sol";
+import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 
 import {PausableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
