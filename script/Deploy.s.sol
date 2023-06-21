@@ -61,24 +61,18 @@ contract DeployScript is Script {
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
             ERC20DecimalsMock token = new ERC20DecimalsMock(18);
             console.log("Test ERC20 Token Contract", address(token));
+            token.mint(address(this), 100_000);
             token.mint(address(10), 100_000);
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
-                BeaconProxy proxy = new BeaconProxy(
-                    address(beacon),
-                    abi.encodeWithSelector(
-                        subscriptionImplementation.initialize.selector,
-                        address(token),
-                        1,
-                        0,
-                        100,
-                        address(creator),
-                        creatorId
-                    )
+                address subscription = manager.createSubscription(
+                    address(token),
+                    1,
+                    0,
+                    100,
+                    creatorId
                 );
-
-                Subscription subscription = Subscription(address(proxy));
-                console.log("Subscription Contract", address(subscription));
+                console.log("Subscription Contract", subscription);
             }
         }
 
