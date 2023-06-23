@@ -28,6 +28,17 @@ interface SubscriptionEvents {
     );
 }
 
+struct Metadata {
+    string title;
+    string description;
+    string image;
+    string externalUrl;
+}
+
+interface SubscriptionMetadata {
+    function contractURI() external view returns (string memory);
+}
+
 interface Subscribable is SubscriptionEvents {
     /// @notice adds deposits to an existing subscription token
     function renew(
@@ -77,7 +88,8 @@ interface ISubscription is
     IERC721Upgradeable,
     IERC721MetadataUpgradeable,
     Subscribable,
-    Claimable
+    Claimable,
+    SubscriptionMetadata
 {
     /// @notice "Mints" a new subscription token
     function mint(

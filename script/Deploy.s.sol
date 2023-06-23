@@ -13,11 +13,21 @@ import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/prox
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
 import "../src/creator/Creator.sol";
+import "../src/subscription/ISubscription.sol";
 import "../src/subscription/Subscription.sol";
 import "../src/SubscriptionManager.sol";
 
 contract DeployScript is Script {
-    function setUp() public {}
+    Metadata private metadata;
+
+    function setUp() public {
+        metadata = Metadata(
+            "PeterTest's Tier 1",
+            "You gain access to my heart",
+            "https://example.com/profiles/peter-t1.png",
+            "https://example.com"
+        );
+    }
 
     function run() public {
         vm.startBroadcast();
@@ -39,7 +49,12 @@ contract DeployScript is Script {
         Creator creator = Creator(address(creatorProxy));
         console.log("Creator Contract", address(creator));
 
-        uint256 creatorId = creator.mint("test", "test", "test", "test");
+        uint256 creatorId = creator.mint(
+            "PeterTest",
+            "I am a super cool influencer",
+            "https://example.com/profiles/peter.png",
+            "https://example.com"
+        );
 
         SubscriptionManager managerImpl = new SubscriptionManager();
         ProxyAdmin managerAdmin = new ProxyAdmin();
@@ -66,6 +81,9 @@ contract DeployScript is Script {
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
                 address subscription = manager.createSubscription(
+                    "My Tier 1 Subscription",
+                    "SUBt1",
+                    metadata,
                     address(token),
                     1,
                     0,

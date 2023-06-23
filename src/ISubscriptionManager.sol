@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import {IERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
 import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
+import {Metadata} from "./subscription/ISubscription.sol";
+
 // TODO add comments
 interface SubscriptionManagerEvents {
     // add more values?
@@ -22,6 +24,9 @@ interface ISubscriptionManager is SubscriptionManagerEvents {
         returns (address[] memory);
 
     function createSubscription(
+        string calldata _name,
+        string calldata _symbol,
+        Metadata calldata _metadata,
         address _token,
         uint256 _rate,
         uint256 _lock,

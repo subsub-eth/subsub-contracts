@@ -32,11 +32,20 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
     string public message;
 
+    Metadata public metadata;
+
     function setUp() public {
         owner = address(1);
         alice = address(10);
 
         message = "Hello World";
+
+        metadata = Metadata(
+            "test",
+            "test",
+            "test",
+            "test"
+        );
 
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;
@@ -56,6 +65,9 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         );
         subscription = Subscription(address(subscriptionProxy));
         subscription.initialize(
+            "test",
+            "test",
+            metadata,
             address(testToken),
             rate,
             lock,

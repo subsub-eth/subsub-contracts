@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscription} from "./ISubscription.sol";
+import {ISubscription, Metadata} from "./ISubscription.sol";
 import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 
@@ -9,7 +9,10 @@ import {PausableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract Subscription is
     ISubscription,
@@ -19,6 +22,8 @@ contract Subscription is
 {
     // should the tokenId 0 == owner?
 
+    // TODO add ERC 4906 metadata events
+    // TODO use structs to combine fields/members?
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
     // TODO max supply?
@@ -48,6 +53,8 @@ contract Subscription is
         uint256 starting; // number of starting subscriptions
         uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
     }
+
+    Metadata public metadata;
 
     uint256 public constant MULTIPLIER_BASE = 100;
 
@@ -94,6 +101,9 @@ contract Subscription is
     }
 
     function initialize(
+        string calldata tokenName,
+        string calldata tokenSymbol,
+        Metadata calldata _metadata,
         address _token,
         uint256 _rate,
         uint256 _lock,
@@ -113,9 +123,11 @@ contract Subscription is
 
         // call initializers of inherited contracts
         // TODO set metadata
-        __ERC721_init_unchained("Subscription", "SUB");
+        __ERC721_init_unchained(tokenName, tokenSymbol);
         __OwnableByERC721_init_unchained(creatorContract, creatorTokenId);
         __Pausable_init_unchained();
+
+        metadata = _metadata;
 
         // TODO check validity of token
         token = IERC20Metadata(_token);
@@ -124,6 +136,33 @@ contract Subscription is
         epochSize = _epochSize;
 
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
+    }
+
+    function contractURI() external view returns (string memory) {
+        string memory output = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name":"',
+                        metadata.title,
+                        '","description":"',
+                        metadata.description,
+                        '","image":"',
+                        metadata.image,
+                        '","external_url":"',
+                        metadata.externalUrl,
+                        '"',
+                        "}"
+                    )
+                )
+            )
+        );
+
+        output = string(
+            abi.encodePacked("data:application/json;base64,", output)
+        );
+
+        return output;
     }
 
     function getCurrentEpoch() internal view returns (uint256) {

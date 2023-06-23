@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/ISubscriptionManager.sol";
 import "../src/SubscriptionManager.sol";
 import "../src/subscription/Subscription.sol";
+import "../src/subscription/ISubscription.sol";
 
 import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 
@@ -24,6 +25,8 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
     IBeacon private beacon;
     Subscription private subscription;
 
+    Metadata private metadata;
+
     address[] private createdContracts; // side effect?
 
     function setUp() public {
@@ -31,6 +34,8 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         beacon = new UpgradeableBeacon(address(subscription));
         creator = new ERC721Mock("test", "test");
         creatorTokenId = 10;
+
+        metadata = Metadata("test", "test", "test", "test");
 
         creator.mint(address(this), creatorTokenId);
 
@@ -55,6 +60,9 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
 
         address token = address(1);
         address result = manager.createSubscription(
+            "My Subscription",
+            "SUB",
+            metadata,
             token,
             1,
             10,
@@ -82,7 +90,16 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         vm.expectRevert("Manager: Not owner of token");
         vm.startPrank(address(1234));
 
-        manager.createSubscription(address(1), 1, 10, 100, creatorTokenId);
+        manager.createSubscription(
+            "My Subscription",
+            "SUB",
+            metadata,
+            address(1),
+            1,
+            10,
+            100,
+            creatorTokenId
+        );
     }
 
     function testCreateSubscription_multipleContracts() public {
@@ -90,6 +107,9 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
 
         for (uint256 i = 0; i < 100; i++) {
             address result = manager.createSubscription(
+                "My Subscription",
+                "SUB",
+                metadata,
                 token,
                 1,
                 10,

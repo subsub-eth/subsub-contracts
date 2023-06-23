@@ -13,6 +13,7 @@ import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 // metadata https://docs.opensea.io/docs/metadata-standards
+// TODO add ERC 4906 metadata events
 // TODO change token id generation
 // TODO add burn
 // TODO add gap?
@@ -96,15 +97,17 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
             )
         );
 
-        output = string(
-            abi.encodePacked("data:application/json;base64,", output)
-        );
-
-        return output;
+        return string.concat("data:application/json;base64,", output);
     }
 
     function contractURI() external pure returns (string memory) {
-        return
-            '{"name": "Creator Profile", "description": "Creator Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }';
+        string memory json = Base64.encode(
+            bytes(
+                string(
+                    '{"name": "Creator Profile", "description": "Creator Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }'
+                )
+            )
+        );
+        return string.concat("data:application/json;base64,", json);
     }
 }
