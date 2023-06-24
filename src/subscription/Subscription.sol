@@ -33,6 +33,7 @@ contract Subscription is
     // TODO retire function, sends token.balance to owner
     // TODO ownable interface?
     // TODO pausable interface?
+    // TODO refactor block.number to abstract time => _now()
 
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
