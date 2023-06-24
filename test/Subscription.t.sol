@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
 
-import {SubscriptionEvents, ClaimEvents, Metadata} from "../src/subscription/ISubscription.sol";
+import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings} from "../src/subscription/ISubscription.sol";
 import {Creator} from "../src/creator/Creator.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
@@ -32,6 +32,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     string public message;
 
     Metadata public metadata;
+    SubSettings public settings;
 
     function setUp() public {
         owner = address(1);
@@ -41,12 +42,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         message = "Hello World";
 
-        metadata = Metadata(
-            "test",
-            "test",
-            "test",
-            "test"
-        );
+        metadata = Metadata("test", "test", "test", "test");
 
         rate = 5;
         lock = 100;
@@ -56,6 +52,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         ownerTokenId = creator.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(18);
+        settings = SubSettings(testToken, rate, lock, epochSize);
 
         // init simple proxy setup
         subscriptionImplementation = new Subscription();
@@ -68,10 +65,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "test",
             "test",
             metadata,
-            address(testToken),
-            rate,
-            lock,
-            epochSize,
+            settings,
             address(creator),
             ownerTokenId
         );
@@ -91,82 +85,53 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
     function testConstruct_not0token() public {
         Subscription sub = createSubWithProxy();
+        settings.token = ERC20DecimalsMock(address(0));
+        settings.rate = 10;
+        settings.lock = 0;
+        settings.epochSize = 10;
+
         vm.expectRevert("SUB: token cannot be 0 address");
-        sub.initialize(
-            "test",
-            "test",
-            metadata,
-            address(0),
-            10,
-            0,
-            10,
-            address(1),
-            1
-        );
+        sub.initialize("test", "test", metadata, settings, address(1), 1);
     }
 
     function testConstruct_not0rate() public {
         Subscription sub = createSubWithProxy();
+        settings.token = testToken;
+        settings.rate = 0;
+        settings.lock = 0;
+        settings.epochSize = 10;
         vm.expectRevert("SUB: rate cannot be 0");
-        sub.initialize(
-            "test",
-            "test",
-            metadata,
-            address(testToken),
-            0,
-            0,
-            10,
-            address(1),
-            1
-        );
+        sub.initialize("test", "test", metadata, settings, address(1), 1);
     }
 
     function testConstruct_not0epochSize() public {
         Subscription sub = createSubWithProxy();
+        settings.token = testToken;
+        settings.rate = 10;
+        settings.lock = 10_000;
+        settings.epochSize = 0;
         vm.expectRevert("SUB: invalid epochSize");
-        sub.initialize(
-            "test",
-            "test",
-            metadata,
-            address(testToken),
-            10,
-            10_000,
-            0,
-            address(1),
-            1
-        );
+        sub.initialize("test", "test", metadata, settings, address(1), 1);
     }
 
     function testConstruct_lockTooLarge() public {
         Subscription sub = createSubWithProxy();
+        settings.token = testToken;
+        settings.rate = 10;
+        settings.lock = 10_001;
+        settings.epochSize = 10;
         vm.expectRevert("SUB: lock percentage out of range");
-        sub.initialize(
-            "test",
-            "test",
-            metadata,
-            address(testToken),
-            10,
-            10_001,
-            10,
-            address(0),
-            1
-        );
+        sub.initialize("test", "test", metadata, settings, address(0), 1);
     }
 
     function testConstruct_not0OwnerContract() public {
         Subscription sub = createSubWithProxy();
+        settings.token = testToken;
+        settings.rate = 10;
+        settings.lock = 0;
+        settings.epochSize = 10;
         vm.expectRevert("SUB: creator address not set");
-        sub.initialize(
-            "test",
-            "test",
-            metadata,
-            address(testToken),
-            10,
-            0,
-            10,
-            address(0),
-            1
-        );
+        sub.initialize("test", "test", metadata, settings, address(0), 1);
     }
 
     function mintToken(address user, uint256 amount)

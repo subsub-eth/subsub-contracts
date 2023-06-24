@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
 import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
@@ -33,6 +34,19 @@ struct Metadata {
     string description;
     string image;
     string externalUrl;
+}
+
+struct SubSettings {
+    IERC20Metadata token;
+    /// @notice rate per block
+    /// @dev the amount of tokens paid per block based on 18 decimals
+    uint256 rate;
+    // locked % of deposited amount
+    // 0 - 10000
+    // TODO uint32
+    uint256 lock;
+    // time of contract's inception
+    uint256 epochSize;
 }
 
 interface SubscriptionMetadata {

@@ -8,6 +8,7 @@ import "../src/subscription/Subscription.sol";
 import "../src/subscription/ISubscription.sol";
 
 import {ERC721Mock} from "./mocks/ERC721Mock.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
@@ -26,6 +27,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
     Subscription private subscription;
 
     Metadata private metadata;
+    SubSettings private settings;
 
     address[] private createdContracts; // side effect?
 
@@ -36,6 +38,10 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         creatorTokenId = 10;
 
         metadata = Metadata("test", "test", "test", "test");
+        settings.token = IERC20Metadata(address(1));
+        settings.rate = 1;
+        settings.lock = 10;
+        settings.epochSize = 100;
 
         creator.mint(address(this), creatorTokenId);
 
@@ -58,23 +64,23 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         vm.expectEmit(true, false, false, false);
         emit SubscriptionContractCreated(creatorTokenId, address(0));
 
-        address token = address(1);
+        address token = address(12345);
+        settings.token = IERC20Metadata(token);
+
         address result = manager.createSubscription(
             "My Subscription",
             "SUB",
             metadata,
-            token,
-            1,
-            10,
-            100,
+            settings,
             creatorTokenId
         );
         assertFalse(result == address(0), "contract not created");
         assertTrue(result.isContract(), "result is actually a contract");
 
+        (IERC20Metadata resToken, , , ) = Subscription(result).settings();
         assertEq(
             token,
-            address(Subscription(result).token()),
+            address(resToken),
             "new contract initialized, token is set"
         );
 
@@ -94,34 +100,30 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
             "My Subscription",
             "SUB",
             metadata,
-            address(1),
-            1,
-            10,
-            100,
+            settings,
             creatorTokenId
         );
     }
 
     function testCreateSubscription_multipleContracts() public {
         address token = address(1);
+        settings.token = IERC20Metadata(token);
 
         for (uint256 i = 0; i < 100; i++) {
             address result = manager.createSubscription(
                 "My Subscription",
                 "SUB",
                 metadata,
-                token,
-                1,
-                10,
-                100,
+                settings,
                 creatorTokenId
             );
             assertFalse(result == address(0), "contract not created");
             assertTrue(result.isContract(), "result is actually a contract");
 
+            (IERC20Metadata resToken, , , ) = Subscription(result).settings();
             assertEq(
                 token,
-                address(Subscription(result).token()),
+                address(resToken),
                 "new contract initialized, token is set"
             );
             createdContracts.push(result);

@@ -33,6 +33,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     string public message;
 
     Metadata public metadata;
+    SubSettings public settings;
 
     function setUp() public {
         owner = address(1);
@@ -40,12 +41,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         message = "Hello World";
 
-        metadata = Metadata(
-            "test",
-            "test",
-            "test",
-            "test"
-        );
+        metadata = Metadata("test", "test", "test", "test");
 
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;
@@ -57,6 +53,8 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
     function createContracts(uint8 decimals) private {
         testToken = new ERC20DecimalsMock(decimals);
+        settings = SubSettings(testToken, rate, lock, epochSize);
+
         // init simple proxy setup
         subscriptionImplementation = new Subscription();
         subscriptionProxy = new ERC1967Proxy(
@@ -68,10 +66,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
             "test",
             "test",
             metadata,
-            address(testToken),
-            rate,
-            lock,
-            epochSize,
+            settings,
             address(creator),
             ownerTokenId
         );

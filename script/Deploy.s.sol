@@ -5,6 +5,7 @@ import "forge-std/Script.sol";
 import "forge-std/console.sol";
 
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -19,6 +20,7 @@ import "../src/SubscriptionManager.sol";
 
 contract DeployScript is Script {
     Metadata private metadata;
+    SubSettings private settings;
 
     function setUp() public {
         metadata = Metadata(
@@ -27,6 +29,11 @@ contract DeployScript is Script {
             "https://example.com/profiles/peter-t1.png",
             "https://example.com"
         );
+
+        settings.token = IERC20Metadata(address(1));
+        settings.rate = 1;
+        settings.lock = 0;
+        settings.epochSize = 100;
     }
 
     function run() public {
@@ -80,14 +87,12 @@ contract DeployScript is Script {
             token.mint(address(10), 100_000);
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
+                settings.token = token;
                 address subscription = manager.createSubscription(
                     "My Tier 1 Subscription",
                     "SUBt1",
                     metadata,
-                    address(token),
-                    1,
-                    0,
-                    100,
+                    settings,
                     creatorId
                 );
                 console.log("Subscription Contract", subscription);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscription, Metadata} from "./ISubscription.sol";
+import {ISubscription, Metadata, SubSettings} from "./ISubscription.sol";
 import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 
@@ -55,25 +55,16 @@ contract Subscription is
         uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
     }
 
-    Metadata public metadata;
-
     uint256 public constant MULTIPLIER_BASE = 100;
-
-    uint256 public totalSupply;
-
-    IERC20Metadata public token;
-
-    /// @notice rate per block
-    /// @dev the amount of tokens paid per block based on 18 decimals
-    uint256 public rate;
-
-    // locked % of deposited amount
-    // 0 - 10000
-    // TODO uint32
-    uint256 public lock;
     uint256 public constant LOCK_BASE = 10_000;
 
+    Metadata public metadata;
+    SubSettings public settings;
+
     mapping(uint256 => SubscriptionData) private subData;
+    mapping(uint256 => Epoch) private epochs;
+
+    uint256 public totalSupply;
 
     // number of active subscriptions with a multiplier represented as shares
     // base 100:
@@ -81,16 +72,10 @@ contract Subscription is
     // 1 Sub * 2.5x == 250 shares
     uint256 public activeSubShares;
 
-    // time of contract's inception
-    // uint private creationBlock;
-    uint256 private epochSize;
-
     uint256 private _lastProcessedEpoch;
 
     // external amount
     uint256 public totalClaimed;
-
-    mapping(uint256 => Epoch) private epochs;
 
     modifier requireExists(uint256 tokenId) {
         require(_exists(tokenId), "SUB: subscription does not exist");
@@ -105,20 +90,17 @@ contract Subscription is
         string calldata tokenName,
         string calldata tokenSymbol,
         Metadata calldata _metadata,
-        address _token,
-        uint256 _rate,
-        uint256 _lock,
-        uint256 _epochSize,
+        SubSettings calldata _settings,
         address creatorContract,
         uint256 creatorTokenId
     ) external initializer {
-        require(_epochSize > 0, "SUB: invalid epochSize");
+        require(_settings.epochSize > 0, "SUB: invalid epochSize");
         require(
-            address(_token) != address(0),
+            address(_settings.token) != address(0),
             "SUB: token cannot be 0 address"
         );
-        require(_lock <= 10_000, "SUB: lock percentage out of range");
-        require(_rate > 0, "SUB: rate cannot be 0");
+        require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
+        require(_settings.rate > 0, "SUB: rate cannot be 0");
         // check that creatorContract is a contract of ERC721 and does have a tokenId
         require(creatorContract != address(0), "SUB: creator address not set");
 
@@ -129,12 +111,9 @@ contract Subscription is
         __Pausable_init_unchained();
 
         metadata = _metadata;
+        settings = _settings;
 
         // TODO check validity of token
-        token = IERC20Metadata(_token);
-        rate = _rate;
-        lock = _lock;
-        epochSize = _epochSize;
 
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
@@ -167,7 +146,7 @@ contract Subscription is
     }
 
     function getCurrentEpoch() internal view returns (uint256) {
-        return block.number / epochSize;
+        return block.number / settings.epochSize;
     }
 
     function pause() external onlyOwner {
@@ -194,9 +173,11 @@ contract Subscription is
         // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = ++totalSupply;
-        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
 
-        uint256 internalAmount = amount.toInternal(token).adjustToRate(mRate);
+        uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(
+            mRate
+        );
 
         subData[tokenId].mintedAt = block.number;
         subData[tokenId].lastDepositAt = block.number;
@@ -205,13 +186,13 @@ contract Subscription is
         subData[tokenId].multiplier = multiplier;
 
         // set lockedAmount
-        subData[tokenId].lockedAmount = ((internalAmount * lock) / LOCK_BASE)
-            .adjustToRate(mRate);
+        subData[tokenId].lockedAmount = ((internalAmount * settings.lock) /
+            LOCK_BASE).adjustToRate(mRate);
 
         addNewSubscriptionToEpochs(internalAmount, multiplier);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
-        token.safeTransferFrom(msg.sender, address(this), amount);
+        settings.token.safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
 
@@ -229,23 +210,24 @@ contract Subscription is
     function addNewSubscriptionToEpochs(uint256 amount, uint256 multiplier)
         internal
     {
-        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
         uint256 expiresAt_ = block.number + (amount / mRate);
 
         // TODO use _expiresAt(tokenId)
         // starting
         uint256 _currentEpoch = getCurrentEpoch();
         epochs[_currentEpoch].starting += multiplier;
-        uint256 remaining = (epochSize - (block.number % epochSize)).min(
-            expiresAt_ - block.number // subscription ends within current block
-        );
+        uint256 remaining = (settings.epochSize -
+            (block.number % settings.epochSize)).min(
+                expiresAt_ - block.number // subscription ends within current block
+            );
         epochs[_currentEpoch].partialFunds += (remaining * mRate);
 
         // ending
-        uint256 expiringEpoch = expiresAt_ / epochSize;
+        uint256 expiringEpoch = expiresAt_ / settings.epochSize;
         epochs[expiringEpoch].expiring += multiplier;
         epochs[expiringEpoch].partialFunds +=
-            (expiresAt_ - (expiringEpoch * epochSize)).min(
+            (expiresAt_ - (expiringEpoch * settings.epochSize)).min(
                 expiresAt_ - block.number // subscription ends within current block
             ) *
             mRate;
@@ -257,22 +239,23 @@ contract Subscription is
         uint256 _newDeposit,
         uint256 multiplier
     ) internal {
-        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
         // when does the sub currently end?
         uint256 oldExpiringAt = _lastDepositAt + (_oldDeposit / mRate);
         // update old epoch
-        uint256 oldEpoch = oldExpiringAt / epochSize;
+        uint256 oldEpoch = oldExpiringAt / settings.epochSize;
         epochs[oldEpoch].expiring -= multiplier;
         uint256 removable = (oldExpiringAt -
-            ((oldEpoch * epochSize).max(block.number))) * mRate;
+            ((oldEpoch * settings.epochSize).max(block.number))) * mRate;
         epochs[oldEpoch].partialFunds -= removable;
 
         // update new epoch
         uint256 newEndingBlock = _lastDepositAt + (_newDeposit / mRate);
-        uint256 newEpoch = newEndingBlock / epochSize;
+        uint256 newEpoch = newEndingBlock / settings.epochSize;
         epochs[newEpoch].expiring += multiplier;
         epochs[newEpoch].partialFunds +=
-            (newEndingBlock - ((newEpoch * epochSize).max(block.number))) *
+            (newEndingBlock -
+                ((newEpoch * settings.epochSize).max(block.number))) *
             mRate;
     }
 
@@ -283,8 +266,10 @@ contract Subscription is
         string calldata message
     ) external whenNotPaused requireExists(tokenId) {
         uint256 multiplier = subData[tokenId].multiplier;
-        uint256 mRate = (rate * multiplier) / MULTIPLIER_BASE;
-        uint256 internalAmount = amount.toInternal(token).adjustToRate(mRate);
+        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
+        uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(
+            mRate
+        );
         require(internalAmount >= mRate, "SUB: amount too small");
 
         uint256 oldExpiresAt = _expiresAt(tokenId);
@@ -311,12 +296,12 @@ contract Subscription is
         subData[tokenId].currentDeposit = deposit;
         subData[tokenId].lastDepositAt = block.number;
         subData[tokenId].totalDeposited += internalAmount;
-        subData[tokenId].lockedAmount = ((deposit * lock) / LOCK_BASE)
+        subData[tokenId].lockedAmount = ((deposit * settings.lock) / LOCK_BASE)
             .adjustToRate(mRate);
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
-        token.safeTransferFrom(msg.sender, address(this), amount);
+        settings.token.safeTransferFrom(msg.sender, address(this), amount);
 
         emit SubscriptionRenewed(
             tokenId,
@@ -331,7 +316,7 @@ contract Subscription is
         external
         requireExists(tokenId)
     {
-        _withdraw(tokenId, amount.toInternal(token));
+        _withdraw(tokenId, amount.toInternal(settings.token));
     }
 
     function cancel(uint256 tokenId) external requireExists(tokenId) {
@@ -359,8 +344,8 @@ contract Subscription is
         subData[tokenId].currentDeposit = newDeposit;
         subData[tokenId].totalDeposited -= amount;
 
-        uint256 externalAmount = amount.toExternal(token);
-        token.safeTransfer(msg.sender, externalAmount);
+        uint256 externalAmount = amount.toExternal(settings.token);
+        settings.token.safeTransfer(msg.sender, externalAmount);
 
         emit SubscriptionWithdrawn(
             tokenId,
@@ -384,7 +369,8 @@ contract Subscription is
         // active = [start, + deposit / rate)
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
-        uint256 mRate = (rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = (settings.rate * subData[tokenId].multiplier) /
+            MULTIPLIER_BASE;
 
         uint256 end = lastDeposit + (currentDeposit_ / mRate);
 
@@ -398,7 +384,7 @@ contract Subscription is
         returns (uint256)
     {
         // TODO is this the correct implementation?
-        return subData[tokenId].totalDeposited.toExternal(token);
+        return subData[tokenId].totalDeposited.toExternal(settings.token);
     }
 
     function expiresAt(uint256 tokenId)
@@ -413,7 +399,8 @@ contract Subscription is
     function _expiresAt(uint256 tokenId) internal view returns (uint256) {
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        uint256 mRate = (rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = (settings.rate * subData[tokenId].multiplier) /
+            MULTIPLIER_BASE;
         return lastDeposit + (currentDeposit_ / mRate);
     }
 
@@ -423,7 +410,7 @@ contract Subscription is
         requireExists(tokenId)
         returns (uint256)
     {
-        return _withdrawable(tokenId).toExternal(token);
+        return _withdrawable(tokenId).toExternal(settings.token);
     }
 
     function _withdrawable(uint256 tokenId) private view returns (uint256) {
@@ -434,7 +421,8 @@ contract Subscription is
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 lockedAmount = subData[tokenId].lockedAmount;
-        uint256 mRate = (rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = (settings.rate * subData[tokenId].multiplier) /
+            MULTIPLIER_BASE;
         uint256 usedBlocks = block.number - lastDeposit;
 
         return
@@ -456,7 +444,7 @@ contract Subscription is
         if (!_isActive(tokenId)) {
             spentAmount = totalDeposited;
         } else {
-            uint256 mRate = (rate * subData[tokenId].multiplier) /
+            uint256 mRate = (settings.rate * subData[tokenId].multiplier) /
                 MULTIPLIER_BASE;
             spentAmount =
                 totalDeposited -
@@ -464,7 +452,7 @@ contract Subscription is
                 ((block.number - subData[tokenId].lastDepositAt) * mRate);
         }
 
-        return spentAmount.toExternal(token);
+        return spentAmount.toExternal(settings.token);
     }
 
     function tip(
@@ -474,9 +462,9 @@ contract Subscription is
     ) external requireExists(tokenId) {
         require(amount > 0, "SUB: amount too small");
 
-        subData[tokenId].totalDeposited += amount.toInternal(token);
+        subData[tokenId].totalDeposited += amount.toInternal(settings.token);
 
-        token.safeTransferFrom(_msgSender(), address(this), amount);
+        settings.token.safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Tipped(
             tokenId,
@@ -510,10 +498,10 @@ contract Subscription is
         _lastProcessedEpoch = _currentEpoch - 1;
 
         // convert to external amount
-        amount = amount.toExternal(token);
+        amount = amount.toExternal(settings.token);
         totalClaimed += amount;
 
-        token.safeTransfer(ownerAddress(), amount);
+        settings.token.safeTransfer(ownerAddress(), amount);
 
         emit FundsClaimed(amount, totalClaimed);
     }
@@ -522,7 +510,7 @@ contract Subscription is
         (uint256 amount, , ) = processEpochs();
 
         // TODO when optimizing, define var name in signature
-        return amount.toExternal(token);
+        return amount.toExternal(settings.token);
     }
 
     function lastProcessedEpoch() private view returns (uint256 i) {
@@ -555,7 +543,7 @@ contract Subscription is
             // included in _activeSubs, expiring, and starting subs
             amount +=
                 epochs[i].partialFunds +
-                (_activeSubs * epochSize * rate) /
+                (_activeSubs * settings.epochSize * settings.rate) /
                 MULTIPLIER_BASE;
             starting += epochs[i].starting;
             expiring += epochs[i].expiring;
