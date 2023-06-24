@@ -38,6 +38,8 @@ contract Subscription is
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
     using SubscriptionLib for uint256;
+    using Strings for uint256;
+    using Strings for address;
 
     struct SubscriptionData {
         uint256 mintedAt; // mint date
@@ -131,8 +133,15 @@ contract Subscription is
                         metadata.image,
                         '","external_url":"',
                         metadata.externalUrl,
-                        '"',
-                        "}"
+                        '","attributes":[{"trait_type":"token","value":"',
+                        address(settings.token).toHexString(),
+                        '"},{"trait_type":"rate","value":',
+                        settings.rate.toString(),
+                        '},{"trait_type":"lock","value":',
+                        settings.lock.toString(),
+                        '},{"trait_type":"epoch_size","value":',
+                        settings.epochSize.toString(),
+                        "}]}"
                     )
                 )
             )
