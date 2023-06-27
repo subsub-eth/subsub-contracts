@@ -9,6 +9,10 @@ import {PausableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {IERC165Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/interfaces/IERC165Upgradeable.sol";
+
+import {CountersUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
@@ -16,7 +20,7 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract Subscription is
     ISubscription,
-    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
     OwnableByERC721Upgradeable,
     PausableUpgradeable
 {
@@ -40,6 +44,7 @@ contract Subscription is
     using SubscriptionLib for uint256;
     using Strings for uint256;
     using Strings for address;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
     struct SubscriptionData {
         uint256 mintedAt; // mint date
@@ -66,7 +71,7 @@ contract Subscription is
     mapping(uint256 => SubscriptionData) private subData;
     mapping(uint256 => Epoch) private epochs;
 
-    uint256 public totalSupply;
+    CountersUpgradeable.Counter private _tokenIdTracker;
 
     // number of active subscriptions with a multiplier represented as shares
     // base 100:
@@ -181,7 +186,8 @@ contract Subscription is
         // TODO check minimum amount?
         // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
-        uint256 tokenId = ++totalSupply;
+        _tokenIdTracker.increment();
+        uint256 tokenId = _tokenIdTracker.current();
         uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
 
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(

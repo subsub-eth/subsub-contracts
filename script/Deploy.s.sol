@@ -83,7 +83,7 @@ contract DeployScript is Script {
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
             ERC20DecimalsMock token = new ERC20DecimalsMock(18);
             console.log("Test ERC20 Token Contract", address(token));
-            token.mint(address(this), 100_000);
+            token.mint(msg.sender, 100_000);
             token.mint(address(10), 100_000);
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
@@ -96,6 +96,15 @@ contract DeployScript is Script {
                     creatorId
                 );
                 console.log("Subscription Contract", subscription);
+
+                token.approve(address(subscription), 100_000);
+                uint256 tokenId = Subscription(subscription).mint(
+                    100_000,
+                    100,
+                    "Hello world"
+                );
+
+                console.log("Subscription TokenId", tokenId);
             }
         }
 
