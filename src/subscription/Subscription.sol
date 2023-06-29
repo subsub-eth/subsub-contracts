@@ -11,6 +11,7 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {IERC165Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/interfaces/IERC165Upgradeable.sol";
+import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
 import {CountersUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
 
@@ -26,6 +27,9 @@ contract Subscription is
 {
     // should the tokenId 0 == owner?
 
+    // TODO add metadata for owner to change token image and external link if defined
+    // TODO add public view function data to token and contact metadata
+    // TODO generate simple image on chain to illustrate sub status
     // TODO add ERC 4906 metadata events
     // TODO use structs to combine fields/members?
     // TODO refactor event deposited to spent amount?
@@ -157,6 +161,40 @@ contract Subscription is
         );
 
         return output;
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
+        returns (string memory)
+    {
+        _requireMinted(tokenId);
+
+        string memory output = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name":"',
+                        symbol(),
+                        " #",
+                        tokenId.toString(),
+                        '","description":"',
+                        "A subscription of ",
+                        name(),
+                        '","image":"',
+                        "",
+                        '","external_url":"',
+                        "",
+                        '"',
+                        "}"
+                    )
+                )
+            )
+        );
+
+        return string.concat("data:application/json;base64,", output);
     }
 
     function getCurrentEpoch() internal view returns (uint256) {
