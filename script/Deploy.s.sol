@@ -22,6 +22,9 @@ contract DeployScript is Script {
     Metadata private metadata;
     SubSettings private settings;
 
+    address private anvilUser1 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+    address private anvilUser2 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+
     function setUp() public {
         metadata = Metadata(
             "PeterTest's Tier 1",
@@ -83,8 +86,10 @@ contract DeployScript is Script {
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
             ERC20DecimalsMock token = new ERC20DecimalsMock(18);
             console.log("Test ERC20 Token Contract", address(token));
-            token.mint(msg.sender, 100_000);
-            token.mint(address(10), 100_000);
+            token.mint(msg.sender, 100_000 ether);
+            token.mint(address(10), 100_000 ether);
+            token.mint(anvilUser1, 100_000 ether);
+            token.mint(anvilUser2, 100_000 ether);
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
                 settings.token = token;
