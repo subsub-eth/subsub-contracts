@@ -2,17 +2,17 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/creator/Creator.sol";
+import "../src/profile/Profile.sol";
 
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
 // TODO test mint/renew with amount==0
-contract CreatorTest is Test {
+contract ProfileTest is Test {
     event Minted(address indexed to, uint256 indexed tokenId);
 
-    Creator public creator;
-    Creator public implementation;
+    Profile public profile;
+    Profile public implementation;
     TransparentUpgradeableProxy public proxy;
     ProxyAdmin public admin;
 
@@ -24,21 +24,21 @@ contract CreatorTest is Test {
         bob = address(20);
 
         admin = new ProxyAdmin();
-        implementation = new Creator();
+        implementation = new Profile();
         proxy = new TransparentUpgradeableProxy(
             address(implementation),
             address(admin),
             abi.encodeWithSignature("initialize()")
         );
-        creator = Creator(address(proxy));
+        profile = Profile(address(proxy));
     }
 
     function testMetadata() public {
         assertEq(implementation.name(), "", "name is not set on implementation");
         assertEq(implementation.symbol(), "", "symbol is not set on implementation");
 
-        assertEq(creator.name(), "CreateZ Creator Profile", "name is set");
-        assertEq(creator.symbol(), "crzP", "symbol is set");
+        assertEq(profile.name(), "CreateZ Profile", "name is set");
+        assertEq(profile.symbol(), "crzP", "symbol is set");
     }
 
     function testMint() public {
@@ -46,20 +46,20 @@ contract CreatorTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit Minted(alice, 1);
-        uint256 aliceTokenId = creator.mint("test", "test", "test", "test");
+        uint256 aliceTokenId = profile.mint("test", "test", "test", "test");
 
-        assertEq(creator.ownerOf(aliceTokenId), alice, "alice minted a token");
-        assertEq(creator.totalSupply(), 1, "1 token minted");
+        assertEq(profile.ownerOf(aliceTokenId), alice, "alice minted a token");
+        assertEq(profile.totalSupply(), 1, "1 token minted");
 
         vm.startPrank(bob);
 
         vm.expectEmit(true, true, true, true);
         emit Minted(bob, 2);
-        uint256 bobTokenId = creator.mint("test", "test", "test", "test");
-        assertEq(creator.ownerOf(bobTokenId), bob, "bob minted a token");
+        uint256 bobTokenId = profile.mint("test", "test", "test", "test");
+        assertEq(profile.ownerOf(bobTokenId), bob, "bob minted a token");
 
         assertLt(aliceTokenId, bobTokenId, "token ids are unique");
 
-        assertEq(creator.totalSupply(), 2, "2 tokens minted");
+        assertEq(profile.totalSupply(), 2, "2 tokens minted");
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ICreator} from "./ICreator.sol";
+import {IProfile} from "./IProfile.sol";
 
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
@@ -21,13 +21,13 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 // TODO add meta information, name, links, etc
 // TODO max supply?
 // TODO bind to another ERC721 for identity verification
-contract Creator is ICreator, ERC721EnumerableUpgradeable {
+contract Profile is IProfile, ERC721EnumerableUpgradeable {
     using Strings for uint256;
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     event Minted(address indexed to, uint256 indexed tokenId);
 
-    struct CreatorData {
+    struct ProfileData {
         string name;
         string description;
         string image;
@@ -35,7 +35,7 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
     }
 
     CountersUpgradeable.Counter private _tokenIdTracker;
-    mapping(uint256 => CreatorData) private creatorData;
+    mapping(uint256 => ProfileData) private profileData;
 
     constructor() {
         // disable direct usage of implementation contract
@@ -43,7 +43,7 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
     }
 
     function initialize() public initializer {
-        __ERC721_init("CreateZ Creator Profile", "crzP");
+        __ERC721_init("CreateZ Profile", "crzP");
     }
 
     function mint(
@@ -56,7 +56,7 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
         _tokenIdTracker.increment();
         uint256 tokenId = _tokenIdTracker.current();
 
-        creatorData[tokenId] = CreatorData(
+        profileData[tokenId] = ProfileData(
             _name,
             _description,
             _image,
@@ -83,13 +83,13 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
                 string(
                     abi.encodePacked(
                         '{"name":"',
-                        creatorData[tokenId].name,
+                        profileData[tokenId].name,
                         '","description":"',
-                        creatorData[tokenId].description,
+                        profileData[tokenId].description,
                         '","image":"',
-                        creatorData[tokenId].image,
+                        profileData[tokenId].image,
                         '","external_url":"',
-                        creatorData[tokenId].externalUrl,
+                        profileData[tokenId].externalUrl,
                         '"',
                         "}"
                     )
@@ -104,7 +104,7 @@ contract Creator is ICreator, ERC721EnumerableUpgradeable {
         string memory json = Base64.encode(
             bytes(
                 string(
-                    '{"name": "Creator Profile", "description": "Creator Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }'
+                    '{"name": "CreateZ Profile", "description": "CreateZ Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }'
                 )
             )
         );

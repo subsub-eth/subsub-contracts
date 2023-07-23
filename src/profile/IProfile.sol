@@ -5,7 +5,7 @@ import {IERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/t
 import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import {IERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721EnumerableUpgradeable.sol";
 
-interface ICreator is
+interface IProfile is
     IERC721Upgradeable,
     IERC721MetadataUpgradeable,
     IERC721EnumerableUpgradeable

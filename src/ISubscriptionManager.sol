@@ -16,7 +16,7 @@ interface SubscriptionManagerEvents {
 }
 
 interface ISubscriptionManager is SubscriptionManagerEvents {
-    function creatorContract() external returns (address);
+    function profileContract() external returns (address);
 
     function getSubscriptionContracts(uint256 _ownerTokenId)
         external

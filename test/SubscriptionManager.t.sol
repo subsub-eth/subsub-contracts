@@ -20,8 +20,8 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
 
     SubscriptionManager private manager;
 
-    ERC721Mock private creator;
-    uint256 private creatorTokenId;
+    ERC721Mock private profile;
+    uint256 private profileTokenId;
 
     IBeacon private beacon;
     Subscription private subscription;
@@ -34,8 +34,8 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
     function setUp() public {
         subscription = new Subscription();
         beacon = new UpgradeableBeacon(address(subscription));
-        creator = new ERC721Mock("test", "test");
-        creatorTokenId = 10;
+        profile = new ERC721Mock("test", "test");
+        profileTokenId = 10;
 
         metadata = Metadata("test", "test", "test", "test");
         settings.token = IERC20Metadata(address(1));
@@ -43,26 +43,26 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         settings.lock = 10;
         settings.epochSize = 100;
 
-        creator.mint(address(this), creatorTokenId);
+        profile.mint(address(this), profileTokenId);
 
         SubscriptionManager impl = new SubscriptionManager();
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
         manager = SubscriptionManager(address(proxy));
-        manager.initialize(address(beacon), address(creator));
+        manager.initialize(address(beacon), address(profile));
     }
 
-    function testCreatorContract() public {
+    function testProfileContract() public {
         assertEq(
-            address(creator),
-            manager.creatorContract(),
-            "Creator contract set"
+            address(profile),
+            manager.profileContract(),
+            "Profile contract set"
         );
     }
 
     function testCreateSubscription() public {
         vm.expectEmit(true, false, false, false);
-        emit SubscriptionContractCreated(creatorTokenId, address(0));
+        emit SubscriptionContractCreated(profileTokenId, address(0));
 
         address token = address(12345);
         settings.token = IERC20Metadata(token);
@@ -72,7 +72,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
             "SUB",
             metadata,
             settings,
-            creatorTokenId
+            profileTokenId
         );
         assertFalse(result == address(0), "contract not created");
         assertTrue(result.isContract(), "result is actually a contract");
@@ -85,7 +85,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         );
 
         address[] memory contracts = manager.getSubscriptionContracts(
-            creatorTokenId
+            profileTokenId
         );
         address[] memory res = new address[](1);
         res[0] = result;
@@ -101,7 +101,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
             "SUB",
             metadata,
             settings,
-            creatorTokenId
+            profileTokenId
         );
     }
 
@@ -115,7 +115,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
                 "SUB",
                 metadata,
                 settings,
-                creatorTokenId
+                profileTokenId
             );
             assertFalse(result == address(0), "contract not created");
             assertTrue(result.isContract(), "result is actually a contract");
@@ -130,7 +130,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         }
 
         address[] memory contracts = manager.getSubscriptionContracts(
-            creatorTokenId
+            profileTokenId
         );
         address[] memory _createdContracts = createdContracts;
         assertEq(contracts, _createdContracts, "contracts stored");

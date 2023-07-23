@@ -7,7 +7,7 @@ import "../src/subscription/Subscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../src/subscription/ISubscription.sol";
 import {SubscriptionLib} from "../src/subscription/SubscriptionLib.sol";
-import {Creator} from "../src/creator/Creator.sol";
+import {Profile} from "../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -19,7 +19,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     Subscription public subscriptionImplementation;
     Subscription public subscription;
     ERC20DecimalsMock private testToken;
-    Creator public creator;
+    Profile public profile;
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
@@ -47,9 +47,9 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         lock = 100;
         epochSize = 100;
         decimals = 6;
-        creator = new Creator();
+        profile = new Profile();
         vm.prank(owner);
-        ownerTokenId = creator.mint("test", "test", "test", "test");
+        ownerTokenId = profile.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(decimals);
         settings = SubSettings(testToken, rate, lock, epochSize);
@@ -66,7 +66,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
             "test",
             metadata,
             settings,
-            address(creator),
+            address(profile),
             ownerTokenId
         );
 

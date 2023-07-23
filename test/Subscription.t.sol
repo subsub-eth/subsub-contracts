@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
 
 import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings} from "../src/subscription/ISubscription.sol";
-import {Creator} from "../src/creator/Creator.sol";
+import {Profile} from "../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -18,7 +18,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Subscription public subscriptionImplementation;
     Subscription public subscription;
     ERC20DecimalsMock private testToken;
-    Creator public creator;
+    Profile public profile;
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
@@ -47,9 +47,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         rate = 5;
         lock = 100;
         epochSize = 10;
-        creator = new Creator();
+        profile = new Profile();
         vm.prank(owner);
-        ownerTokenId = creator.mint("test", "test", "test", "test");
+        ownerTokenId = profile.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(18);
         settings = SubSettings(testToken, rate, lock, epochSize);
@@ -66,7 +66,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
             "test",
             metadata,
             settings,
-            address(creator),
+            address(profile),
             ownerTokenId
         );
 
@@ -130,7 +130,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         settings.rate = 10;
         settings.lock = 0;
         settings.epochSize = 10;
-        vm.expectRevert("SUB: creator address not set");
+        vm.expectRevert("SUB: profile address not set");
         sub.initialize("test", "test", metadata, settings, address(0), 1);
     }
 

@@ -13,7 +13,7 @@ import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/U
 import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
-import "../src/creator/Creator.sol";
+import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
 import "../src/subscription/Subscription.sol";
 import "../src/SubscriptionManager.sol";
@@ -49,17 +49,17 @@ contract DeployScript is Script {
             address(subscriptionImplementation)
         );
 
-        Creator creatorImplementation = new Creator();
-        ProxyAdmin creatorAdmin = new ProxyAdmin();
-        TransparentUpgradeableProxy creatorProxy = new TransparentUpgradeableProxy(
-                address(creatorImplementation),
-                address(creatorAdmin),
+        Profile profileImplementation = new Profile();
+        ProxyAdmin profileAdmin = new ProxyAdmin();
+        TransparentUpgradeableProxy profileProxy = new TransparentUpgradeableProxy(
+                address(profileImplementation),
+                address(profileAdmin),
                 abi.encodeWithSignature("initialize()")
             );
-        Creator creator = Creator(address(creatorProxy));
-        console.log("Creator Contract", address(creator));
+        Profile profile = Profile(address(profileProxy));
+        console.log("Profile Contract", address(profile));
 
-        uint256 creatorId = creator.mint(
+        uint256 profileId = profile.mint(
             "PeterTest",
             "I am a super cool influencer",
             "https://example.com/profiles/peter.png",
@@ -74,7 +74,7 @@ contract DeployScript is Script {
                 abi.encodeWithSignature(
                     "initialize(address,address)",
                     address(beacon),
-                    address(creator)
+                    address(profile)
                 )
             );
 
@@ -98,7 +98,7 @@ contract DeployScript is Script {
                     "SUBt1",
                     metadata,
                     settings,
-                    creatorId
+                    profileId
                 );
                 console.log("Subscription Contract", subscription);
 

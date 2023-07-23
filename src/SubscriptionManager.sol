@@ -22,23 +22,23 @@ contract SubscriptionManager is
 
     address private beacon;
 
-    // reference to the Creator contract
-    address public creatorContract;
+    // reference to the Profile contract
+    address public profileContract;
 
     // owner mapping
-    // TODO? move relationship to Creator Token
+    // TODO? move relationship to Profile Token
     mapping(uint256 => address[]) private ownerMapping;
 
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address _beacon, address _creatorContract)
+    function initialize(address _beacon, address _profileContract)
         external
         initializer
     {
         beacon = _beacon;
-        creatorContract = _creatorContract;
+        profileContract = _profileContract;
     }
 
     function createSubscription(
@@ -46,10 +46,10 @@ contract SubscriptionManager is
         string calldata _symbol,
         Metadata calldata _metadata,
         SubSettings calldata _settings,
-        uint256 _creatorTokenId
+        uint256 _profileTokenId
     ) external returns (address) {
         require(
-            IERC721(creatorContract).ownerOf(_creatorTokenId) == _msgSender(),
+            IERC721(profileContract).ownerOf(_profileTokenId) == _msgSender(),
             "Manager: Not owner of token"
         );
 
@@ -65,17 +65,17 @@ contract SubscriptionManager is
                 _symbol,
                 _metadata,
                 _settings,
-                creatorContract,
-                _creatorTokenId
+                profileContract,
+                _profileTokenId
             )
         );
 
         address proxyAddress = address(proxy);
 
         // add contract to owner's list
-        ownerMapping[_creatorTokenId].push(proxyAddress);
+        ownerMapping[_profileTokenId].push(proxyAddress);
 
-        emit SubscriptionContractCreated(_creatorTokenId, proxyAddress);
+        emit SubscriptionContractCreated(_profileTokenId, proxyAddress);
 
         return proxyAddress;
     }

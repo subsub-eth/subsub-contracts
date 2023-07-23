@@ -36,6 +36,7 @@ contract Subscription is
     // TODO define metadata
     // TODO max supply?
     // TODO max donation / deposit
+    // TODO should an operator be allowed to withdraw?
     // TODO improve active subscriptions to include current epoch changes
     // TODO interchangable implementation for time tracking: blocks vs timestamp
     // TODO retire function, sends token.balance to owner
@@ -102,8 +103,8 @@ contract Subscription is
         string calldata tokenSymbol,
         Metadata calldata _metadata,
         SubSettings calldata _settings,
-        address creatorContract,
-        uint256 creatorTokenId
+        address profileContract,
+        uint256 profileTokenId
     ) external initializer {
         require(_settings.epochSize > 0, "SUB: invalid epochSize");
         require(
@@ -112,13 +113,13 @@ contract Subscription is
         );
         require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
         require(_settings.rate > 0, "SUB: rate cannot be 0");
-        // check that creatorContract is a contract of ERC721 and does have a tokenId
-        require(creatorContract != address(0), "SUB: creator address not set");
+        // check that profileContract is a contract of ERC721 and does have a tokenId
+        require(profileContract != address(0), "SUB: profile address not set");
 
         // call initializers of inherited contracts
         // TODO set metadata
         __ERC721_init_unchained(tokenName, tokenSymbol);
-        __OwnableByERC721_init_unchained(creatorContract, creatorTokenId);
+        __OwnableByERC721_init_unchained(profileContract, profileTokenId);
         __Pausable_init_unchained();
 
         metadata = _metadata;
