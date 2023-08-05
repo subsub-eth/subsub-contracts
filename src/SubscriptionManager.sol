@@ -18,7 +18,8 @@ contract SubscriptionManager is
     Initializable,
     ContextUpgradeable
 {
-    // TODO? store subscription contract in manager for validity check
+    // TODO? store subscription contract in manager for validity check -> isManaged()?
+    // TODO allow profiles to curate a list of sub contracts
 
     address private beacon;
 

@@ -27,6 +27,10 @@ contract Subscription is
 {
     // should the tokenId 0 == owner?
 
+    // TODO deposited public or external
+    // TODO refactor expiresAt and isActive
+    // TODO externalize tokenURI function
+    // TODO show funds left in an active subscription
     // TODO add metadata for owner to change token image and external link if defined
     // TODO add public view function data to token and contact metadata
     // TODO generate simple image on chain to illustrate sub status
@@ -36,6 +40,7 @@ contract Subscription is
     // TODO define metadata
     // TODO max supply?
     // TODO max donation / deposit
+    // TODO allow 0 amount tip or check for a configurable min tip amount?
     // TODO should an operator be allowed to withdraw?
     // TODO improve active subscriptions to include current epoch changes
     // TODO interchangable implementation for time tracking: blocks vs timestamp
@@ -179,17 +184,19 @@ contract Subscription is
                     abi.encodePacked(
                         '{"name":"',
                         symbol(),
-                        " #",
+                        ' #',
                         tokenId.toString(),
                         '","description":"',
-                        "A subscription of ",
+                        'A subscription of ',
                         name(),
                         '","image":"',
-                        "",
+                        '',
                         '","external_url":"',
-                        "",
-                        '"',
-                        "}"
+                        '","attributes":[{"trait_type":"deposited","value":',
+                        deposited(tokenId).toString(),
+                        '},{"trait_type":"withdrawable","value":',
+                        _withdrawable(tokenId).toString(),
+                        '}]}'
                     )
                 )
             )
@@ -432,7 +439,7 @@ contract Subscription is
     }
 
     function deposited(uint256 tokenId)
-        external
+        public
         view
         requireExists(tokenId)
         returns (uint256)
