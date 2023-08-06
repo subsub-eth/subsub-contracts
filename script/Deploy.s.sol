@@ -10,7 +10,8 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import {TransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TransparentUpgradeableProxy} from
+    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 
 import "../src/profile/Profile.sol";
@@ -60,10 +61,7 @@ contract DeployScript is Script {
         console.log("Profile Contract", address(profile));
 
         uint256 profileId = profile.mint(
-            "PeterTest",
-            "I am a super cool influencer",
-            "https://example.com/profiles/peter.png",
-            "https://example.com"
+            "PeterTest", "I am a super cool influencer", "https://example.com/profiles/peter.png", "https://example.com"
         );
 
         SubscriptionManager managerImpl = new SubscriptionManager();
@@ -78,9 +76,7 @@ contract DeployScript is Script {
                 )
             );
 
-        SubscriptionManager manager = SubscriptionManager(
-            address(managerProxy)
-        );
+        SubscriptionManager manager = SubscriptionManager(address(managerProxy));
         console.log("Manager Contract", address(manager));
 
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
@@ -93,23 +89,18 @@ contract DeployScript is Script {
 
             if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
                 settings.token = token;
-                address subscription = manager.createSubscription(
-                    "My Tier 1 Subscription",
-                    "SUBt1",
-                    metadata,
-                    settings,
-                    profileId
-                );
-                console.log("Subscription Contract", subscription);
+                for (int256 i = 0; i < 6; i++) {
+                    address subscription =
+                        manager.createSubscription("My Tier 1 Subscription", "SUBt1", metadata, settings, profileId);
+                    console.log("Subscription Contract", subscription);
 
-                token.approve(address(subscription), 100_000);
-                uint256 tokenId = Subscription(subscription).mint(
-                    100_000,
-                    100,
-                    "Hello world"
-                );
+                    for (uint256 j = 0; j < 11; j++) {
+                        token.approve(address(subscription), 1_000);
+                        uint256 tokenId = Subscription(subscription).mint(1_000, 100, "Hello world");
 
-                console.log("Subscription TokenId", tokenId);
+                        console.log("Subscription TokenId", tokenId);
+                    }
+                }
             }
         }
 
