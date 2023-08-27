@@ -154,6 +154,21 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
             );
         }
 
+        {
+            output = string(
+                abi.encodePacked(
+                    output,
+                    ',{"trait_type":"claimable","value":"',
+                    claimable().toString(),
+                    '"},{"trait_type":"total_claimed","value":"',
+                    totalClaimed.toString(),
+                    '"},{"trait_type":"paused","value":',
+                    paused() ? "true" : "false",
+                    "}"
+                )
+            );
+        }
+
         output = Base64.encode(
             bytes(
                 string(
@@ -498,7 +513,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         emit FundsClaimed(amount, totalClaimed);
     }
 
-    function claimable() external view returns (uint256) {
+    function claimable() public view returns (uint256) {
         (uint256 amount,,) = processEpochs();
 
         // TODO when optimizing, define var name in signature
