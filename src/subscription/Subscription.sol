@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {ISubscription, Metadata, SubSettings} from "./ISubscription.sol";
 import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
+import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
 import {PausableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -52,6 +53,8 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     using Strings for uint256;
     using Strings for address;
     using CountersUpgradeable for CountersUpgradeable.Counter;
+
+    using SubscriptionViewLib for Subscription;
 
     struct SubscriptionData {
         uint256 mintedAt; // mint date
@@ -130,68 +133,8 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function contractURI() external view returns (string memory) {
-        string memory output;
-        {
-            (address ownerContract, uint256 ownerId) = owner();
-            output = string(
-                abi.encodePacked(
-                    '{"trait_type":"token","value":"',
-                    address(settings.token).toHexString(),
-                    '"},{"trait_type":"rate","value":',
-                    settings.rate.toString(),
-                    '},{"trait_type":"lock","value":',
-                    settings.lock.toString(),
-                    '},{"trait_type":"epoch_size","value":',
-                    settings.epochSize.toString(),
-                    '},{"trait_type":"owner_contract","value":"',
-                    ownerContract.toHexString(),
-                    '"},{"trait_type":"owner_id","value":',
-                    ownerId.toString(),
-                    '},{"trait_type":"owner_address","value":"',
-                    ownerAddress().toHexString(),
-                    '"}'
-                )
-            );
-        }
 
-        {
-            output = string(
-                abi.encodePacked(
-                    output,
-                    ',{"trait_type":"claimable","value":"',
-                    claimable().toString(),
-                    '"},{"trait_type":"total_claimed","value":"',
-                    totalClaimed.toString(),
-                    '"},{"trait_type":"paused","value":',
-                    paused() ? "true" : "false",
-                    "}"
-                )
-            );
-        }
-
-        output = Base64.encode(
-            bytes(
-                string(
-                    abi.encodePacked(
-                        '{"name":"',
-                        metadata.title,
-                        '","description":"',
-                        metadata.description,
-                        '","image":"',
-                        metadata.image,
-                        '","external_url":"',
-                        metadata.externalUrl,
-                        '","attributes":[',
-                        output,
-                        "]}"
-                    )
-                )
-            )
-        );
-
-        output = string(abi.encodePacked("data:application/json;base64,", output));
-
-        return output;
+        return this.contractData();
     }
 
     function tokenURI(uint256 tokenId)
@@ -203,31 +146,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     {
         _requireMinted(tokenId);
 
-        string memory output = Base64.encode(
-            bytes(
-                string(
-                    abi.encodePacked(
-                        '{"name":"',
-                        symbol(),
-                        " #",
-                        tokenId.toString(),
-                        '","description":"',
-                        "A subscription of ",
-                        name(),
-                        '","image":"',
-                        "",
-                        '","external_url":"',
-                        '","attributes":[{"trait_type":"deposited","value":',
-                        deposited(tokenId).toString(),
-                        '},{"trait_type":"withdrawable","value":',
-                        _withdrawable(tokenId).toString(),
-                        "}]}"
-                    )
-                )
-            )
-        );
-
-        return string.concat("data:application/json;base64,", output);
+        return this.tokenData(tokenId);
     }
 
     function getCurrentEpoch() internal view returns (uint256) {
