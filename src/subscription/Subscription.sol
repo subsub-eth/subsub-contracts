@@ -46,6 +46,8 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     // TODO ownable interface?
     // TODO pausable interface?
     // TODO refactor block.number to abstract time => _now()
+    // TODO allow tipping while contract is paused?
+    // TODO fast block time + small epoch size => out of gas?
 
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
@@ -133,7 +135,6 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function contractURI() external view returns (string memory) {
-
         return this.contractData();
     }
 
@@ -159,6 +160,18 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function setDescription(string calldata _description) external onlyOwner {
+        metadata.description = _description;
+    }
+
+    function setImage(string calldata _image) external onlyOwner {
+        metadata.image = _image;
+    }
+
+    function setExternalUrl(string calldata _externalUrl) external onlyOwner {
+        metadata.externalUrl = _externalUrl;
     }
 
     /// @notice "Mints" a new subscription token
@@ -427,7 +440,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         amount = amount.toExternal(settings.token);
         totalClaimed += amount;
 
-        settings.token.safeTransfer(ownerAddress(), amount);
+        settings.token.safeTransfer(_msgSender(), amount);
 
         emit FundsClaimed(amount, totalClaimed);
     }
