@@ -58,6 +58,7 @@ contract SubscriptionManager is
             IBeacon(beacon).implementation()
         );
 
+        // TODO use create2 to prevent users re-using contract addresses on other chains
         BeaconProxy proxy = new BeaconProxy(
             address(beacon),
             abi.encodeWithSelector(

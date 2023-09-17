@@ -25,8 +25,9 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO add metadata for owner to change token image and external link if defined
-    // TODO add public view function data to token and contact metadata
+    // TODO add function: when would this sub expire if I'd deposit X amount, renewPreview
+    // TODO refactor: mRate into separate, re-usable function
+    // TODO refactor: epoch changes, pass expiresAt?
     // TODO generate simple image on chain to illustrate sub status
     // TODO add ERC 4906 metadata events
     // TODO use structs to combine fields/members?
@@ -69,6 +70,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         uint256 multiplier;
     }
 
+    // epochs always start from genesis
     struct Epoch {
         uint256 expiring; // number of expiring subscriptions
         uint256 starting; // number of starting subscriptions
@@ -84,6 +86,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     mapping(uint256 => SubscriptionData) private subData;
     mapping(uint256 => Epoch) private epochs;
 
+    // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
 
     // number of active subscriptions with a multiplier represented as shares
@@ -355,8 +358,12 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         // active = [start, + deposit / rate)
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        uint256 mRate = (settings.rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
-        return lastDeposit + (currentDeposit_ / mRate);
+        return _expiresAt(lastDeposit, currentDeposit_, subData[tokenId].multiplier);
+    }
+
+    function _expiresAt(uint256 depositAt, uint256 amount, uint256 multiplier) internal view returns (uint256) {
+        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
+        return depositAt + (amount / mRate);
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
