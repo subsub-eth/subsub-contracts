@@ -25,7 +25,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO show funds left in an active subscription
     // TODO add metadata for owner to change token image and external link if defined
     // TODO add public view function data to token and contact metadata
     // TODO generate simple image on chain to illustrate sub status
@@ -378,7 +377,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (usedBlocks * mRate));
     }
 
-    function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
+    function _spent(uint256 tokenId) internal view returns (uint256, uint256) {
         uint256 totalDeposited = subData[tokenId].totalDeposited;
 
         uint256 spentAmount;
@@ -391,7 +390,19 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
                 + ((block.number - subData[tokenId].lastDepositAt) * mRate);
         }
 
-        return spentAmount.toExternal(settings.token);
+        uint256 unspentAmount = totalDeposited - spentAmount;
+
+        return (spentAmount.toExternal(settings.token), unspentAmount.toExternal(settings.token));
+    }
+
+    function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
+      (uint256 spentAmount,) = _spent(tokenId);
+      return spentAmount;
+    }
+
+    function unspent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
+      (,uint256 unspentAmount) = _spent(tokenId);
+      return unspentAmount;
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message) external requireExists(tokenId) {

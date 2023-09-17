@@ -691,6 +691,32 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription.spent(tokenId);
     }
 
+    function testUnspent() public {
+        uint256 initialDeposit = 100;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        assertEq(subscription.unspent(tokenId), 100, "All funds are still unspent");
+
+        vm.roll(block.number + 1);
+
+        assertEq(subscription.unspent(tokenId), 100 - rate, "1 block was spent");
+
+        vm.roll(block.number + 9);
+
+        assertEq(subscription.unspent(tokenId), 100 - 10 * rate, "10 blocks were spent");
+
+        vm.roll(block.number + 1_000);
+
+        assertEq(subscription.unspent(tokenId), 0, "no funds are unspent");
+    }
+
+    function testUnspent_nonExisting() public {
+        uint256 tokenId = 1234;
+
+        vm.expectRevert("SUB: subscription does not exist");
+        subscription.unspent(tokenId);
+    }
+
     function testClaimable() public {
         mintToken(alice, 1_000);
 

@@ -68,9 +68,14 @@ interface Subscribable is SubscriptionEvents {
 
     function expiresAt(uint256 tokenId) external view returns (uint256);
 
+    // the amount of tokens ever deposited reduced by the withdrawn amount.
     function deposited(uint256 tokenId) external view returns (uint256);
 
+    // the amount of tokens spent in the subscription
     function spent(uint256 tokenId) external view returns (uint256);
+
+    // the amount of deposited tokens that have not been spend yet
+    function unspent(uint256 tokenId) external view returns (uint256);
 
     function withdrawable(uint256 tokenId) external view returns (uint256);
 
