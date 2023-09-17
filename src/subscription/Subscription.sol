@@ -25,7 +25,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO refactor expiresAt and isActive
     // TODO show funds left in an active subscription
     // TODO add metadata for owner to change token image and external link if defined
     // TODO add public view function data to token and contact metadata
@@ -339,16 +338,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function _isActive(uint256 tokenId) private view returns (bool) {
-        // a subscription is active form the starting block (including)
-        // to the calculated end block (excluding)
-        // active = [start, + deposit / rate)
-        uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        uint256 lastDeposit = subData[tokenId].lastDepositAt;
-        uint256 mRate = (settings.rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
-
-        uint256 end = lastDeposit + (currentDeposit_ / mRate);
-
-        return block.number < end;
+        return block.number < _expiresAt(tokenId);
     }
 
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -361,6 +351,9 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function _expiresAt(uint256 tokenId) internal view returns (uint256) {
+        // a subscription is active form the starting block (including)
+        // to the calculated end block (excluding)
+        // active = [start, + deposit / rate)
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 mRate = (settings.rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
