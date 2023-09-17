@@ -25,8 +25,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO remove metadata.title as it is obsolete when already name exists
-    // TODO deposited public or external
     // TODO refactor expiresAt and isActive
     // TODO show funds left in an active subscription
     // TODO add metadata for owner to change token image and external link if defined
@@ -353,7 +351,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         return block.number < end;
     }
 
-    function deposited(uint256 tokenId) public view requireExists(tokenId) returns (uint256) {
+    function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         // TODO is this the correct implementation?
         return subData[tokenId].totalDeposited.toExternal(settings.token);
     }
