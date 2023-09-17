@@ -30,7 +30,6 @@ interface SubscriptionEvents {
 }
 
 struct Metadata {
-    string title;
     string description;
     string image;
     string externalUrl;

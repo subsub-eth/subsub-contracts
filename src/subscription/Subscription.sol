@@ -25,9 +25,9 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
+    // TODO remove metadata.title as it is obsolete when already name exists
     // TODO deposited public or external
     // TODO refactor expiresAt and isActive
-    // TODO externalize tokenURI function
     // TODO show funds left in an active subscription
     // TODO add metadata for owner to change token image and external link if defined
     // TODO add public view function data to token and contact metadata
@@ -42,12 +42,17 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     // TODO should an operator be allowed to withdraw?
     // TODO improve active subscriptions to include current epoch changes
     // TODO interchangable implementation for time tracking: blocks vs timestamp
+    // TODO refactor block.number to abstract time => _now()
     // TODO retire function, sends token.balance to owner
+    // TODO upgrade function / flow, migrating one token into another
     // TODO ownable interface?
     // TODO pausable interface?
-    // TODO refactor block.number to abstract time => _now()
     // TODO allow tipping while contract is paused?
     // TODO fast block time + small epoch size => out of gas?
+    // TODO split owner and user sides into separate abstract contracts?
+    // TODO instead of multiple instances have everything in 1 ERC721 instance?
+
+    // TODO add natspec comments
 
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;

@@ -28,7 +28,6 @@ contract DeployScript is Script {
 
     function setUp() public {
         metadata = Metadata(
-            "PeterTest's Tier 1",
             "You gain access to my heart",
             "https://example.com/profiles/peter-t1.png",
             "https://example.com"

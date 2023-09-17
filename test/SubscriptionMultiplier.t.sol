@@ -41,7 +41,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
         message = "Hello World";
 
-        metadata = Metadata("test", "test", "test", "test");
+        metadata = Metadata("test", "test", "test");
 
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;

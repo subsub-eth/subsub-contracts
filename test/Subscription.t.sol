@@ -42,7 +42,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         message = "Hello World";
 
-        metadata = Metadata("test", "test", "test", "test");
+        metadata = Metadata("test", "test", "test");
 
         rate = 5;
         lock = 100;
@@ -132,7 +132,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(owner);
         subscription.setExternalUrl(url);
 
-        (,,, string memory externalUrl) = subscription.metadata();
+        (,, string memory externalUrl) = subscription.metadata();
 
         assertEq(url, externalUrl);
     }
@@ -149,7 +149,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(owner);
         subscription.setImage(newImage);
 
-        (,, string memory image,) = subscription.metadata();
+        (, string memory image,) = subscription.metadata();
 
         assertEq(newImage, image);
     }
@@ -166,7 +166,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(owner);
         subscription.setDescription(desc);
 
-        (, string memory description,,) = subscription.metadata();
+        ( string memory description,,) = subscription.metadata();
 
         assertEq(desc, description);
     }

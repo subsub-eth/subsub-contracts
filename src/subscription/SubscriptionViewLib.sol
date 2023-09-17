@@ -9,15 +9,15 @@ import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 library SubscriptionViewLib {
+    // TODO add symbol to contractURI
 
     using Strings for uint256;
     using Strings for address;
 
     function contractData(Subscription s) public view returns (string memory) {
-
         string memory output;
         {
-          (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize) = s.settings();
+            (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize) = s.settings();
             output = string(
                 abi.encodePacked(
                     '{"trait_type":"token","value":"',
@@ -28,7 +28,7 @@ library SubscriptionViewLib {
                     lock.toString(),
                     '},{"trait_type":"epoch_size","value":',
                     epochSize.toString(),
-                    '}'
+                    "}"
                 )
             );
         }
@@ -63,13 +63,13 @@ library SubscriptionViewLib {
             );
         }
 
-        (string memory title, string memory description, string memory image, string memory externalUrl) = s.metadata();
+        (string memory description, string memory image, string memory externalUrl) = s.metadata();
         output = Base64.encode(
             bytes(
                 string(
                     abi.encodePacked(
                         '{"name":"',
-                        title,
+                        s.name(),
                         '","description":"',
                         description,
                         '","image":"',
@@ -89,13 +89,7 @@ library SubscriptionViewLib {
         return output;
     }
 
-
-    function tokenData(Subscription s, uint256 tokenId)
-        public
-        view
-        returns (string memory)
-    {
-
+    function tokenData(Subscription s, uint256 tokenId) public view returns (string memory) {
         string memory output = Base64.encode(
             bytes(
                 string(
@@ -122,5 +116,4 @@ library SubscriptionViewLib {
 
         return string.concat("data:application/json;base64,", output);
     }
-
 }

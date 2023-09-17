@@ -37,7 +37,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         profile = new ERC721Mock("test", "test");
         profileTokenId = 10;
 
-        metadata = Metadata("test", "test", "test", "test");
+        metadata = Metadata("test", "test", "test");
         settings.token = IERC20Metadata(address(1));
         settings.rate = 1;
         settings.lock = 10;
