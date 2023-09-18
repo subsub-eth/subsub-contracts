@@ -25,7 +25,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO refactor: epoch changes, pass expiresAt?
     // TODO generate simple image on chain to illustrate sub status
     // TODO add ERC 4906 metadata events
     // TODO use structs to combine fields/members?
@@ -221,7 +220,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
 
     function addNewSubscriptionToEpochs(uint256 amount, uint256 multiplier) internal {
         uint256 mRate = multipliedRate(multiplier);
-        uint256 expiresAt_ = block.number + (amount / mRate);
+        uint256 expiresAt_ = _expiresAt(block.number, amount, mRate);
 
         // TODO use _expiresAt(tokenId)
         // starting
@@ -248,7 +247,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     ) internal {
         uint256 mRate = multipliedRate(multiplier);
         // when does the sub currently end?
-        uint256 oldExpiringAt = _lastDepositAt + (_oldDeposit / mRate);
+        uint256 oldExpiringAt = _expiresAt(_lastDepositAt, _oldDeposit, mRate);
         // update old epoch
         uint256 oldEpoch = oldExpiringAt / settings.epochSize;
         epochs[oldEpoch].expiring -= multiplier;
@@ -256,7 +255,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         epochs[oldEpoch].partialFunds -= removable;
 
         // update new epoch
-        uint256 newEndingBlock = _lastDepositAt + (_newDeposit / mRate);
+        uint256 newEndingBlock = _expiresAt(_lastDepositAt, _newDeposit, mRate);
         uint256 newEpoch = newEndingBlock / settings.epochSize;
         epochs[newEpoch].expiring += multiplier;
         epochs[newEpoch].partialFunds += (newEndingBlock - ((newEpoch * settings.epochSize).max(block.number))) * mRate;
@@ -360,11 +359,11 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         // active = [start, + deposit / rate)
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        return _expiresAt(lastDeposit, currentDeposit_, subData[tokenId].multiplier);
+        return _expiresAt(lastDeposit, currentDeposit_, multipliedRate(subData[tokenId].multiplier));
     }
 
-    function _expiresAt(uint256 depositAt, uint256 amount, uint256 multiplier) internal view returns (uint256) {
-        return depositAt + (amount / multipliedRate(multiplier));
+    function _expiresAt(uint256 depositedAt, uint256 amount, uint256 mRate) internal pure returns (uint256) {
+        return depositedAt + (amount / mRate);
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
