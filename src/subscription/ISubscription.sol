@@ -3,7 +3,9 @@ pragma solidity ^0.8.20;
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
-import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {IERC721MetadataUpgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {IERC4906Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/interfaces/IERC4906Upgradeable.sol";
 
 interface SubscriptionEvents {
     event SubscriptionRenewed(
@@ -14,18 +16,10 @@ interface SubscriptionEvents {
         string message
     );
 
-    event SubscriptionWithdrawn(
-        uint256 indexed tokenId,
-        uint256 indexed removedAmount,
-        uint256 indexed deposited
-    );
+    event SubscriptionWithdrawn(uint256 indexed tokenId, uint256 indexed removedAmount, uint256 indexed deposited);
 
     event Tipped(
-        uint256 indexed tokenId,
-        uint256 indexed amount,
-        uint256 indexed deposited,
-        address depositor,
-        string message
+        uint256 indexed tokenId, uint256 indexed amount, uint256 indexed deposited, address depositor, string message
     );
 }
 
@@ -54,11 +48,7 @@ interface SubscriptionMetadata {
 
 interface Subscribable is SubscriptionEvents {
     /// @notice adds deposits to an existing subscription token
-    function renew(
-        uint256 tokenId,
-        uint256 amount,
-        string calldata message
-    ) external;
+    function renew(uint256 tokenId, uint256 amount, string calldata message) external;
 
     function withdraw(uint256 tokenId, uint256 amount) external;
 
@@ -82,11 +72,7 @@ interface Subscribable is SubscriptionEvents {
     function activeSubShares() external view returns (uint256);
 
     // adds funds to the subscription, but does not extend an active sub
-    function tip(
-        uint256 tokenId,
-        uint256 amount,
-        string calldata message
-    ) external;
+    function tip(uint256 tokenId, uint256 amount, string calldata message) external;
 }
 
 interface ClaimEvents {
@@ -105,14 +91,11 @@ interface Claimable is ClaimEvents {
 interface ISubscription is
     IERC721Upgradeable,
     IERC721MetadataUpgradeable,
+    IERC4906Upgradeable,
     Subscribable,
     Claimable,
     SubscriptionMetadata
 {
     /// @notice "Mints" a new subscription token
-    function mint(
-        uint256 amount,
-        uint256 multiplier,
-        string calldata message
-    ) external returns (uint256);
+    function mint(uint256 amount, uint256 multiplier, string calldata message) external returns (uint256);
 }

@@ -90,6 +90,7 @@ library SubscriptionViewLib {
     }
 
     function tokenData(Subscription s, uint256 tokenId) public view returns (string memory) {
+      // TODO mind changes to contract-wide metadata need to fire ERC4906 events
         string memory output = Base64.encode(
             bytes(
                 string(

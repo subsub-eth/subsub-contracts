@@ -25,8 +25,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO generate simple image on chain to illustrate sub status
-    // TODO add ERC 4906 metadata events
     // TODO use structs to combine fields/members?
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
@@ -45,6 +43,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     // TODO fast block time + small epoch size => out of gas?
     // TODO split owner and user sides into separate abstract contracts?
     // TODO instead of multiple instances have everything in 1 ERC721 instance?
+    // TODO generate simple image on chain to illustrate sub status
 
     // TODO add natspec comments
 
@@ -304,6 +303,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
             msg.sender,
             message
         );
+        emit MetadataUpdate(tokenId);
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external requireExists(tokenId) {
@@ -334,6 +334,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         settings.token.safeTransfer(msg.sender, externalAmount);
 
         emit SubscriptionWithdrawn(tokenId, externalAmount, subData[tokenId].totalDeposited);
+        emit MetadataUpdate(tokenId);
     }
 
     function isActive(uint256 tokenId) external view requireExists(tokenId) returns (bool) {
@@ -425,6 +426,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
             _msgSender(),
             message
         );
+        emit MetadataUpdate(tokenId);
     }
 
     /// @notice The owner claims their rewards

@@ -34,6 +34,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Metadata public metadata;
     SubSettings public settings;
 
+    event MetadataUpdate(uint256 _tokenId);
+
     function setUp() public {
         owner = address(1);
         alice = address(10);
@@ -286,8 +288,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         // fast forward
         vm.roll(block.number + 5);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit SubscriptionRenewed(tokenId, 20_000, 30_000, address(this), message);
+
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
 
         assertFalse(subscription.paused(), "contract is not paused");
 
@@ -496,8 +501,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.roll(block.number + passed);
 
         // try withdraw 0 without effect
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit SubscriptionWithdrawn(tokenId, 0, 100);
+
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
 
         vm.prank(alice);
         subscription.withdraw(tokenId, 0);
@@ -624,8 +632,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         assertEq(subscription.withdrawable(tokenId), amount, "withdrawable amount is 75");
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit SubscriptionWithdrawn(tokenId, amount, initialDeposit - amount);
+
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
 
         vm.prank(alice);
         subscription.cancel(tokenId);
@@ -896,6 +907,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         vm.expectEmit(true, true, true, true);
         emit Tipped(tokenId, amount, target, alice, "hello world");
+
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
 
         subscription.tip(tokenId, amount, "hello world");
 
