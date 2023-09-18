@@ -18,6 +18,7 @@ contract SubscriptionManager is
     Initializable,
     ContextUpgradeable
 {
+    // TODO deploy block and time based subs?
     // TODO? store subscription contract in manager for validity check -> isManaged()?
     // TODO allow profiles to curate a list of sub contracts
 

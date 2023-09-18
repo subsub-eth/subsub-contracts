@@ -22,10 +22,9 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
+abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO interchangable implementation for time tracking: blocks vs timestamp
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
     // TODO max supply?
@@ -133,9 +132,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
-    function _now() internal view returns (uint256) {
-      return block.number;
-    }
+    function _now() internal virtual view returns (uint256);
 
     function contractURI() external view returns (string memory) {
         return this.contractData();

@@ -7,6 +7,8 @@ import "../src/SubscriptionManager.sol";
 import "../src/subscription/Subscription.sol";
 import "../src/subscription/ISubscription.sol";
 
+import "./mocks/TestSubscription.sol";
+
 import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -32,7 +34,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
     address[] private createdContracts; // side effect?
 
     function setUp() public {
-        subscription = new Subscription();
+        subscription = new TestSubscription();
         beacon = new UpgradeableBeacon(address(subscription));
         profile = new ERC721Mock("test", "test");
         profileTokenId = 10;

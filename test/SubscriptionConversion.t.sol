@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
+import "./mocks/TestSubscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../src/subscription/ISubscription.sol";
 import {SubscriptionLib} from "../src/subscription/SubscriptionLib.sol";
@@ -16,8 +17,8 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     using SubscriptionLib for uint256;
 
     ERC1967Proxy public subscriptionProxy;
-    Subscription public subscriptionImplementation;
-    Subscription public subscription;
+    TestSubscription public subscriptionImplementation;
+    TestSubscription public subscription;
     ERC20DecimalsMock public testToken;
     Profile public profile;
     uint256 public rate;
@@ -34,6 +35,13 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
     Metadata public metadata;
     SubSettings public settings;
+
+    uint256 public currentTime;
+
+    function setCurrentTime(uint256 newTime) internal {
+      currentTime = newTime;
+      subscription.setNow(newTime);
+    }
 
     function setUp() public {
         owner = address(1);
@@ -56,12 +64,13 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         settings = SubSettings(testToken, rate, lock, epochSize);
 
         // init simple proxy setup
-        subscriptionImplementation = new Subscription();
+        subscriptionImplementation = new TestSubscription();
         subscriptionProxy = new ERC1967Proxy(
             address(subscriptionImplementation),
             ""
         );
-        subscription = Subscription(address(subscriptionProxy));
+        subscription = TestSubscription(address(subscriptionProxy));
+        subscription.setNow(currentTime);
         subscription.initialize(
             "test",
             "test",
@@ -114,13 +123,13 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     function testFlow(uint8 decimals) public {
         vm.assume(decimals <= 64);
 
-        vm.roll(100_000);
+        currentTime = 100_000;
         uint256 amount = 10 * (10**decimals);
 
         createContracts(decimals);
         uint256 tokenId = mintToken(alice, amount);
 
-        vm.roll(100_001);
+        setCurrentTime(100_001);
         assertTrue(subscription.isActive(tokenId), "sub active");
 
         assertEq(
@@ -129,7 +138,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
             "sub expires after 3_333 blocks"
         );
 
-        vm.roll(102_001);
+        setCurrentTime(102_001);
 
         assertEq(
             subscription.claimable(),
@@ -148,7 +157,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
             "sub added another 3_333 blocks"
         );
 
-        vm.roll(200_000);
+        setCurrentTime(200_000);
         assertFalse(subscription.isActive(tokenId), "sub expired");
 
         vm.startPrank(owner);
@@ -172,13 +181,13 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     function testFlow_withdraw(uint8 decimals) public {
         vm.assume(decimals <= 64);
 
-        vm.roll(100_000);
+        currentTime = 100_000;
         uint256 amount = 10 * (10**decimals);
 
         createContracts(decimals);
         uint256 tokenId = mintToken(alice, amount);
 
-        vm.roll(100_001);
+        setCurrentTime(100_001);
         assertTrue(subscription.isActive(tokenId), "sub active");
 
         assertEq(
@@ -187,7 +196,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
             "sub expires after 3_333 blocks"
         );
 
-        vm.roll(102_000);
+        setCurrentTime(102_000);
 
         uint256 withdrawable = subscription.withdrawable(tokenId);
         assertEq(
@@ -205,7 +214,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
             "funds returned"
         );
 
-        vm.roll(200_000);
+        setCurrentTime(200_000);
 
         vm.startPrank(owner);
         uint256 claimable = subscription.claimable();

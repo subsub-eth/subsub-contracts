@@ -17,6 +17,7 @@ import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/Pro
 import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
 import "../src/subscription/Subscription.sol";
+import "../src/subscription/BlockSubscription.sol";
 import "../src/SubscriptionManager.sol";
 
 contract DeployScript is Script {
@@ -44,7 +45,7 @@ contract DeployScript is Script {
 
         // simple Test Deployment
 
-        Subscription subscriptionImplementation = new Subscription();
+        Subscription subscriptionImplementation = new BlockSubscription();
         UpgradeableBeacon beacon = new UpgradeableBeacon(
             address(subscriptionImplementation)
         );

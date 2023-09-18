@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
+import "./mocks/TestSubscription.sol";
 
 import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings} from "../src/subscription/ISubscription.sol";
 import {Profile} from "../src/profile/Profile.sol";
@@ -15,8 +16,8 @@ import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC19
 // TODO test lock 0% and 100%
 contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     ERC1967Proxy public subscriptionProxy;
-    Subscription public subscriptionImplementation;
-    Subscription public subscription;
+    TestSubscription public subscriptionImplementation;
+    TestSubscription public subscription;
     ERC20DecimalsMock private testToken;
     Profile public profile;
     uint256 public rate;
@@ -34,7 +35,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     Metadata public metadata;
     SubSettings public settings;
 
+    uint256 public currentTime;
+
     event MetadataUpdate(uint256 _tokenId);
+
+    function setCurrentTime(uint256 newTime) internal {
+      currentTime = newTime;
+      subscription.setNow(newTime);
+    }
 
     function setUp() public {
         owner = address(1);
@@ -57,12 +65,13 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         settings = SubSettings(testToken, rate, lock, epochSize);
 
         // init simple proxy setup
-        subscriptionImplementation = new Subscription();
+        subscriptionImplementation = new TestSubscription();
         subscriptionProxy = new ERC1967Proxy(
             address(subscriptionImplementation),
             ""
         );
-        subscription = Subscription(address(subscriptionProxy));
+        subscription = TestSubscription(address(subscriptionProxy));
+        setCurrentTime(1);
         subscription.initialize("test", "test", metadata, settings, address(profile), ownerTokenId);
 
         testToken.approve(address(subscription), type(uint256).max);
@@ -73,7 +82,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function createSubWithProxy() private returns (Subscription) {
-        Subscription impl = new Subscription();
+        Subscription impl = new TestSubscription();
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
         return Subscription(address(proxy));
     }
@@ -208,7 +217,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 end = subscription.expiresAt(tokenId);
 
         assertEq(tokenId, 1, "subscription has first token id");
-        assertEq(end, block.number + 20, "subscription ends at 20");
+        assertEq(end, currentTime + 20, "subscription ends at 20");
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
         assertTrue(active, "subscription active");
     }
@@ -230,7 +239,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 end = subscription.expiresAt(tokenId);
 
         assertEq(tokenId, 1, "subscription has first token id");
-        assertEq(end, block.number, "subscription ends at current block");
+        assertEq(end, currentTime, "subscription ends at current block");
         assertEq(subscription.deposited(tokenId), 0, "0 tokens deposited");
         assertFalse(active, "subscription active");
     }
@@ -254,7 +263,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(tokenId, 1, "subscription has first token id");
 
         // fast forward
-        vm.roll(block.number + 5);
+        setCurrentTime(currentTime + 5);
         bool active = subscription.isActive(tokenId);
 
         assertTrue(active, "subscription active");
@@ -266,12 +275,12 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(tokenId, 1, "subscription has first token id");
 
         // fast forward
-        vm.roll(block.number + 19);
+        setCurrentTime(currentTime + 19);
         bool active = subscription.isActive(tokenId);
 
         assertTrue(active, "subscription active");
 
-        vm.roll(block.number + 1); // + 20
+        setCurrentTime(currentTime + 1); // + 20
         active = subscription.isActive(tokenId);
 
         assertFalse(active, "subscription inactive");
@@ -282,11 +291,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, initialDeposit);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
-        assertEq(initialEnd, block.number + 2000, "subscription initially ends at 2000");
+        assertEq(initialEnd, currentTime + 2000, "subscription initially ends at 2000");
         assertEq(subscription.deposited(tokenId), initialDeposit, "10_000 tokens deposited");
 
         // fast forward
-        vm.roll(block.number + 5);
+        setCurrentTime(currentTime + 5);
 
         vm.expectEmit();
         emit SubscriptionRenewed(tokenId, 20_000, 30_000, address(this), message);
@@ -316,7 +325,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 100);
 
         // fast forward
-        vm.roll(block.number + 5);
+        setCurrentTime(currentTime + 5);
 
         vm.prank(owner);
         subscription.pause();
@@ -356,7 +365,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
-        assertEq(initialEnd, block.number + 20, "subscription initially ends at 20");
+        assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
         vm.expectEmit(true, true, true, true);
@@ -376,11 +385,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
-        assertEq(initialEnd, block.number + 20, "subscription initially ends at 20");
+        assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
 
         // fast forward
         uint256 ff = 50;
-        vm.roll(block.number + ff);
+        setCurrentTime(currentTime + ff);
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
@@ -393,7 +402,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         assertTrue(subscription.isActive(tokenId), "subscription is active");
         uint256 end = subscription.expiresAt(tokenId);
-        assertEq(end, block.number + 40, "subscription ends at 90");
+        assertEq(end, currentTime + 40, "subscription ends at 90");
         assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
     }
 
@@ -401,7 +410,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 initialEnd = subscription.expiresAt(tokenId);
-        assertEq(initialEnd, block.number + 20, "subscription initially ends at 20");
+        assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
 
         uint256 amount = 200;
         vm.startPrank(bob);
@@ -436,7 +445,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 passed = 50;
 
-        vm.roll(block.number + passed);
+        setCurrentTime(currentTime + passed);
 
         assertTrue(subscription.isActive(tokenId), "subscription active");
         assertEq(subscription.withdrawable(tokenId), initialDeposit - (passed * rate), "withdrawable deposit 750");
@@ -455,7 +464,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 passed = 5;
 
-        vm.roll(block.number + passed);
+        setCurrentTime(currentTime + passed);
 
         assertTrue(subscription.isActive(tokenId), "subscription active");
         assertEq(subscription.withdrawable(tokenId), initialDeposit - (passed * rate), "withdrawable deposit 75");
@@ -485,7 +494,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 passed = 50;
 
-        vm.roll(block.number + passed);
+        setCurrentTime(currentTime + passed);
 
         assertFalse(subscription.isActive(tokenId), "subscription inactive");
         assertEq(subscription.withdrawable(tokenId), 0, "withdrawable deposit 0");
@@ -498,7 +507,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
         uint256 passed = 5;
-        vm.roll(block.number + passed);
+        setCurrentTime(currentTime + passed);
 
         // try withdraw 0 without effect
         vm.expectEmit();
@@ -535,7 +544,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, initialDeposit);
 
         uint256 passed = 5;
-        vm.roll(block.number + passed);
+        setCurrentTime(currentTime + passed);
 
         uint256 aliceBalance = testToken.balanceOf(alice);
         uint256 withdrawable = subscription.withdrawable(tokenId);
@@ -624,7 +633,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, initialDeposit);
 
         uint256 passed = 5;
-        vm.roll(block.number + passed);
+        setCurrentTime(currentTime + passed);
 
         uint256 aliceBalance = testToken.balanceOf(alice);
 
@@ -681,15 +690,15 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         assertEq(subscription.spent(tokenId), 0, "nothing spent yet");
 
-        vm.roll(block.number + 1);
+        setCurrentTime(currentTime + 1);
 
         assertEq(subscription.spent(tokenId), rate, "1 block spent");
 
-        vm.roll(block.number + 9);
+        setCurrentTime(currentTime + 9);
 
         assertEq(subscription.spent(tokenId), 10 * rate, "10 block spent");
 
-        vm.roll(block.number + 1_000);
+        setCurrentTime(currentTime + 1_000);
 
         assertEq(subscription.spent(tokenId), initialDeposit, "initial funds spent");
         assertEq(subscription.spent(tokenId), subscription.deposited(tokenId), "all deposited funds spent");
@@ -708,15 +717,15 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         assertEq(subscription.unspent(tokenId), 100, "All funds are still unspent");
 
-        vm.roll(block.number + 1);
+        setCurrentTime(currentTime + 1);
 
         assertEq(subscription.unspent(tokenId), 100 - rate, "1 block was spent");
 
-        vm.roll(block.number + 9);
+        setCurrentTime(currentTime + 9);
 
         assertEq(subscription.unspent(tokenId), 100 - 10 * rate, "10 blocks were spent");
 
-        vm.roll(block.number + 1_000);
+        setCurrentTime(currentTime + 1_000);
 
         assertEq(subscription.unspent(tokenId), 0, "no funds are unspent");
     }
@@ -731,14 +740,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     function testClaimable() public {
         mintToken(alice, 1_000);
 
-        vm.roll(block.number + (epochSize * 2));
+        setCurrentTime(currentTime + (epochSize * 2));
 
         // partial epoch + complete epoch
         assertEq(subscription.claimable(), 9 * rate + epochSize * rate, "claimable partial epoch");
     }
 
     function testClaimable_instantly() public {
-        vm.roll(10_000);
+        setCurrentTime(10_000);
         mintToken(alice, 1_000);
 
         assertEq(subscription.claimable(), 0, "0 of deposit is instantly claimable");
@@ -747,7 +756,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     function testClaimable_epoch0() public {
         mintToken(alice, 1_000);
 
-        vm.roll(block.number + (epochSize * 1));
+        setCurrentTime(currentTime + (epochSize * 1));
 
         // epoch 0 is not processed on its own
         assertEq(subscription.claimable(), 0, "no funds claimable");
@@ -756,7 +765,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     function testClaimable_expiring() public {
         uint256 tokenId = mintToken(alice, 100);
 
-        vm.roll(block.number + (epochSize * 3));
+        setCurrentTime(currentTime + (epochSize * 3));
 
         assertFalse(subscription.isActive(tokenId), "Subscription inactive");
         assertEq(subscription.claimable(), 100, "all funds claimable");
@@ -766,7 +775,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 1_000);
 
         assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
-        vm.roll(block.number + (epochSize * 2));
+        setCurrentTime(currentTime + (epochSize * 2));
 
         // partial epoch + complete epoch
         uint256 claimable = subscription.claimable();
@@ -787,7 +796,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testClaim_instantly() public {
-        vm.roll(10_000);
+        setCurrentTime(10_000);
 
         uint256 tokenId = mintToken(alice, 1_000);
 
@@ -817,7 +826,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, 1_000);
 
         assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
-        vm.roll(block.number + (epochSize * 2));
+        setCurrentTime(currentTime + (epochSize * 2));
 
         // partial epoch + complete epoch
         uint256 claimable = subscription.claimable();
@@ -835,7 +844,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
         assertEq(subscription.claimable(), 0, "no funds claimable right after claim");
 
-        vm.roll(block.number + (epochSize));
+        setCurrentTime(currentTime + (epochSize));
         claimable = subscription.claimable();
         totalClaimed += claimable;
         assertEq(claimable, epochSize * rate, "new epoch claimable");
@@ -857,7 +866,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 tokenId = mintToken(alice, funds);
 
         assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
-        vm.roll(block.number + (epochSize * 3));
+        setCurrentTime(currentTime + (epochSize * 3));
 
         assertFalse(subscription.isActive(tokenId), "Subscription inactive");
         assertEq(subscription.claimable(), funds, "all funds claimable");
