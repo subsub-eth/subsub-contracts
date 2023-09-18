@@ -25,8 +25,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
     // should the tokenId 0 == owner?
 
-    // TODO add function: when would this sub expire if I'd deposit X amount, renewPreview
-    // TODO refactor: mRate into separate, re-usable function
     // TODO refactor: epoch changes, pass expiresAt?
     // TODO generate simple image on chain to illustrate sub status
     // TODO add ERC 4906 metadata events
@@ -178,6 +176,10 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         metadata.externalUrl = _externalUrl;
     }
 
+    function multipliedRate(uint256 multiplier) internal view returns (uint256) {
+        return (settings.rate * multiplier) / MULTIPLIER_BASE;
+    }
+
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint256 multiplier, string calldata message)
         external
@@ -192,7 +194,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         // uint subscriptionEnd = amount / rate;
         _tokenIdTracker.increment();
         uint256 tokenId = _tokenIdTracker.current();
-        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = multipliedRate(multiplier);
 
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
 
@@ -218,7 +220,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function addNewSubscriptionToEpochs(uint256 amount, uint256 multiplier) internal {
-        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = multipliedRate(multiplier);
         uint256 expiresAt_ = block.number + (amount / mRate);
 
         // TODO use _expiresAt(tokenId)
@@ -244,7 +246,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         uint256 _newDeposit,
         uint256 multiplier
     ) internal {
-        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = multipliedRate(multiplier);
         // when does the sub currently end?
         uint256 oldExpiringAt = _lastDepositAt + (_oldDeposit / mRate);
         // update old epoch
@@ -267,7 +269,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         requireExists(tokenId)
     {
         uint256 multiplier = subData[tokenId].multiplier;
-        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = multipliedRate(multiplier);
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
         require(internalAmount >= mRate, "SUB: amount too small");
 
@@ -362,8 +364,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function _expiresAt(uint256 depositAt, uint256 amount, uint256 multiplier) internal view returns (uint256) {
-        uint256 mRate = (settings.rate * multiplier) / MULTIPLIER_BASE;
-        return depositAt + (amount / mRate);
+        return depositAt + (amount / multipliedRate(multiplier));
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -378,7 +379,7 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
         uint256 lockedAmount = subData[tokenId].lockedAmount;
-        uint256 mRate = (settings.rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
+        uint256 mRate = multipliedRate(subData[tokenId].multiplier);
         uint256 usedBlocks = block.number - lastDeposit;
 
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (usedBlocks * mRate));
@@ -392,9 +393,8 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
         if (!_isActive(tokenId)) {
             spentAmount = totalDeposited;
         } else {
-            uint256 mRate = (settings.rate * subData[tokenId].multiplier) / MULTIPLIER_BASE;
             spentAmount = totalDeposited - subData[tokenId].currentDeposit
-                + ((block.number - subData[tokenId].lastDepositAt) * mRate);
+                + ((block.number - subData[tokenId].lastDepositAt) * multipliedRate(subData[tokenId].multiplier));
         }
 
         uint256 unspentAmount = totalDeposited - spentAmount;
@@ -403,13 +403,13 @@ contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByER
     }
 
     function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-      (uint256 spentAmount,) = _spent(tokenId);
-      return spentAmount;
+        (uint256 spentAmount,) = _spent(tokenId);
+        return spentAmount;
     }
 
     function unspent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-      (,uint256 unspentAmount) = _spent(tokenId);
-      return unspentAmount;
+        (, uint256 unspentAmount) = _spent(tokenId);
+        return unspentAmount;
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message) external requireExists(tokenId) {
