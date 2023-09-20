@@ -24,6 +24,7 @@ contract DeployScript is Script {
     Metadata private metadata;
     SubSettings private settings;
 
+    // TODO replace with json array of addresses
     address private anvilUser1 = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
     address private anvilUser2 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
@@ -38,6 +39,7 @@ contract DeployScript is Script {
         settings.rate = 1;
         settings.lock = 0;
         settings.epochSize = 100;
+        settings.maxSupply = 10_000;
     }
 
     function run() public {

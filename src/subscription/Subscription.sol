@@ -22,19 +22,24 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, OwnableByERC721Upgradeable, PausableUpgradeable {
+abstract contract Subscription is
+    ISubscription,
+    ERC721EnumerableUpgradeable,
+    OwnableByERC721Upgradeable,
+    PausableUpgradeable
+{
     // should the tokenId 0 == owner?
 
-    // TODO refactor event deposited to spent amount?
-    // TODO define metadata
+    // TODO allow tipping while contract is paused?
     // TODO max supply?
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?
-    // TODO should an operator be allowed to withdraw?
-    // TODO upgrade function / flow, migrating one token into another
     // TODO ownable interface?
     // TODO pausable interface?
-    // TODO allow tipping while contract is paused?
+    // TODO should an operator be allowed to withdraw?
+    // TODO refactor event deposited to spent amount?
+    // TODO define metadata
+    // TODO upgrade function / flow, migrating one token into another
     // TODO fast block time + small epoch size => out of gas?
     // TODO split owner and user sides into separate abstract contracts?
     //      use structs to combine fields/members?
@@ -77,7 +82,7 @@ abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, Ow
     Metadata public metadata;
     SubSettings public settings;
 
-    mapping(uint256 => SubscriptionData) private subData;
+    mapping(uint256 => SubscriptionData) internal subData;
     mapping(uint256 => Epoch) private epochs;
 
     // TODO replace me?
@@ -96,6 +101,11 @@ abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, Ow
 
     modifier requireExists(uint256 tokenId) {
         require(_exists(tokenId), "SUB: subscription does not exist");
+        _;
+    }
+
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
         _;
     }
 
@@ -132,7 +142,7 @@ abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, Ow
         _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
-    function _now() internal virtual view returns (uint256);
+    function _now() internal view virtual returns (uint256);
 
     function contractURI() external view returns (string memory) {
         return this.contractData();
@@ -179,12 +189,22 @@ abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, Ow
         return (settings.rate * multiplier) / MULTIPLIER_BASE;
     }
 
+    function burn(uint256 tokenId) external onlyTokenOwner(tokenId) {
+        // only owner of tokenId can burn
+
+        delete subData[tokenId];
+
+        _burn(tokenId);
+    }
+
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint256 multiplier, string calldata message)
         external
         whenNotPaused
         returns (uint256)
     {
+        // check max supply
+        require(totalSupply() < settings.maxSupply, "SUB: max supply reached");
         // multiplier must be larger that 1x and less than 1000x
         // TODO in one call
         require(multiplier >= 100 && multiplier <= 100_000, "SUB: multiplier invalid");
@@ -224,7 +244,6 @@ abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, Ow
         uint256 mRate = multipliedRate(multiplier);
         uint256 expiresAt_ = _expiresAt(now_, amount, mRate);
 
-        // TODO use _expiresAt(tokenId)
         // starting
         uint256 _currentEpoch = getCurrentEpoch();
         epochs[_currentEpoch].starting += multiplier;
@@ -319,9 +338,7 @@ abstract contract Subscription is ISubscription, ERC721EnumerableUpgradeable, Ow
         _withdraw(tokenId, _withdrawable(tokenId));
     }
 
-    function _withdraw(uint256 tokenId, uint256 amount) private {
-        require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
-
+    function _withdraw(uint256 tokenId, uint256 amount) private onlyTokenOwner(tokenId) {
         uint256 withdrawable_ = _withdrawable(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 

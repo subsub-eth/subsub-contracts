@@ -24,6 +24,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
+    uint256 public maxSupply;
 
     uint8 public decimals;
 
@@ -54,13 +55,14 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;
         epochSize = 100;
+        maxSupply = 10_000;
         decimals = 6;
         profile = new Profile();
         vm.prank(owner);
         ownerTokenId = profile.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(decimals);
-        settings = SubSettings(testToken, rate, lock, epochSize);
+        settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
 
         // init simple proxy setup
         subscriptionImplementation = new TestSubscription();

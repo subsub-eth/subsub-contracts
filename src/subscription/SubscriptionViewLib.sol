@@ -17,7 +17,7 @@ library SubscriptionViewLib {
     function contractData(Subscription s) public view returns (string memory) {
         string memory output;
         {
-            (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize) = s.settings();
+            (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) = s.settings();
             output = string(
                 abi.encodePacked(
                     '{"trait_type":"token","value":"',
@@ -28,6 +28,8 @@ library SubscriptionViewLib {
                     lock.toString(),
                     '},{"trait_type":"epoch_size","value":',
                     epochSize.toString(),
+                    '},{"trait_type":"max_supply","value":',
+                    maxSupply.toString(),
                     "}"
                 )
             );
@@ -90,7 +92,7 @@ library SubscriptionViewLib {
     }
 
     function tokenData(Subscription s, uint256 tokenId) public view returns (string memory) {
-      // TODO mind changes to contract-wide metadata need to fire ERC4906 events
+        // TODO mind changes to contract-wide metadata need to fire ERC4906 events
         string memory output = Base64.encode(
             bytes(
                 string(

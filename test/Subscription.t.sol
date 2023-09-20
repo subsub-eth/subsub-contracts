@@ -23,6 +23,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
+    uint256 public maxSupply;
 
     address public owner;
     uint256 public ownerTokenId;
@@ -40,8 +41,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
     event MetadataUpdate(uint256 _tokenId);
 
     function setCurrentTime(uint256 newTime) internal {
-      currentTime = newTime;
-      subscription.setNow(newTime);
+        currentTime = newTime;
+        subscription.setNow(newTime);
     }
 
     function setUp() public {
@@ -57,12 +58,13 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         rate = 5;
         lock = 100;
         epochSize = 10;
+        maxSupply = 10_000;
         profile = new Profile();
         vm.prank(owner);
         ownerTokenId = profile.mint("test", "test", "test", "test");
 
         testToken = new ERC20DecimalsMock(18);
-        settings = SubSettings(testToken, rate, lock, epochSize);
+        settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
 
         // init simple proxy setup
         subscriptionImplementation = new TestSubscription();
@@ -177,7 +179,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(owner);
         subscription.setDescription(desc);
 
-        ( string memory description,,) = subscription.metadata();
+        (string memory description,,) = subscription.metadata();
 
         assertEq(desc, description);
     }
@@ -194,7 +196,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.startPrank(user);
         testToken.approve(address(subscription), amount);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit SubscriptionRenewed(subscription.totalSupply() + 1, amount, (amount / rate) * rate, user, message);
 
         tokenId = subscription.mint(amount, 100, message);
@@ -255,6 +257,106 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription.unpause();
 
         mintToken(alice, 100);
+    }
+
+    function testMaxSupply() public {
+        Subscription sub = createSubWithProxy();
+        settings.maxSupply = 1;
+        sub.initialize("test", "test", metadata, settings, address(1), 1);
+
+        assertEq(0, sub.totalSupply());
+
+        vm.startPrank(alice);
+        sub.mint(0, 100, "");
+
+        assertEq(1, sub.totalSupply());
+
+        vm.expectRevert("SUB: max supply reached");
+        sub.mint(0, 100, "");
+    }
+
+    function testMaxSupply_none() public {
+        Subscription sub = createSubWithProxy();
+        settings.maxSupply = 0;
+        sub.initialize("test", "test", metadata, settings, address(1), 1);
+
+        vm.startPrank(alice);
+        vm.expectRevert("SUB: max supply reached");
+        sub.mint(0, 100, "");
+    }
+
+    function testMaxSupply_withBurn() public {
+        Subscription sub = createSubWithProxy();
+        settings.maxSupply = 1;
+        sub.initialize("test", "test", metadata, settings, address(1), 1);
+
+        assertEq(0, sub.totalSupply());
+
+        vm.startPrank(alice);
+        uint256 tokenId = sub.mint(0, 100, "");
+        assertEq(1, sub.totalSupply());
+
+        sub.burn(tokenId);
+        assertEq(0, sub.totalSupply());
+
+        sub.mint(0, 100, "");
+        assertEq(1, sub.totalSupply());
+
+        vm.expectRevert("SUB: max supply reached");
+        sub.mint(0, 100, "");
+    }
+
+    function testBurn() public {
+        uint256 amount = 100;
+        uint256 tokenId = mintToken(alice, amount);
+
+        assertEq(subscription.totalSupply(), 1, "only one sub exists");
+
+        assertEq(testToken.balanceOf(address(subscription)), amount, "sub contract has tokens");
+
+        vm.prank(alice);
+        subscription.burn(tokenId);
+
+        assertEq(subscription.totalSupply(), 0, "no subs exist");
+        assertEq(testToken.balanceOf(address(subscription)), amount, "sub contract still has tokens");
+        assertEq(subscription.balanceOf(alice), 0, "alice does not own any subs anymore");
+
+        // bahhhh
+        (uint256 a, uint256 b, uint256 c, uint256 d, uint256 e, uint256 f) = subscription.getSubData(tokenId);
+
+        assertEq(0, a);
+        assertEq(0, b);
+        assertEq(0, c);
+        assertEq(0, d);
+        assertEq(0, e);
+        assertEq(0, f);
+
+        vm.startPrank(alice);
+        vm.expectRevert("SUB: subscription does not exist");
+        subscription.deposited(tokenId);
+    }
+
+    function testBurn_nonExisting() public {
+        vm.expectRevert("ERC721: invalid token ID");
+        subscription.burn(123123);
+    }
+
+    function testBurn_notTwice() public {
+        uint256 tokenId = mintToken(alice, 0);
+
+        vm.startPrank(alice);
+        subscription.burn(tokenId);
+
+        vm.expectRevert("ERC721: invalid token ID");
+        subscription.burn(tokenId);
+    }
+
+    function testBurn_notOwner() public {
+        uint256 tokenId = mintToken(alice, 0);
+
+        vm.startPrank(bob);
+        vm.expectRevert("SUB: not the owner");
+        subscription.burn(tokenId);
     }
 
     function testIsActive() public {

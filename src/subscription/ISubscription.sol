@@ -40,6 +40,8 @@ struct SubSettings {
     uint256 lock;
     // time of contract's inception
     uint256 epochSize;
+    // max supply of subscriptions that can be minted
+    uint256 maxSupply;
 }
 
 interface SubscriptionMetadata {
@@ -98,4 +100,8 @@ interface ISubscription is
 {
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint256 multiplier, string calldata message) external returns (uint256);
+
+    /// @notice "Burns" a subscription token, deletes all achieved subscription
+    ///         data and does not withdraw any withdrawable funds
+    function burn(uint256 tokenId) external;
 }

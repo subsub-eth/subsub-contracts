@@ -55,11 +55,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
     }
 
     function testProfileContract() public {
-        assertEq(
-            address(profile),
-            manager.profileContract(),
-            "Profile contract set"
-        );
+        assertEq(address(profile), manager.profileContract(), "Profile contract set");
     }
 
     function testCreateSubscription() public {
@@ -69,26 +65,14 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         address token = address(12345);
         settings.token = IERC20Metadata(token);
 
-        address result = manager.createSubscription(
-            "My Subscription",
-            "SUB",
-            metadata,
-            settings,
-            profileTokenId
-        );
+        address result = manager.createSubscription("My Subscription", "SUB", metadata, settings, profileTokenId);
         assertFalse(result == address(0), "contract not created");
         assertTrue(result.isContract(), "result is actually a contract");
 
-        (IERC20Metadata resToken, , , ) = Subscription(result).settings();
-        assertEq(
-            token,
-            address(resToken),
-            "new contract initialized, token is set"
-        );
+        (IERC20Metadata resToken,,,,) = Subscription(result).settings();
+        assertEq(token, address(resToken), "new contract initialized, token is set");
 
-        address[] memory contracts = manager.getSubscriptionContracts(
-            profileTokenId
-        );
+        address[] memory contracts = manager.getSubscriptionContracts(profileTokenId);
         address[] memory res = new address[](1);
         res[0] = result;
         assertEq(contracts, res, "contracts stored");
@@ -98,13 +82,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         vm.expectRevert("Manager: Not owner of token");
         vm.startPrank(address(1234));
 
-        manager.createSubscription(
-            "My Subscription",
-            "SUB",
-            metadata,
-            settings,
-            profileTokenId
-        );
+        manager.createSubscription("My Subscription", "SUB", metadata, settings, profileTokenId);
     }
 
     function testCreateSubscription_multipleContracts() public {
@@ -112,28 +90,16 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         settings.token = IERC20Metadata(token);
 
         for (uint256 i = 0; i < 100; i++) {
-            address result = manager.createSubscription(
-                "My Subscription",
-                "SUB",
-                metadata,
-                settings,
-                profileTokenId
-            );
+            address result = manager.createSubscription("My Subscription", "SUB", metadata, settings, profileTokenId);
             assertFalse(result == address(0), "contract not created");
             assertTrue(result.isContract(), "result is actually a contract");
 
-            (IERC20Metadata resToken, , , ) = Subscription(result).settings();
-            assertEq(
-                token,
-                address(resToken),
-                "new contract initialized, token is set"
-            );
+            (IERC20Metadata resToken,,,,) = Subscription(result).settings();
+            assertEq(token, address(resToken), "new contract initialized, token is set");
             createdContracts.push(result);
         }
 
-        address[] memory contracts = manager.getSubscriptionContracts(
-            profileTokenId
-        );
+        address[] memory contracts = manager.getSubscriptionContracts(profileTokenId);
         address[] memory _createdContracts = createdContracts;
         assertEq(contracts, _createdContracts, "contracts stored");
     }
