@@ -58,9 +58,9 @@ library SubscriptionViewLib {
                     s.claimable().toString(),
                     '"},{"trait_type":"total_claimed","value":"',
                     s.totalClaimed().toString(),
-                    '"},{"trait_type":"paused","value":',
-                    s.paused() ? "true" : "false",
-                    "}"
+                    '"},{"trait_type":"paused","value":"',
+                    s.getFlags().toString(),
+                    '"}'
                 )
             );
         }

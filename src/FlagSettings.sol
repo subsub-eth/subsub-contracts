@@ -37,11 +37,11 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable {
     }
 
     function _requireDisabled(uint256 flag) internal view virtual {
-        require(!flagsEnabled(flag), "Flag: settings enabled");
+        require(!flagsEnabled(flag), "Flag: setting enabled");
     }
 
     function _requireEnabled(uint256 flag) internal view virtual {
-        require(flagsEnabled(flag), "Flag: settings disabled");
+        require(flagsEnabled(flag), "Flag: setting disabled");
     }
 
     modifier whenDisabled(uint256 flags) {

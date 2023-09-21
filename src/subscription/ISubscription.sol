@@ -90,6 +90,15 @@ interface Claimable is ClaimEvents {
     function totalClaimed() external view returns (uint256);
 }
 
+abstract contract SubscriptionFlags {
+
+    uint256 public constant MINTING_PAUSED = 0x1;
+    uint256 public constant RENEWAL_PAUSED = 0x2;
+    uint256 public constant TIPPING_PAUSED = 0x4;
+
+    uint256 public constant ALL_FLAGS = 0x7;
+}
+
 interface ISubscription is
     IERC721Upgradeable,
     IERC721MetadataUpgradeable,

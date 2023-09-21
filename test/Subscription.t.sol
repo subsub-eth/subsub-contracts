@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
 import "./mocks/TestSubscription.sol";
 
-import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings} from "../src/subscription/ISubscription.sol";
+import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings, SubscriptionFlags} from "../src/subscription/ISubscription.sol";
 import {Profile} from "../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
@@ -14,7 +14,7 @@ import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC19
 
 // TODO test mint/renew with amount==0
 // TODO test lock 0% and 100%
-contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
+contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags {
     ERC1967Proxy public subscriptionProxy;
     TestSubscription public subscriptionImplementation;
     TestSubscription public subscription;
@@ -248,13 +248,13 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
 
     function testMint_whenPaused() public {
         vm.prank(owner);
-        subscription.pause();
+        subscription.setFlags(MINTING_PAUSED);
 
-        vm.expectRevert("Pausable: paused");
+        vm.expectRevert("Flag: setting enabled");
         subscription.mint(1, 100, "");
 
         vm.prank(owner);
-        subscription.unpause();
+        subscription.unsetFlags(MINTING_PAUSED);
 
         mintToken(alice, 100);
     }
@@ -405,7 +405,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.expectEmit();
         emit MetadataUpdate(tokenId);
 
-        assertFalse(subscription.paused(), "contract is not paused");
+        assertFalse(subscription.flagsEnabled(RENEWAL_PAUSED), "contract is not paused");
 
         subscription.renew(tokenId, 20_000, message);
 
@@ -430,9 +430,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         setCurrentTime(currentTime + 5);
 
         vm.prank(owner);
-        subscription.pause();
+        subscription.setFlags(RENEWAL_PAUSED);
 
-        vm.expectRevert("Pausable: paused");
+        vm.expectRevert("Flag: setting enabled");
         subscription.renew(tokenId, 100, "");
     }
 
@@ -987,24 +987,49 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
     }
 
-    function testPause() public {
+    function testFuzz_SetUnsetFlags(uint256 flags) public {
+        flags = bound(flags, 1, ALL_FLAGS);
         vm.prank(owner);
-        subscription.pause();
-        assertTrue(subscription.paused(), "contract paused");
+        subscription.setFlags(flags);
+        assertTrue(subscription.flagsEnabled(flags), "flags set");
 
         vm.prank(owner);
-        subscription.unpause();
-        assertFalse(subscription.paused(), "contract unpaused");
+        subscription.unsetFlags(flags);
+        assertFalse(subscription.flagsEnabled(flags), "flags not set");
     }
 
-    function testPause_notOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
-        subscription.pause();
+    function testSetFlags_invalid() public {
+        vm.startPrank(owner);
+        vm.expectRevert("SUB: invalid settings");
+        subscription.setFlags(ALL_FLAGS + 1);
     }
 
-    function testUnpause_notOwner() public {
+    function testSetFlags_invalid0() public {
+        vm.startPrank(owner);
+        vm.expectRevert("SUB: invalid settings");
+        subscription.setFlags(0);
+    }
+
+    function testSetFlags_notOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");
-        subscription.unpause();
+        subscription.setFlags(0x1);
+    }
+
+    function testUnsetFlags_notOwner() public {
+        vm.expectRevert("Ownable: caller is not the owner");
+        subscription.unsetFlags(0x1);
+    }
+
+    function testUnsetFlags_invalid() public {
+        vm.startPrank(owner);
+        vm.expectRevert("SUB: invalid settings");
+        subscription.unsetFlags(ALL_FLAGS + 1);
+    }
+
+    function testUnsetFlags_invalid0() public {
+        vm.startPrank(owner);
+        vm.expectRevert("SUB: invalid settings");
+        subscription.unsetFlags(0);
     }
 
     function testTip() public {
@@ -1060,4 +1085,15 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription.tip(tokenId, 1, "min amount");
         assertEq(subscription.deposited(tokenId), 1, "min amount deposited");
     }
+
+    function testTip_whenPaused() public {
+        uint256 tokenId = mintToken(alice, 100);
+
+        vm.prank(owner);
+        subscription.setFlags(TIPPING_PAUSED);
+
+        vm.expectRevert("Flag: setting enabled");
+        subscription.tip(tokenId, 100, "");
+    }
+
 }

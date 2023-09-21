@@ -10,7 +10,7 @@ contract TestFlagSettings is FlagSettings {
     uint256 private requiredFlags;
 
     function setRequiredFlags(uint256 rf) public {
-      requiredFlags = rf;
+        requiredFlags = rf;
     }
 
     function setFlags(uint256 flags) public {
@@ -43,8 +43,19 @@ contract FlagSettingsTest is Test {
         assertEq(fs.getFlags(), flags, "flags set");
     }
 
+    function testFuzz_UnsetGet(uint256 flags) public {
+        uint256 max = type(uint256).max;
+        fs.setFlags(max);
+
+        assertEq(fs.getFlags(), max, "all flags set");
+
+        fs.unsetFlags(flags);
+
+        assertEq(fs.getFlags(), ~flags, "flags unset");
+    }
+
     function testFuzz_FlagsEnabled(uint256 flags) public {
-        vm.assume(flags > 0);
+        flags = bound(flags, 1, type(uint256).max);
         assertFalse(fs.flagsEnabled(flags), "no flags set");
 
         fs.setFlags(flags);
@@ -55,7 +66,7 @@ contract FlagSettingsTest is Test {
     }
 
     function testFuzz_ModifiedSet(uint256 flags) public {
-        vm.assume(flags > 0);
+        flags = bound(flags, 1, type(uint256).max);
         fs.setRequiredFlags(flags);
 
         fs.setFlags(type(uint256).max);
@@ -69,7 +80,7 @@ contract FlagSettingsTest is Test {
     }
 
     function testFuzz_ModifiedNotSet(uint256 flags) public {
-        vm.assume(flags > 0);
+        flags = bound(flags, 1, type(uint256).max);
         fs.setRequiredFlags(flags);
 
         fs.withoutFlag();

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscription, Metadata, SubSettings} from "./ISubscription.sol";
+import {ISubscription, Metadata, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
 import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
-import {PausableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
+import {FlagSettings} from "../FlagSettings.sol";
+
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
@@ -26,16 +27,13 @@ abstract contract Subscription is
     ISubscription,
     ERC721EnumerableUpgradeable,
     OwnableByERC721Upgradeable,
-    PausableUpgradeable
+    SubscriptionFlags,
+    FlagSettings
 {
     // should the tokenId 0 == owner?
 
-    // TODO allow tipping while contract is paused?
-    // TODO max supply?
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?
-    // TODO ownable interface?
-    // TODO pausable interface?
     // TODO should an operator be allowed to withdraw?
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
@@ -109,6 +107,12 @@ abstract contract Subscription is
         _;
     }
 
+    modifier requireValidFlags(uint256 flags) {
+        require(flags > 0, "SUB: invalid settings");
+        require(flags <= ALL_FLAGS, "SUB: invalid settings");
+        _;
+    }
+
     constructor() {
         _disableInitializers();
     }
@@ -132,7 +136,7 @@ abstract contract Subscription is
         // TODO set metadata
         __ERC721_init_unchained(tokenName, tokenSymbol);
         __OwnableByERC721_init_unchained(profileContract, profileTokenId);
-        __Pausable_init_unchained();
+        __FlagSettings_init_unchained();
 
         metadata = _metadata;
         settings = _settings;
@@ -165,12 +169,12 @@ abstract contract Subscription is
         return _now() / settings.epochSize;
     }
 
-    function pause() external onlyOwner {
-        _pause();
+    function setFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
+        _setFlags(flags);
     }
 
-    function unpause() external onlyOwner {
-        _unpause();
+    function unsetFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
+        _unsetFlags(flags);
     }
 
     function setDescription(string calldata _description) external onlyOwner {
@@ -200,7 +204,7 @@ abstract contract Subscription is
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint256 multiplier, string calldata message)
         external
-        whenNotPaused
+        whenDisabled(MINTING_PAUSED)
         returns (uint256)
     {
         // check max supply
@@ -286,7 +290,7 @@ abstract contract Subscription is
     /// @notice adds deposits to an existing subscription token
     function renew(uint256 tokenId, uint256 amount, string calldata message)
         external
-        whenNotPaused
+        whenDisabled(RENEWAL_PAUSED)
         requireExists(tokenId)
     {
         uint256 now_ = _now();
@@ -295,19 +299,21 @@ abstract contract Subscription is
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
         require(internalAmount >= mRate, "SUB: amount too small");
 
-        uint256 oldExpiresAt = _expiresAt(tokenId);
-
         uint256 remainingDeposit = 0;
-        if (oldExpiresAt > now_) {
-            // subscription is still active
-            remainingDeposit = (oldExpiresAt - now_) * mRate;
+        {
+            uint256 oldExpiresAt = _expiresAt(tokenId);
+            if (oldExpiresAt > now_) {
+                // subscription is still active
+                remainingDeposit = (oldExpiresAt - now_) * mRate;
 
-            uint256 _currentDeposit = subData[tokenId].currentDeposit;
-            uint256 newDeposit = _currentDeposit + internalAmount;
-            moveSubscriptionInEpochs(subData[tokenId].lastDepositAt, _currentDeposit, newDeposit, multiplier);
-        } else {
-            // subscription is inactive
-            addNewSubscriptionToEpochs(internalAmount, multiplier);
+                uint256 _currentDeposit = subData[tokenId].currentDeposit;
+                moveSubscriptionInEpochs(
+                    subData[tokenId].lastDepositAt, _currentDeposit, _currentDeposit + internalAmount, multiplier
+                );
+            } else {
+                // subscription is inactive
+                addNewSubscriptionToEpochs(internalAmount, multiplier);
+            }
         }
 
         uint256 deposit = remainingDeposit + internalAmount;
@@ -434,7 +440,11 @@ abstract contract Subscription is
         return unspentAmount;
     }
 
-    function tip(uint256 tokenId, uint256 amount, string calldata message) external requireExists(tokenId) {
+    function tip(uint256 tokenId, uint256 amount, string calldata message)
+        external
+        requireExists(tokenId)
+        whenDisabled(TIPPING_PAUSED)
+    {
         require(amount > 0, "SUB: amount too small");
 
         subData[tokenId].totalDeposited += amount.toInternal(settings.token);
