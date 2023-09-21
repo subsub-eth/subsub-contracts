@@ -7,17 +7,17 @@ import "../src/FlagSettings.sol";
 contract TestFlagSettings is FlagSettings {
     function init() public initializer {}
 
-    uint8 private requiredFlags;
+    uint256 private requiredFlags;
 
-    function setRequiredFlags(uint8 rf) public {
+    function setRequiredFlags(uint256 rf) public {
       requiredFlags = rf;
     }
 
-    function setFlags(uint8 flags) public {
+    function setFlags(uint256 flags) public {
         _setFlags(flags);
     }
 
-    function unsetFlags(uint8 flags) public {
+    function unsetFlags(uint256 flags) public {
         _unsetFlags(flags);
     }
 
@@ -35,7 +35,7 @@ contract FlagSettingsTest is Test {
         fs.init();
     }
 
-    function testFuzz_SetGet(uint8 flags) public {
+    function testFuzz_SetGet(uint256 flags) public {
         assertEq(fs.getFlags(), 0, "no flags set");
 
         fs.setFlags(flags);
@@ -43,7 +43,7 @@ contract FlagSettingsTest is Test {
         assertEq(fs.getFlags(), flags, "flags set");
     }
 
-    function testFuzz_FlagsEnabled(uint8 flags) public {
+    function testFuzz_FlagsEnabled(uint256 flags) public {
         vm.assume(flags > 0);
         assertFalse(fs.flagsEnabled(flags), "no flags set");
 
@@ -54,11 +54,11 @@ contract FlagSettingsTest is Test {
         assertTrue(fs.flagsEnabled(flags), "flags still enabled");
     }
 
-    function testFuzz_ModifiedSet(uint8 flags) public {
+    function testFuzz_ModifiedSet(uint256 flags) public {
         vm.assume(flags > 0);
         fs.setRequiredFlags(flags);
 
-        fs.setFlags(0xff);
+        fs.setFlags(type(uint256).max);
         fs.withFlag();
 
         fs.setFlags(flags);
@@ -68,7 +68,7 @@ contract FlagSettingsTest is Test {
         fs.withoutFlag();
     }
 
-    function testFuzz_ModifiedNotSet(uint8 flags) public {
+    function testFuzz_ModifiedNotSet(uint256 flags) public {
         vm.assume(flags > 0);
         fs.setRequiredFlags(flags);
 

@@ -5,10 +5,10 @@ import "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.so
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 abstract contract FlagSettings is Initializable, ContextUpgradeable {
-    event FlagSet(address account, uint8 flag, uint8 newFlags);
-    event FlagUnset(address account, uint8 flag, uint8 newFlags);
+    event FlagSet(address account, uint256 flag, uint256 newFlags);
+    event FlagUnset(address account, uint256 flag, uint256 newFlags);
 
-    uint8 private _flags;
+    uint256 private _flags;
 
     function __FlagSettings_init() internal onlyInitializing {
         __FlagSettings_init_unchained();
@@ -18,38 +18,38 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable {
         _flags = 0;
     }
 
-    function _setFlags(uint8 flags) internal virtual {
+    function _setFlags(uint256 flags) internal virtual {
         _flags = _flags | flags;
         emit FlagSet(_msgSender(), flags, _flags);
     }
 
-    function _unsetFlags(uint8 flags) internal virtual {
+    function _unsetFlags(uint256 flags) internal virtual {
         _flags = _flags ^ flags;
         emit FlagUnset(_msgSender(), flags, _flags);
     }
 
-    function flagsEnabled(uint8 flags) public view virtual returns (bool) {
+    function flagsEnabled(uint256 flags) public view virtual returns (bool) {
         return (_flags & flags) == flags;
     }
 
-    function getFlags() public view virtual returns (uint8) {
+    function getFlags() public view virtual returns (uint256) {
         return _flags;
     }
 
-    function _requireDisabled(uint8 flag) internal view virtual {
+    function _requireDisabled(uint256 flag) internal view virtual {
         require(!flagsEnabled(flag), "Flag: settings enabled");
     }
 
-    function _requireEnabled(uint8 flag) internal view virtual {
+    function _requireEnabled(uint256 flag) internal view virtual {
         require(flagsEnabled(flag), "Flag: settings disabled");
     }
 
-    modifier whenDisabled(uint8 flags) {
+    modifier whenDisabled(uint256 flags) {
         _requireDisabled(flags);
         _;
     }
 
-    modifier whenEnabled(uint8 flags) {
+    modifier whenEnabled(uint256 flags) {
         _requireEnabled(flags);
         _;
     }
