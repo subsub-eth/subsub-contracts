@@ -641,6 +641,48 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(subscription.deposited(tokenId), initialDeposit - amount, "75 tokens deposited");
     }
 
+    function testWithdraw_operator() public {
+        uint256 initialDeposit = 100;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        // approve operator
+        vm.prank(alice);
+        subscription.setApprovalForAll(bob, true);
+
+        uint256 passed = 5;
+        setCurrentTime(currentTime + passed);
+
+        uint256 bobBalance = testToken.balanceOf(bob);
+
+        uint256 amount = 25;
+
+        vm.prank(bob);
+        subscription.withdraw(tokenId, amount);
+
+        assertEq(bobBalance + amount, testToken.balanceOf(bob), "operator withdrew funds");
+    }
+
+    function testWithdraw_approved() public {
+        uint256 initialDeposit = 100;
+        uint256 tokenId = mintToken(alice, initialDeposit);
+
+        // approve operator
+        vm.prank(alice);
+        subscription.approve(bob, tokenId);
+
+        uint256 passed = 5;
+        setCurrentTime(currentTime + passed);
+
+        uint256 bobBalance = testToken.balanceOf(bob);
+
+        uint256 amount = 25;
+
+        vm.prank(bob);
+        subscription.withdraw(tokenId, amount);
+
+        assertEq(bobBalance + amount, testToken.balanceOf(bob), "approved account withdrew funds");
+    }
+
     function testWithdraw_all() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
@@ -713,7 +755,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 tokenId = mintToken(alice, initialDeposit);
 
         vm.prank(bob);
-        vm.expectRevert("SUB: not the owner");
+        vm.expectRevert("ERC721: caller is not token owner or approved");
         subscription.withdraw(tokenId, 10000);
         assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
         assertEq(subscription.deposited(tokenId), initialDeposit, "100 tokens deposited");

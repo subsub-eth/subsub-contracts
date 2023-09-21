@@ -34,7 +34,6 @@ abstract contract Subscription is
 
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?
-    // TODO should an operator be allowed to withdraw?
     // TODO refactor event deposited to spent amount?
     // TODO define metadata
     // TODO upgrade function / flow, migrating one token into another
@@ -99,11 +98,6 @@ abstract contract Subscription is
 
     modifier requireExists(uint256 tokenId) {
         require(_exists(tokenId), "SUB: subscription does not exist");
-        _;
-    }
-
-    modifier onlyTokenOwner(uint256 tokenId) {
-        require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
         _;
     }
 
@@ -193,8 +187,9 @@ abstract contract Subscription is
         return (settings.rate * multiplier) / MULTIPLIER_BASE;
     }
 
-    function burn(uint256 tokenId) external onlyTokenOwner(tokenId) {
+    function burn(uint256 tokenId) external {
         // only owner of tokenId can burn
+        require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
 
         delete subData[tokenId];
 
@@ -344,7 +339,9 @@ abstract contract Subscription is
         _withdraw(tokenId, _withdrawable(tokenId));
     }
 
-    function _withdraw(uint256 tokenId, uint256 amount) private onlyTokenOwner(tokenId) {
+    function _withdraw(uint256 tokenId, uint256 amount) private {
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
+
         uint256 withdrawable_ = _withdrawable(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
@@ -359,7 +356,7 @@ abstract contract Subscription is
         subData[tokenId].totalDeposited -= amount;
 
         uint256 externalAmount = amount.toExternal(settings.token);
-        settings.token.safeTransfer(msg.sender, externalAmount);
+        settings.token.safeTransfer(_msgSender(), externalAmount);
 
         emit SubscriptionWithdrawn(tokenId, externalAmount, subData[tokenId].totalDeposited);
         emit MetadataUpdate(tokenId);
