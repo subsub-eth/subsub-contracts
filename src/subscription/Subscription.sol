@@ -143,7 +143,7 @@ abstract contract Subscription is
 
         // TODO check validity of token
 
-        _lastProcessedEpoch = getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
+        _lastProcessedEpoch = _getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
     function _now() internal view virtual returns (uint256);
@@ -165,7 +165,7 @@ abstract contract Subscription is
     }
 
     // TODO rename, add leading underscore due to being an internal func
-    function getCurrentEpoch() internal view returns (uint256) {
+    function _getCurrentEpoch() internal view returns (uint256) {
         return _now() / settings.epochSize;
     }
 
@@ -249,7 +249,7 @@ abstract contract Subscription is
         uint256 expiresAt_ = _expiresAt(now_, amount, mRate);
 
         // starting
-        uint256 _currentEpoch = getCurrentEpoch();
+        uint256 _currentEpoch = _getCurrentEpoch();
         epochs[_currentEpoch].starting += multiplier;
         uint256 remaining = (settings.epochSize - (now_ % settings.epochSize)).min(
             expiresAt_ - now_ // subscription ends within the current time slot
@@ -374,7 +374,6 @@ abstract contract Subscription is
     }
 
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        // TODO is this the correct implementation?
         return subData[tokenId].totalDeposited.toExternal(settings.token);
     }
 
@@ -463,12 +462,12 @@ abstract contract Subscription is
 
     /// @notice The owner claims their rewards
     function claim() external onlyOwner {
-        require(getCurrentEpoch() > 1, "SUB: cannot handle epoch 0");
+        require(_getCurrentEpoch() > 1, "SUB: cannot handle epoch 0");
 
         (uint256 amount, uint256 starting, uint256 expiring) = processEpochs();
 
         // delete epochs
-        uint256 _currentEpoch = getCurrentEpoch();
+        uint256 _currentEpoch = _getCurrentEpoch();
 
         // TODO: copy processEpochs function body to decrease gas?
         for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
@@ -495,14 +494,13 @@ abstract contract Subscription is
     function claimable() public view returns (uint256) {
         (uint256 amount,,) = processEpochs();
 
-        // TODO when optimizing, define var name in signature
         return amount.toExternal(settings.token);
     }
 
     function lastProcessedEpoch() private view returns (uint256 i) {
         // handle the lastProcessedEpoch init value of 0
         // if claimable is called before epoch 2, it will return 0
-        if (0 == _lastProcessedEpoch && getCurrentEpoch() > 1) {
+        if (0 == _lastProcessedEpoch && _getCurrentEpoch() > 1) {
             i = 0;
         } else {
             i = _lastProcessedEpoch + 1;
@@ -510,7 +508,7 @@ abstract contract Subscription is
     }
 
     function processEpochs() internal view returns (uint256 amount, uint256 starting, uint256 expiring) {
-        uint256 _currentEpoch = getCurrentEpoch();
+        uint256 _currentEpoch = _getCurrentEpoch();
         uint256 _activeSubs = activeSubShares;
 
         for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
