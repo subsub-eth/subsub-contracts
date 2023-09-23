@@ -39,7 +39,12 @@ contract Badge is
         _nextId = 1;
     }
 
-    function mint(address to, uint256 id, uint256 amount, bytes memory data) external {}
+    function mint(address to, uint256 id, uint256 amount, bytes memory data) external {
+        _requireMintAllowed(id);
+        require(_tokenData[id].maxSupply >= amount + totalSupply(id), "Badge: exceeds max supply");
+
+        _mint(to, id, amount, data);
+    }
 
     function burn(uint256 id, uint256 amount) external {}
 
@@ -49,6 +54,8 @@ contract Badge is
         id = _nextId++;
 
         _tokenData[id] = tokenData;
+
+        // TODO emit event
     }
 
     function setMintAllowed(address minter, uint256 id, bool allow)
