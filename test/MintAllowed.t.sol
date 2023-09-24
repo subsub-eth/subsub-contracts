@@ -20,7 +20,7 @@ contract TestMintAllowed is MintAllowedUpgradeable {
     }
 }
 
-contract MintAllowedTest is Test {
+contract MintAllowedTest is Test, IMintAllowedEvents {
     TestMintAllowed private ma;
 
     function setUp() public {
@@ -29,6 +29,9 @@ contract MintAllowedTest is Test {
     }
 
     function testSetMintAllowed(address minter, uint256 id, bool allow) public {
+        vm.expectEmit();
+        emit MintAllowed(address(this), minter, id, allow);
+
         ma.setMintAllowed(minter, id, allow);
         assertEq(allow, ma.isMintAllowed(minter, id), "MintAllowed not set correctly");
     }
@@ -61,6 +64,9 @@ contract MintAllowedTest is Test {
 
     function testFreezeMintAllowed(uint256 id) public {
         assertFalse(ma.isMintAllowedFrozen(id), "mint already frozen for id");
+
+        vm.expectEmit();
+        emit MintAllowedFrozen(address(this), id);
 
         ma.freezeMintAllowed(id);
 

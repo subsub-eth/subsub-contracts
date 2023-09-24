@@ -24,7 +24,7 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
         require(!isMintAllowedFrozen(id), "MintAllowed: Minter list is frozen");
         _mintAllowed[id][minter] = allow;
 
-        // TODO emit event
+        emit MintAllowed(_msgSender(), minter, id, allow);
     }
 
     function isMintAllowed(address minter, uint256 id) public view virtual returns (bool) {
@@ -35,7 +35,7 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
         require(_idExists(id), "MintAllowed: token does not exist");
         _mintAllowedFrozen[id] = true;
 
-        // TODO emit event
+        emit MintAllowedFrozen(_msgSender(), id);
     }
 
     function isMintAllowedFrozen(uint256 id) public view returns (bool) {
