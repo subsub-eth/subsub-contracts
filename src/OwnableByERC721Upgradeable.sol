@@ -24,6 +24,7 @@ import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol
  */
 // TODO fix comments
 // TODO check contract to an ERC721 contract
+// TODO respect approval?
 abstract contract OwnableByERC721Upgradeable is
     Initializable,
     ContextUpgradeable

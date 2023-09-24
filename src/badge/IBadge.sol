@@ -17,7 +17,7 @@ interface IBadge is IERC1155Upgradeable, IERC1155MetadataURIUpgradeable, IMintAl
 
     // TODO batchMint???
 
-    function burn(uint256 id, uint256 amount) external;
+    function burn(address account, uint256 id, uint256 value) external; 
 
     // contract owner can create new tokens
     function createToken(TokenData memory tokenData) external returns (uint256);

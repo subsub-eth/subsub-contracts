@@ -19,6 +19,8 @@ contract Badge is
     OwnableByERC721Upgradeable,
     MintAllowedUpgradeable
 {
+    // TODO add royalties?
+
     mapping(uint256 => TokenData) private _tokenData;
 
     uint256 private _nextId;
@@ -46,7 +48,9 @@ contract Badge is
         _mint(to, id, amount, data);
     }
 
-    function burn(uint256 id, uint256 amount) external {}
+    function burn(address account, uint256 id, uint256 value) public override(IBadge, ERC1155BurnableUpgradeable) {
+        super.burn(account, id, value);
+    }
 
     function createToken(TokenData memory tokenData) external onlyOwner returns (uint256 id) {
         require(tokenData.maxSupply > 0, "Badge: new token maxSupply == 0");

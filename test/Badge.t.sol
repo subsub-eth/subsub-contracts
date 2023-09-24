@@ -121,4 +121,37 @@ contract BadgeTest is Test {
         vm.expectRevert();
         badge.mint(bob, tokenId, amount, "");
     }
+
+    function testBurn(uint256 amount) public {
+        uint256 max = type(uint256).max;
+        uint256 tokenId = createToken(max);
+
+        vm.prank(owner);
+        badge.setMintAllowed(alice, tokenId, true);
+
+        vm.prank(alice);
+        badge.mint(bob, tokenId, max, "");
+
+        vm.prank(bob);
+        badge.burn(bob, tokenId, amount);
+
+        assertEq(max - amount, badge.balanceOf(bob, tokenId));
+        assertEq(max - amount, badge.totalSupply(tokenId));
+    }
+
+    function testBurn_notOwner(uint256 amount) public {
+        // vm.assume(amount > 0);
+        uint256 max = type(uint256).max;
+        uint256 tokenId = createToken(max);
+
+        vm.prank(owner);
+        badge.setMintAllowed(alice, tokenId, true);
+
+        vm.prank(alice);
+        badge.mint(bob, tokenId, max, "");
+
+        vm.expectRevert();
+        badge.burn(bob, tokenId, amount);
+    }
+
 }

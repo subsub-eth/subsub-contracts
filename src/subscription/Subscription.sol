@@ -44,6 +44,7 @@ abstract contract Subscription is
     //      add gaps
     // TODO instead of multiple instances have everything in 1 ERC721 instance?
     // TODO generate simple image on chain to illustrate sub status
+    // TODO add royalties?
 
     // TODO add natspec comments
 
