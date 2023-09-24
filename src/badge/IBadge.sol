@@ -12,7 +12,11 @@ struct TokenData {
     uint256 maxSupply;
 }
 
-interface IBadge is IERC1155Upgradeable, IERC1155MetadataURIUpgradeable, IMintAllowedUpgradeable{
+interface IBadgeEvents {
+    event TokenCreated(address indexed creator, uint256 tokenId);
+}
+
+interface IBadge is IERC1155Upgradeable, IERC1155MetadataURIUpgradeable, IMintAllowedUpgradeable, IBadgeEvents{
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external;
 
     function mintBatch(

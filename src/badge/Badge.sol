@@ -75,7 +75,7 @@ contract Badge is
 
         _tokenData[id] = tokenData;
 
-        // TODO emit event
+        emit TokenCreated(_msgSender(), id);
     }
 
     function setMintAllowed(address minter, uint256 id, bool allow)

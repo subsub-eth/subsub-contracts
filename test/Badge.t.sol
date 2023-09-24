@@ -9,7 +9,7 @@ import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract BadgeTest is Test {
+contract BadgeTest is Test, IBadgeEvents {
     ERC1967Proxy public proxy;
     Badge public implementation;
     Badge public badge;
@@ -55,12 +55,16 @@ contract BadgeTest is Test {
     function testCreateToken(uint256 maxSupply) public {
         vm.assume(maxSupply > 0);
 
+        vm.expectEmit(true, false, false, false);
+        emit TokenCreated(owner, 1);
         uint256 id = createToken(maxSupply);
 
         assertTrue(id > 0, "token id is 0");
         assertTrue(badge.exists(id), "new token does not exist");
         assertEq(0, badge.totalSupply(id), "new token has supply");
 
+        vm.expectEmit(true, false, false, false);
+        emit TokenCreated(owner, 1);
         uint256 id2 = createToken(maxSupply);
 
         assertTrue(id2 > 0, "token id2 is 0");
