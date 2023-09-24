@@ -48,8 +48,24 @@ contract Badge is
         _mint(to, id, amount, data);
     }
 
+    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external {
+        for (uint256 i = 0; i < ids.length; i++) {
+            _requireMintAllowed(ids[i]);
+            require(_tokenData[ids[i]].maxSupply >= amounts[i] + totalSupply(ids[i]), "Badge: exceeds max supply");
+        }
+
+        _mintBatch(to, ids, amounts, data);
+    }
+
     function burn(address account, uint256 id, uint256 value) public override(IBadge, ERC1155BurnableUpgradeable) {
         super.burn(account, id, value);
+    }
+
+    function burnBatch(address account, uint256[] memory ids, uint256[] memory values)
+        public
+        override(IBadge, ERC1155BurnableUpgradeable)
+    {
+        super.burnBatch(account, ids, values);
     }
 
     function createToken(TokenData memory tokenData) external onlyOwner returns (uint256 id) {

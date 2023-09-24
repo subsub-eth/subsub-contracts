@@ -22,6 +22,9 @@ contract BadgeTest is Test {
     address public alice;
     address public bob;
 
+    uint256[] private _tokenIds;
+    uint256[] private _amounts;
+
     function setUp() public {
         owner = address(1345275);
         ownerTokenId = 2342378482;
@@ -122,6 +125,75 @@ contract BadgeTest is Test {
         badge.mint(bob, tokenId, amount, "");
     }
 
+    function testMintBatch(uint256[] memory amounts) public {
+        delete _tokenIds;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            uint256 tokenId = createToken(type(uint256).max);
+
+            vm.prank(owner);
+            badge.setMintAllowed(alice, tokenId, true);
+
+            _tokenIds.push(tokenId);
+        }
+
+        vm.prank(alice);
+        badge.mintBatch(bob, _tokenIds, amounts, "");
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            assertEq(amounts[i], badge.balanceOf(bob, _tokenIds[i]), "bob did not receive tokens");
+            assertEq(amounts[i], badge.totalSupply(_tokenIds[i]), "minted tokens added to supply");
+        }
+    }
+
+    function testMintBatch_notCreated(uint256[] memory tokenIds) public {
+        vm.assume(tokenIds.length > 0);
+        delete _amounts;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _amounts.push(1);
+        }
+
+        vm.prank(alice);
+        vm.expectRevert();
+        badge.mintBatch(bob, _tokenIds, _amounts, "");
+    }
+
+    function testMintBatch_emptyArrays() public {
+        badge.mintBatch(bob, new uint256[](0), new uint256[](0), "");
+    }
+
+    function testMintBatch_maxSupply(uint256[] memory amounts) public {
+        vm.assume(amounts.length > 0);
+        delete _tokenIds;
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            amounts[i] = bound(amounts[i], 2, type(uint256).max);
+
+            uint256 tokenId = createToken(1);
+            vm.prank(owner);
+            badge.setMintAllowed(alice, tokenId, true);
+
+            _tokenIds.push(tokenId);
+        }
+
+        vm.prank(alice);
+        vm.expectRevert("Badge: exceeds max supply");
+        badge.mintBatch(bob, _tokenIds, amounts, "");
+    }
+
+    function testMint_notAllowed(uint256[] memory amounts) public {
+        vm.assume(amounts.length > 0);
+        delete _tokenIds;
+        for (uint256 i = 0; i < amounts.length; i++) {
+            amounts[i] = bound(amounts[i], 2, type(uint256).max);
+            uint256 tokenId = createToken(amounts[i]);
+            _tokenIds.push(tokenId);
+        }
+
+        vm.prank(alice);
+        vm.expectRevert();
+        badge.mintBatch(bob, _tokenIds, amounts, "");
+    }
+
     function testBurn(uint256 amount) public {
         uint256 max = type(uint256).max;
         uint256 tokenId = createToken(max);
@@ -140,7 +212,6 @@ contract BadgeTest is Test {
     }
 
     function testBurn_notOwner(uint256 amount) public {
-        // vm.assume(amount > 0);
         uint256 max = type(uint256).max;
         uint256 tokenId = createToken(max);
 
@@ -154,4 +225,46 @@ contract BadgeTest is Test {
         badge.burn(bob, tokenId, amount);
     }
 
+    function testBurnBatch(uint256[] memory amounts) public {
+        delete _tokenIds;
+        uint256 max = type(uint256).max;
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            uint256 tokenId = createToken(max);
+            vm.prank(owner);
+            badge.setMintAllowed(alice, tokenId, true);
+
+            vm.prank(alice);
+            badge.mint(bob, tokenId, max, "");
+
+            _tokenIds.push(tokenId);
+        }
+
+        vm.prank(bob);
+        badge.burnBatch(bob, _tokenIds, amounts);
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            assertEq(max - amounts[i], badge.balanceOf(bob, _tokenIds[i]));
+            assertEq(max - amounts[i], badge.totalSupply(_tokenIds[i]));
+        }
+    }
+
+    function testBurnBatch_notOwner(uint256[] memory amounts) public {
+        delete _tokenIds;
+        uint256 max = type(uint256).max;
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            uint256 tokenId = createToken(max);
+            vm.prank(owner);
+            badge.setMintAllowed(alice, tokenId, true);
+
+            vm.prank(alice);
+            badge.mint(bob, tokenId, max, "");
+
+            _tokenIds.push(tokenId);
+        }
+
+        vm.expectRevert();
+        badge.burnBatch(bob, _tokenIds, amounts);
+    }
 }

@@ -15,9 +15,16 @@ struct TokenData {
 interface IBadge is IERC1155Upgradeable, IERC1155MetadataURIUpgradeable, IMintAllowedUpgradeable{
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external;
 
-    // TODO batchMint???
+    function mintBatch(
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) external;
 
     function burn(address account, uint256 id, uint256 value) external; 
+
+    function burnBatch(address account, uint256[] memory ids, uint256[] memory values) external;
 
     // contract owner can create new tokens
     function createToken(TokenData memory tokenData) external returns (uint256);
