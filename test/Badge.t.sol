@@ -76,7 +76,7 @@ contract BadgeTest is Test, IBadgeEvents {
     function testCreateToken_onlyOwner() public {
         TokenData memory td = TokenData("something", 1);
 
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("Ownable: caller is not owner or approved");
         badge.createToken(td);
     }
 

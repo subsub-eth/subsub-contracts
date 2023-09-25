@@ -32,6 +32,7 @@ abstract contract Subscription is
 {
     // should the tokenId 0 == owner?
 
+    // TODO change Ownable to check approval
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?
     // TODO refactor event deposited to spent amount?

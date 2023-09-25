@@ -68,7 +68,7 @@ contract Badge is
         super.burnBatch(account, ids, values);
     }
 
-    function createToken(TokenData memory tokenData) external onlyOwner returns (uint256 id) {
+    function createToken(TokenData memory tokenData) external onlyOwnerOrApproved returns (uint256 id) {
         require(tokenData.maxSupply > 0, "Badge: new token maxSupply == 0");
 
         id = _nextId++;
@@ -81,7 +81,7 @@ contract Badge is
     function setMintAllowed(address minter, uint256 id, bool allow)
         public
         override(IMintAllowedUpgradeable, MintAllowedUpgradeable)
-        onlyOwner
+        onlyOwnerOrApproved
     {
         super.setMintAllowed(minter, id, allow);
     }
