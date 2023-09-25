@@ -24,11 +24,7 @@ import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol
  */
 // TODO fix comments
 // TODO check contract to an ERC721 contract
-// TODO respect approval?
-abstract contract OwnableByERC721Upgradeable is
-    Initializable,
-    ContextUpgradeable
-{
+abstract contract OwnableByERC721Upgradeable is Initializable, ContextUpgradeable {
     address private _ownerContract;
     uint256 private _ownerTokenId;
 
@@ -42,17 +38,11 @@ abstract contract OwnableByERC721Upgradeable is
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
-    function __OwnableByERC721_init(address ownerContract, uint256 ownerTokenId)
-        internal
-        onlyInitializing
-    {
+    function __OwnableByERC721_init(address ownerContract, uint256 ownerTokenId) internal onlyInitializing {
         __OwnableByERC721_init_unchained(ownerContract, ownerTokenId);
     }
 
-    function __OwnableByERC721_init_unchained(
-        address ownerContract,
-        uint256 ownerTokenId
-    ) internal onlyInitializing {
+    function __OwnableByERC721_init_unchained(address ownerContract, uint256 ownerTokenId) internal onlyInitializing {
         _transferOwnership(ownerContract, ownerTokenId);
     }
 
@@ -61,6 +51,14 @@ abstract contract OwnableByERC721Upgradeable is
      */
     modifier onlyOwner() {
         _checkOwner();
+        _;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner or an approved one.
+     */
+    modifier onlyOwnerOrApproved() {
+        _checkOwnerOrApproved();
         _;
     }
 
@@ -86,9 +84,18 @@ abstract contract OwnableByERC721Upgradeable is
      * @dev Throws if the sender is not the owner.
      */
     function _checkOwner() internal view virtual {
+        require(ownerAddress() == _msgSender(), "Ownable: caller is not the owner");
+    }
+
+    /**
+     * @dev Throws if the sender is not approved
+     */
+    function _checkOwnerOrApproved() internal view virtual {
+        address _owner = ownerAddress();
         require(
-            IERC721(_ownerContract).ownerOf(_ownerTokenId) == _msgSender(),
-            "Ownable: caller is not the owner"
+            _owner == _msgSender() || IERC721(_ownerContract).isApprovedForAll(_owner, _msgSender())
+                || IERC721(_ownerContract).getApproved(_ownerTokenId) == _msgSender(),
+            "Ownable: caller is not owner or approved"
         );
     }
 
@@ -96,20 +103,12 @@ abstract contract OwnableByERC721Upgradeable is
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */
-    function _transferOwnership(
-        address newOwnerContract,
-        uint256 newOwnerTokenId
-    ) internal virtual {
+    function _transferOwnership(address newOwnerContract, uint256 newOwnerTokenId) internal virtual {
         address oldOwnerContract = _ownerContract;
         uint256 oldOwnerTokenId = _ownerTokenId;
         _ownerContract = newOwnerContract;
         _ownerTokenId = newOwnerTokenId;
-        emit OwnershipTransferred(
-            oldOwnerContract,
-            oldOwnerTokenId,
-            newOwnerContract,
-            newOwnerTokenId
-        );
+        emit OwnershipTransferred(oldOwnerContract, oldOwnerTokenId, newOwnerContract, newOwnerTokenId);
     }
 
     /**
@@ -121,7 +120,6 @@ abstract contract OwnableByERC721Upgradeable is
 }
 
 abstract contract TransferableOwnableByERC721Upgradeable is OwnableByERC721Upgradeable {
-
     /**
      * @dev Leaves the contract without owner. It will not be possible to call
      * `onlyOwner` functions. Can only be called by the current owner.
@@ -137,15 +135,9 @@ abstract contract TransferableOwnableByERC721Upgradeable is OwnableByERC721Upgra
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the current owner.
      */
-    function transferOwnership(
-        address newOwnerContract,
-        uint256 newOwnerTokenId
-    ) public virtual onlyOwner {
+    function transferOwnership(address newOwnerContract, uint256 newOwnerTokenId) public virtual onlyOwner {
         // TODO check supportsInterface
-        require(
-            newOwnerContract != address(0),
-            "Ownable: new owner contract is the zero address"
-        );
+        require(newOwnerContract != address(0), "Ownable: new owner contract is the zero address");
         _transferOwnership(newOwnerContract, newOwnerTokenId);
     }
 }

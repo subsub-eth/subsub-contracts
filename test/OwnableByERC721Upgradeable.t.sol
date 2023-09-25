@@ -12,6 +12,9 @@ contract MyOwnable is TransferableOwnableByERC721Upgradeable {
   function init(address kontract, uint256 tokenId) initializer public {
     __OwnableByERC721_init(kontract, tokenId);
   }
+
+  function runOnlyOwner() public onlyOwner {}
+  function runOwnerOrApproved() public onlyOwnerOrApproved {}
 }
 
 contract OwnableByERC721UpgradeableTest is Test {
@@ -27,8 +30,14 @@ contract OwnableByERC721UpgradeableTest is Test {
 
     MyOwnable private myOwnable;
 
+    address private alice;
+    address private bob;
+
     function setUp() public {
       nft = new ERC721Mock("test", "test");
+
+      alice = address(423423);
+      bob = address(9793248979);
     }
 
 
@@ -146,5 +155,137 @@ contract OwnableByERC721UpgradeableTest is Test {
       vm.expectRevert("Ownable: caller is not the owner");
       vm.prank(otherUser);
       mo.renounceOwnership();
+    }
+
+    function testOnlyOwner(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      mo.runOnlyOwner();
+    }
+
+    function testOnlyOwner_notOwner(uint256 tokenId) public {
+
+      nft.mint(address(10), tokenId);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.expectRevert("Ownable: caller is not the owner");
+      mo.runOnlyOwner();
+    }
+
+    function testOnlyOwner_tokenDoesNotExist(uint256 tokenId) public {
+      vm.assume(tokenId != 10);
+
+      nft.mint(address(this), 10);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.expectRevert(); // fails in ERC721
+      mo.runOnlyOwner();
+    }
+
+    function testOnlyOwner_nftContractDoesNotExist(address addr, uint256 tokenId) public {
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(addr), tokenId);
+
+      vm.expectRevert();
+      mo.runOnlyOwner();
+    }
+
+
+    function testOnlyOwnerOrApproved_owner(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_notOwner(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.prank(bob);
+      vm.expectRevert("Ownable: caller is not owner or approved");
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_tokenContractDoesNotExist(address addr, uint256 tokenId) public {
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(addr), tokenId);
+
+      vm.expectRevert();
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_tokenDoesNotExist(uint256 tokenId) public {
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.expectRevert();
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_operator(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+      nft.setApprovalForAll(alice, true);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.prank(alice);
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_notOperator(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+      nft.setApprovalForAll(alice, true);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.prank(bob);
+      vm.expectRevert("Ownable: caller is not owner or approved");
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_tokenApproved(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+      nft.approve(alice, tokenId);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.prank(alice);
+      mo.runOwnerOrApproved();
+    }
+
+    function testOnlyOwnerOrApproved_notTokenApproved(uint256 tokenId) public {
+
+      nft.mint(address(this), tokenId);
+      nft.approve(alice, tokenId);
+
+      MyOwnable mo = new MyOwnable();
+      mo.init(address(nft), tokenId);
+
+      vm.prank(bob);
+      vm.expectRevert("Ownable: caller is not owner or approved");
+      mo.runOwnerOrApproved();
     }
 }
