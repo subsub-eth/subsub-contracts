@@ -16,23 +16,28 @@ interface IBadgeEvents {
     event TokenCreated(address indexed creator, uint256 tokenId);
 }
 
-interface IBadge is IERC1155Upgradeable, IERC1155MetadataURIUpgradeable, IMintAllowedUpgradeable, IBadgeEvents{
+interface IBadgeOperations {
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external;
 
-    function mintBatch(
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) external;
+    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external;
 
-    function burn(address account, uint256 id, uint256 value) external; 
+    function burn(address account, uint256 id, uint256 value) external;
 
     function burnBatch(address account, uint256[] memory ids, uint256[] memory values) external;
+}
 
+interface IBadgeCreation {
     // contract owner can create new tokens
     function createToken(TokenData memory tokenData) external returns (uint256);
 
     // TODO edit token data?
-
 }
+
+interface IBadge is
+    IERC1155Upgradeable,
+    IERC1155MetadataURIUpgradeable,
+    IMintAllowedUpgradeable,
+    IBadgeEvents,
+    IBadgeOperations,
+    IBadgeCreation
+{}

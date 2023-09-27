@@ -57,13 +57,13 @@ contract Badge is
         _mintBatch(to, ids, amounts, data);
     }
 
-    function burn(address account, uint256 id, uint256 value) public override(IBadge, ERC1155BurnableUpgradeable) {
+    function burn(address account, uint256 id, uint256 value) public override(IBadgeOperations, ERC1155BurnableUpgradeable) {
         super.burn(account, id, value);
     }
 
     function burnBatch(address account, uint256[] memory ids, uint256[] memory values)
         public
-        override(IBadge, ERC1155BurnableUpgradeable)
+        override(IBadgeOperations, ERC1155BurnableUpgradeable)
     {
         super.burnBatch(account, ids, values);
     }
