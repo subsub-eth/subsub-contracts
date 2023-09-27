@@ -99,14 +99,7 @@ abstract contract SubscriptionFlags {
     uint256 public constant ALL_FLAGS = 0x7;
 }
 
-interface ISubscription is
-    IERC721Upgradeable,
-    IERC721MetadataUpgradeable,
-    IERC4906Upgradeable,
-    Subscribable,
-    Claimable,
-    SubscriptionMetadata
-{
+interface SubscriptionCreation {
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint256 multiplier, string calldata message) external returns (uint256);
 
@@ -114,3 +107,13 @@ interface ISubscription is
     ///         data and does not withdraw any withdrawable funds
     function burn(uint256 tokenId) external;
 }
+
+interface ISubscription is
+    IERC721Upgradeable,
+    IERC721MetadataUpgradeable,
+    IERC4906Upgradeable,
+    Subscribable,
+    Claimable,
+    SubscriptionCreation,
+    SubscriptionMetadata
+{}
