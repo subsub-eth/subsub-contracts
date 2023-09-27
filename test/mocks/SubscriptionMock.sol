@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "../../src/subscription/ISubscription.sol";
+import {ERC721Mock} from "./ERC721Mock.sol";
+
+// THIS IS A WORK IN PROGRESS, MAKE CHANGES AND ADDITIONS AS NEEDED
+contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
+    mapping(uint256 => uint256) private _spentAmounts;
+
+    constructor() ERC721Mock("test", "test") {}
+
+    function renew(uint256 tokenId, uint256 amount, string calldata message) external {}
+
+    function withdraw(uint256 tokenId, uint256 amount) external {}
+
+    function cancel(uint256 tokenId) external {}
+
+    function isActive(uint256 tokenId) external view returns (bool) {}
+
+    function expiresAt(uint256 tokenId) external view returns (uint256) {}
+
+    // the amount of tokens ever deposited reduced by the withdrawn amount.
+    function deposited(uint256 tokenId) external view returns (uint256) {}
+
+    // the amount of tokens spent in the subscription
+    function spent(uint256 tokenId) external view returns (uint256) {
+        return _spentAmounts[tokenId];
+    }
+
+    function setSpent(uint256 tokenId, uint256 amount) external {
+        _spentAmounts[tokenId] = amount;
+    }
+
+    // the amount of deposited tokens that have not been spend yet
+    function unspent(uint256 tokenId) external view returns (uint256) {}
+
+    function withdrawable(uint256 tokenId) external view returns (uint256) {}
+
+    function activeSubShares() external view returns (uint256) {}
+
+    // adds funds to the subscription, but does not extend an active sub
+    function tip(uint256 tokenId, uint256 amount, string calldata message) external {}
+
+    /// @notice "Mints" a new subscription token
+    function mint(uint256 amount, uint256 multiplier, string calldata message) external returns (uint256) {}
+
+    /// @notice "Burns" a subscription token, deletes all achieved subscription
+    ///         data and does not withdraw any withdrawable funds
+    function burn(uint256 tokenId) public override(SubscriptionCreation, ERC721Mock) {
+        super.burn(tokenId);
+    }
+}

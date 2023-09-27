@@ -35,7 +35,7 @@ contract ERC721Mock is ERC721 {
         _safeMint(to, tokenId, _data);
     }
 
-    function burn(uint256 tokenId) public {
+    function burn(uint256 tokenId) public virtual {
         _burn(tokenId);
     }
 }
