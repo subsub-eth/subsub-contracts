@@ -1,0 +1,45 @@
+name: NPM Publish Tag
+
+on:
+  push:
+    tags:
+      - "**"
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  publish:
+    name: Publish Contracts and Typescript Types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - uses: actions/setup-node@v3
+        name: Install Node
+        with:
+          node-version: '19.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        with:
+          version: 8
+
+      - run: pnpm install
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+
+      - run: pnpm run generate-types
+      - run: pnpm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
