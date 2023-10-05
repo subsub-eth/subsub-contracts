@@ -23,6 +23,8 @@ contract SpentAmountSingleBadgeMinterTest is Test {
 
     uint256 public badgeTokenId;
 
+    uint256 public mintAmount = 1 ether;
+
     address public owner;
     uint256 public ownerTokenId;
 
@@ -43,7 +45,8 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         subscription = new SubscriptionMock();
 
         badgeTokenId = 88787878;
-        minter = new SpentAmountSingleBadgeMinter(address(badge), badgeTokenId, address(subscription), 1 ether);
+
+        minter = new SpentAmountSingleBadgeMinter(address(badge), badgeTokenId, address(subscription), mintAmount);
     }
 
     function testMint(uint256 amount, uint256 tokenId) public {
@@ -57,7 +60,7 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         vm.expectEmit();
         emit SpentAmountSingleBadgeMinted(bob, tokenId, "");
 
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
 
         assertEq(1, badge.balanceOf(bob, badgeTokenId), "Badge not minted");
     }
@@ -73,7 +76,7 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         subscription.approve(bob, tokenId);
 
         vm.prank(bob);
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
 
         assertEq(1, badge.balanceOf(bob, badgeTokenId), "Badge not minted");
     }
@@ -89,7 +92,7 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         subscription.setApprovalForAll(bob, true);
 
         vm.prank(bob);
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
 
         assertEq(1, badge.balanceOf(bob, badgeTokenId), "Badge not minted");
     }
@@ -98,7 +101,14 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         vm.assume(amount != 1);
 
         vm.expectRevert("BadgeMint: amount != 1");
-        minter.mint(bob, 0, amount, "");
+        minter.mint(bob, address(subscription), 0, amount, "");
+    }
+
+    function testMint_otherContract(address addr) public {
+        vm.assume(addr != address(subscription));
+
+        vm.expectRevert("BadgeMint: unknown Subscription Contract");
+        minter.mint(bob, addr, 0, 1, "");
     }
 
     function testMint_notSubOwner(uint256 tokenId) public {
@@ -108,7 +118,7 @@ contract SpentAmountSingleBadgeMinterTest is Test {
 
         vm.prank(bob);
         vm.expectRevert("BadgeMinter: not owner of token");
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
     }
 
     function testMint_amountTooLow(uint256 amount, uint256 tokenId) public {
@@ -120,7 +130,7 @@ contract SpentAmountSingleBadgeMinterTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("BadgeMinter: insufficient spent amount");
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
     }
 
     function testMint_twice(uint256 amount, uint256 tokenId) public {
@@ -131,13 +141,13 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         subscription.setSpent(tokenId, amount);
 
         vm.prank(alice);
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
 
         assertEq(1, badge.balanceOf(bob, badgeTokenId), "Badge not minted");
 
         vm.prank(alice);
         vm.expectRevert("BadgeMinter: already minted");
-        minter.mint(bob, tokenId, 1, "");
+        minter.mint(bob, address(subscription), tokenId, 1, "");
     }
 
 }

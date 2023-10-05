@@ -32,6 +32,8 @@ abstract contract Subscription is
 {
     // should the tokenId 0 == owner?
 
+    // TODO merge: seperate funds that are accumulated in the current sub and funds merged in, enable via flag
+    // TODO "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
     // TODO change Ownable to check approval
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?

@@ -26,8 +26,9 @@ contract SpentAmountSingleBadgeMinter is IBadgeMinter, Context {
         spentAmount = _spentAmount;
     }
 
-    function mint(address to, uint256 subscriptionId, uint256 amount, bytes memory data) external {
+    function mint(address to, address subscription, uint256 subscriptionId, uint256 amount, bytes memory data) external {
         require(amount == 1, "BadgeMint: amount != 1");
+        require(subscription == subscriptionContract, "BadgeMint: unknown Subscription Contract");
         address owner = ISubscription(subscriptionContract).ownerOf(subscriptionId);
         require(
             owner == _msgSender() || ISubscription(subscriptionContract).isApprovedForAll(owner, _msgSender())
