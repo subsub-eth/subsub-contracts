@@ -83,7 +83,7 @@ interface ClaimEvents {
 
 interface Claimable is ClaimEvents {
     /// @notice The owner claims their rewards
-    function claim() external;
+    function claim(address to) external;
 
     function claimable() external view returns (uint256);
 

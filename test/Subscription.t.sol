@@ -929,7 +929,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         emit FundsClaimed(claimable, claimable);
 
         vm.prank(owner);
-        subscription.claim();
+        subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), claimable, "claimable funds transferred to owner");
         assertEq(subscription.activeSubShares(), 1 * subscription.MULTIPLIER_BASE(), "subscriptions updated");
@@ -937,6 +937,25 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(subscription.claimable(), 0, "no funds claimable right after claim");
 
         assertEq(subscription.deposited(tokenId), 1_000, "1000 tokens deposited");
+    }
+
+    function testClaim_otherAccount() public {
+        mintToken(alice, 1_000);
+
+        assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
+        setCurrentTime(currentTime + (epochSize * 2));
+
+        // partial epoch + complete epoch
+        uint256 claimable = subscription.claimable();
+        assertEq(claimable, 9 * rate + epochSize * rate, "claimable partial epoch");
+
+        vm.expectEmit(true, true, true, true);
+        emit FundsClaimed(claimable, claimable);
+
+        vm.prank(owner);
+        subscription.claim(charlie);
+
+        assertEq(testToken.balanceOf(charlie), claimable, "claimable funds transferred to charlie");
     }
 
     function testClaim_instantly() public {
@@ -953,7 +972,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         emit FundsClaimed(claimable, claimable);
 
         vm.prank(owner);
-        subscription.claim();
+        subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), claimable, "claimable funds transferred to owner");
         assertEq(subscription.activeSubShares(), 0, "active subscriptions not updated");
@@ -962,8 +981,8 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testClaim_onlyOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
-        subscription.claim();
+        vm.expectRevert();
+        subscription.claim(owner);
     }
 
     function testClaim_nextEpoch() public {
@@ -980,7 +999,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         emit FundsClaimed(claimable, totalClaimed);
 
         vm.prank(owner);
-        subscription.claim();
+        subscription.claim(owner);
 
         uint256 ownerBalance = testToken.balanceOf(owner);
         assertEq(ownerBalance, claimable, "claimable funds transferred to owner");
@@ -997,7 +1016,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         emit FundsClaimed(claimable, totalClaimed);
 
         vm.prank(owner);
-        subscription.claim();
+        subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), ownerBalance + claimable, "new funds transferred to owner");
         assertEq(subscription.activeSubShares(), 1 * subscription.MULTIPLIER_BASE(), "subscriptions updated");
@@ -1019,7 +1038,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         emit FundsClaimed(funds, funds);
 
         vm.prank(owner);
-        subscription.claim();
+        subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), funds, "all funds transferred to owner");
 
@@ -1053,12 +1072,12 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testSetFlags_notOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert();
         subscription.setFlags(0x1);
     }
 
     function testUnsetFlags_notOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert();
         subscription.unsetFlags(0x1);
     }
 

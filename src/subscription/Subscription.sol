@@ -34,7 +34,6 @@ abstract contract Subscription is
 
     // TODO merge: seperate funds that are accumulated in the current sub and funds merged in, enable via flag
     // TODO "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
-    // TODO change Ownable to check approval
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?
     // TODO refactor event deposited to spent amount?
@@ -167,23 +166,23 @@ abstract contract Subscription is
         return _now() / settings.epochSize;
     }
 
-    function setFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
+    function setFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
         _setFlags(flags);
     }
 
-    function unsetFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
+    function unsetFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
         _unsetFlags(flags);
     }
 
-    function setDescription(string calldata _description) external onlyOwner {
+    function setDescription(string calldata _description) external onlyOwnerOrApproved {
         metadata.description = _description;
     }
 
-    function setImage(string calldata _image) external onlyOwner {
+    function setImage(string calldata _image) external onlyOwnerOrApproved {
         metadata.image = _image;
     }
 
-    function setExternalUrl(string calldata _externalUrl) external onlyOwner {
+    function setExternalUrl(string calldata _externalUrl) external onlyOwnerOrApproved {
         metadata.externalUrl = _externalUrl;
     }
 
@@ -462,7 +461,7 @@ abstract contract Subscription is
     }
 
     /// @notice The owner claims their rewards
-    function claim() external onlyOwner {
+    function claim(address to) external onlyOwnerOrApproved {
         require(_getCurrentEpoch() > 1, "SUB: cannot handle epoch 0");
 
         (uint256 amount, uint256 starting, uint256 expiring) = processEpochs();
@@ -487,7 +486,7 @@ abstract contract Subscription is
         amount = amount.toExternal(settings.token);
         totalClaimed += amount;
 
-        settings.token.safeTransfer(_msgSender(), amount);
+        settings.token.safeTransfer(to, amount);
 
         emit FundsClaimed(amount, totalClaimed);
     }

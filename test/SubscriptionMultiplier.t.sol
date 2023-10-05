@@ -174,7 +174,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
             "full sub amount claimable"
         );
 
-        subscription.claim();
+        subscription.claim(owner);
         assertEq(
             testToken.balanceOf(owner),
             claimable,
@@ -225,7 +225,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 claimable = subscription.claimable();
         assertEq(claimable, (2_000 * mRate).toExternal(testToken), "claimable");
 
-        subscription.claim();
+        subscription.claim(owner);
         assertEq(
             testToken.balanceOf(owner),
             claimable,
