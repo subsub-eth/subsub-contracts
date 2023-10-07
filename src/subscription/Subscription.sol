@@ -6,6 +6,9 @@ import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
+import {TimeAware} from "./TimeAware.sol";
+import {Epochs} from "./Epochs.sol";
+
 import {FlagSettings} from "../FlagSettings.sol";
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -25,6 +28,8 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 abstract contract Subscription is
     ISubscription,
+    TimeAware,
+    Epochs,
     ERC721EnumerableUpgradeable,
     OwnableByERC721Upgradeable,
     SubscriptionFlags,
@@ -76,7 +81,6 @@ abstract contract Subscription is
         uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
     }
 
-    uint256 public constant MULTIPLIER_BASE = 100;
     uint256 public constant LOCK_BASE = 10_000;
 
     Metadata public metadata;
@@ -87,12 +91,6 @@ abstract contract Subscription is
 
     // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
-
-    // number of active subscriptions with a multiplier represented as shares
-    // base 100:
-    // 1 Sub * 1x == 100 shares
-    // 1 Sub * 2.5x == 250 shares
-    uint256 public activeSubShares;
 
     uint256 private _lastProcessedEpoch;
 
@@ -134,6 +132,7 @@ abstract contract Subscription is
         __ERC721_init_unchained(tokenName, tokenSymbol);
         __OwnableByERC721_init_unchained(profileContract, profileTokenId);
         __FlagSettings_init_unchained();
+        __Epochs_init_unchained(_settings.epochSize);
 
         metadata = _metadata;
         settings = _settings;
@@ -143,10 +142,12 @@ abstract contract Subscription is
         _lastProcessedEpoch = _getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
-    function _now() internal view virtual returns (uint256);
-
     function contractURI() external view returns (string memory) {
         return this.contractData();
+    }
+
+    function activeSubShares() external view returns (uint256) {
+        return _getActiveSubShares();
     }
 
     function tokenURI(uint256 tokenId)
@@ -159,11 +160,6 @@ abstract contract Subscription is
         _requireMinted(tokenId);
 
         return this.tokenData(tokenId);
-    }
-
-    // TODO rename, add leading underscore due to being an internal func
-    function _getCurrentEpoch() internal view returns (uint256) {
-        return _now() / settings.epochSize;
     }
 
     function setFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
@@ -187,7 +183,8 @@ abstract contract Subscription is
     }
 
     function multipliedRate(uint256 multiplier) internal view returns (uint256) {
-        return (settings.rate * multiplier) / MULTIPLIER_BASE;
+        // TODO check gas consumption
+        return settings.rate.multipliedRate(multiplier);
     }
 
     function burn(uint256 tokenId) external {
@@ -229,7 +226,7 @@ abstract contract Subscription is
         // set lockedAmount
         subData[tokenId].lockedAmount = ((internalAmount * settings.lock) / LOCK_BASE).adjustToRate(mRate);
 
-        addNewSubscriptionToEpochs(internalAmount, multiplier);
+        addNewSubscriptionToEpochs(internalAmount, multiplier, mRate, now_);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
         settings.token.safeTransferFrom(msg.sender, address(this), amount);
@@ -239,50 +236,6 @@ abstract contract Subscription is
         emit SubscriptionRenewed(tokenId, amount, internalAmount, msg.sender, message);
 
         return tokenId;
-    }
-
-    function addNewSubscriptionToEpochs(uint256 amount, uint256 multiplier) internal {
-        uint256 now_ = _now();
-        uint256 mRate = multipliedRate(multiplier);
-        uint256 expiresAt_ = _expiresAt(now_, amount, mRate);
-
-        // starting
-        uint256 _currentEpoch = _getCurrentEpoch();
-        epochs[_currentEpoch].starting += multiplier;
-        uint256 remaining = (settings.epochSize - (now_ % settings.epochSize)).min(
-            expiresAt_ - now_ // subscription ends within the current time slot
-        );
-        epochs[_currentEpoch].partialFunds += (remaining * mRate);
-
-        // ending
-        uint256 expiringEpoch = expiresAt_ / settings.epochSize;
-        epochs[expiringEpoch].expiring += multiplier;
-        epochs[expiringEpoch].partialFunds += (expiresAt_ - (expiringEpoch * settings.epochSize)).min(
-            expiresAt_ - now_ // subscription ends within the current time slot
-        ) * mRate;
-    }
-
-    function moveSubscriptionInEpochs(
-        uint256 _lastDepositAt,
-        uint256 _oldDeposit,
-        uint256 _newDeposit,
-        uint256 multiplier
-    ) internal {
-        uint256 now_ = _now();
-        uint256 mRate = multipliedRate(multiplier);
-        // when does the sub currently end?
-        uint256 oldExpiringAt = _expiresAt(_lastDepositAt, _oldDeposit, mRate);
-        // update old epoch
-        uint256 oldEpoch = oldExpiringAt / settings.epochSize;
-        epochs[oldEpoch].expiring -= multiplier;
-        uint256 removable = (oldExpiringAt - ((oldEpoch * settings.epochSize).max(now_))) * mRate;
-        epochs[oldEpoch].partialFunds -= removable;
-
-        // update new epoch
-        uint256 newEndingBlock = _expiresAt(_lastDepositAt, _newDeposit, mRate);
-        uint256 newEpoch = newEndingBlock / settings.epochSize;
-        epochs[newEpoch].expiring += multiplier;
-        epochs[newEpoch].partialFunds += (newEndingBlock - ((newEpoch * settings.epochSize).max(now_))) * mRate;
     }
 
     /// @notice adds deposits to an existing subscription token
@@ -306,11 +259,16 @@ abstract contract Subscription is
 
                 uint256 _currentDeposit = subData[tokenId].currentDeposit;
                 moveSubscriptionInEpochs(
-                    subData[tokenId].lastDepositAt, _currentDeposit, _currentDeposit + internalAmount, multiplier
+                    subData[tokenId].lastDepositAt,
+                    _currentDeposit,
+                    _currentDeposit + internalAmount,
+                    multiplier,
+                    mRate,
+                    now_
                 );
             } else {
                 // subscription is inactive
-                addNewSubscriptionToEpochs(internalAmount, multiplier);
+                addNewSubscriptionToEpochs(internalAmount, multiplier, mRate, now_);
             }
         }
 
@@ -352,7 +310,13 @@ abstract contract Subscription is
         uint256 _lastDepositAt = subData[tokenId].lastDepositAt;
 
         uint256 newDeposit = _currentDeposit - amount;
-        moveSubscriptionInEpochs(_lastDepositAt, _currentDeposit, newDeposit, subData[tokenId].multiplier);
+        moveSubscriptionInEpochs(_lastDepositAt,
+                                 _currentDeposit,
+                                 newDeposit,
+                                 subData[tokenId].multiplier,
+                                 multipliedRate(subData[tokenId].multiplier),
+                                 _now()
+                                );
 
         // when is is the sub going to end now?
         subData[tokenId].currentDeposit = newDeposit;
@@ -387,11 +351,7 @@ abstract contract Subscription is
         // active = [start, + deposit / rate)
         uint256 lastDeposit = subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        return _expiresAt(lastDeposit, currentDeposit_, multipliedRate(subData[tokenId].multiplier));
-    }
-
-    function _expiresAt(uint256 depositedAt, uint256 amount, uint256 mRate) internal pure returns (uint256) {
-        return depositedAt + (amount / mRate);
+        return currentDeposit_.expiresAt(lastDeposit, multipliedRate(subData[tokenId].multiplier));
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -462,25 +422,7 @@ abstract contract Subscription is
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwnerOrApproved {
-        require(_getCurrentEpoch() > 1, "SUB: cannot handle epoch 0");
-
-        (uint256 amount, uint256 starting, uint256 expiring) = processEpochs();
-
-        // delete epochs
-        uint256 _currentEpoch = _getCurrentEpoch();
-
-        // TODO: copy processEpochs function body to decrease gas?
-        for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
-            delete epochs[i];
-        }
-
-        if (starting > expiring) {
-            activeSubShares += starting - expiring;
-        } else {
-            activeSubShares -= expiring - starting;
-        }
-
-        _lastProcessedEpoch = _currentEpoch - 1;
+        uint256 amount = handleEpochsClaim(settings.rate);
 
         // convert to external amount
         amount = amount.toExternal(settings.token);
@@ -492,37 +434,8 @@ abstract contract Subscription is
     }
 
     function claimable() public view returns (uint256) {
-        (uint256 amount,,) = processEpochs();
+        (uint256 amount,,) = processEpochs(settings.rate, _getCurrentEpoch());
 
         return amount.toExternal(settings.token);
-    }
-
-    function lastProcessedEpoch() private view returns (uint256 i) {
-        // handle the lastProcessedEpoch init value of 0
-        // if claimable is called before epoch 2, it will return 0
-        if (0 == _lastProcessedEpoch && _getCurrentEpoch() > 1) {
-            i = 0;
-        } else {
-            i = _lastProcessedEpoch + 1;
-        }
-    }
-
-    function processEpochs() internal view returns (uint256 amount, uint256 starting, uint256 expiring) {
-        uint256 _currentEpoch = _getCurrentEpoch();
-        uint256 _activeSubs = activeSubShares;
-
-        for (uint256 i = lastProcessedEpoch(); i < _currentEpoch; i++) {
-            // remove subs expiring in this epoch
-            _activeSubs -= epochs[i].expiring;
-
-            // we do not apply the individual multiplier to `rate` as it is
-            // included in _activeSubs, expiring, and starting subs
-            amount += epochs[i].partialFunds + (_activeSubs * settings.epochSize * settings.rate) / MULTIPLIER_BASE;
-            starting += epochs[i].starting;
-            expiring += epochs[i].expiring;
-
-            // add new subs starting in this epoch
-            _activeSubs += epochs[i].starting;
-        }
     }
 }

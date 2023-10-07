@@ -91,7 +91,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 amount,
         uint256 multiplier
     ) private returns (uint256 tokenId) {
-        uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
+        uint256 mRate = (rate * multiplier) / SubscriptionLib.MULTIPLIER_BASE;
         vm.startPrank(user);
         testToken.approve(address(subscription), amount);
 
@@ -128,8 +128,8 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
         setCurrentTime(100_000);
         uint256 amount = (10 * (10**decimals) * multiplier) /
-            subscription.MULTIPLIER_BASE();
-        uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
+            SubscriptionLib.MULTIPLIER_BASE;
+        uint256 mRate = (rate * multiplier) / SubscriptionLib.MULTIPLIER_BASE;
 
         uint256 tokenId = mintToken(alice, amount, multiplier);
 
@@ -187,8 +187,8 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
         setCurrentTime(100_000);
         uint256 amount = (10 * (10**decimals) * multiplier) /
-            subscription.MULTIPLIER_BASE();
-        uint256 mRate = (rate * multiplier) / subscription.MULTIPLIER_BASE();
+            SubscriptionLib.MULTIPLIER_BASE;
+        uint256 mRate = (rate * multiplier) / SubscriptionLib.MULTIPLIER_BASE;
 
         uint256 tokenId = mintToken(alice, amount, multiplier);
 

@@ -39,6 +39,7 @@ struct SubSettings {
     // TODO uint32
     uint256 lock;
     // time of contract's inception
+    // TODO REMOVE
     uint256 epochSize;
     // max supply of subscriptions that can be minted
     uint256 maxSupply;
