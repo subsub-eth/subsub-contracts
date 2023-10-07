@@ -9,11 +9,11 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-abstract contract SubscriptionDataHandling is Initializable, TimeAware, SubscriptionCore {
+abstract contract SubscriptionData is Initializable, TimeAware, SubscriptionCore {
     using SubscriptionLib for uint256;
     using Math for uint256;
 
-    struct SubscriptionData {
+    struct SubData {
         uint256 mintedAt; // mint date
         uint256 totalDeposited; // amount of tokens ever deposited
         uint256 lastDepositAt; // date of last deposit
@@ -28,13 +28,14 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
     // locked % of deposited amount
     // 0 - 10000
     uint256 private _lock;
-    mapping(uint256 => SubscriptionData) private _subData;
+    mapping(uint256 => SubData) private _subData;
 
-    function __SubscriptionDataHandling_init(uint256 lock) internal onlyInitializing {
-        __SubscriptionDataHandling_init_unchained(lock);
+    function __SubscriptionData_init(uint256 lock, uint256 rate) internal onlyInitializing {
+        __SubscriptionCore_init(rate);
+        __SubscriptionData_init_unchained(lock);
     }
 
-    function __SubscriptionDataHandling_init_unchained(uint256 lock) internal onlyInitializing {
+    function __SubscriptionData_init_unchained(uint256 lock) internal onlyInitializing {
         _lock = lock;
     }
 
@@ -48,7 +49,7 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
         // active = [start, + deposit / rate)
         uint256 lastDeposit = _subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = _subData[tokenId].currentDeposit;
-        return currentDeposit_.expiresAt(lastDeposit, multipliedRate(_subData[tokenId].multiplier));
+        return currentDeposit_.expiresAt(lastDeposit, _multipliedRate(_subData[tokenId].multiplier));
     }
 
     function _deleteSubscription(uint256 tokenId) internal {
@@ -65,7 +66,7 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
         _subData[tokenId].multiplier = multiplier;
 
         // set lockedAmount
-        _subData[tokenId].lockedAmount = ((amount * _lock) / LOCK_BASE).adjustToRate(multipliedRate(multiplier));
+        _subData[tokenId].lockedAmount = ((amount * _lock) / LOCK_BASE).adjustToRate(_multipliedRate(multiplier));
     }
 
     function _addToSubscription(uint256 tokenId, uint256 amount)
@@ -75,7 +76,7 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
         uint256 now_ = _now();
 
         oldDeposit = _subData[tokenId].currentDeposit;
-        uint256 mRate = multipliedRate(_multiplier(tokenId));
+        uint256 mRate = _multipliedRate(_multiplier(tokenId));
 
         oldLastDepositedAt = _lastDepositedAt(tokenId);
         reactived = now_ > _expiresAt(tokenId);
@@ -100,7 +101,7 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
         uint256 lastDeposit = _subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = _subData[tokenId].currentDeposit;
         uint256 lockedAmount = _subData[tokenId].lockedAmount;
-        uint256 mRate = multipliedRate(_subData[tokenId].multiplier);
+        uint256 mRate = _multipliedRate(_subData[tokenId].multiplier);
         uint256 usedBlocks = _now() - lastDeposit;
 
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (usedBlocks * mRate));
@@ -126,7 +127,7 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
             spentAmount = totalDeposited;
         } else {
             spentAmount = totalDeposited - _subData[tokenId].currentDeposit
-                + ((_now() - _subData[tokenId].lastDepositAt) * multipliedRate(_subData[tokenId].multiplier));
+                + ((_now() - _subData[tokenId].lastDepositAt) * _multipliedRate(_subData[tokenId].multiplier));
         }
 
         uint256 unspentAmount = totalDeposited - spentAmount;
@@ -150,7 +151,7 @@ abstract contract SubscriptionDataHandling is Initializable, TimeAware, Subscrip
         _subData[tokenId].totalDeposited += amount;
     }
 
-    function _getSubData(uint256 tokenId) internal view returns (SubscriptionData memory) {
+    function _getSubData(uint256 tokenId) internal view returns (SubData memory) {
         return _subData[tokenId];
     }
 

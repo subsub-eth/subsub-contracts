@@ -8,7 +8,7 @@ import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
 import {Epochs} from "./Epochs.sol";
-import {SubscriptionDataHandling} from "./SubscriptionDataHandling.sol";
+import {SubscriptionData} from "./SubscriptionData.sol";
 
 import {FlagSettings} from "../FlagSettings.sol";
 
@@ -31,7 +31,7 @@ abstract contract Subscription is
     ISubscription,
     TimeAware,
     Epochs,
-    SubscriptionDataHandling,
+    SubscriptionData,
     ERC721EnumerableUpgradeable,
     OwnableByERC721Upgradeable,
     SubscriptionFlags,
@@ -112,7 +112,7 @@ abstract contract Subscription is
         __FlagSettings_init_unchained();
         __Epochs_init_unchained(_settings.epochSize);
         __SubscriptionCore_init_unchained(_settings.rate);
-        __SubscriptionDataHandling_init_unchained(_settings.lock);
+        __SubscriptionData_init_unchained(_settings.lock);
 
         metadata = _metadata;
         settings = _settings;
@@ -185,15 +185,13 @@ abstract contract Subscription is
         // uint subscriptionEnd = amount / rate;
         _tokenIdTracker.increment();
         uint256 tokenId = _tokenIdTracker.current();
-        uint256 mRate = multipliedRate(multiplier);
+        uint256 mRate = _multipliedRate(multiplier);
 
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
 
         _createSubscription(tokenId, internalAmount, multiplier);
 
-        // TODO now and mRate need rework
-        uint256 now_ = _now();
-        addNewSubscriptionToEpochs(internalAmount, multiplier, mRate, now_);
+        _addNewSubscriptionToEpochs(internalAmount, multiplier, mRate);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
         settings.token.safeTransferFrom(msg.sender, address(this), amount);
@@ -211,9 +209,8 @@ abstract contract Subscription is
         whenDisabled(RENEWAL_PAUSED)
         requireExists(tokenId)
     {
-        uint256 now_ = _now();
         uint256 multiplier = _multiplier(tokenId);
-        uint256 mRate = multipliedRate(multiplier);
+        uint256 mRate = _multipliedRate(multiplier);
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
         require(internalAmount >= mRate, "SUB: amount too small");
 
@@ -223,9 +220,9 @@ abstract contract Subscription is
 
             if (reactived) {
                 // subscription was inactive
-                addNewSubscriptionToEpochs(newDeposit, multiplier, mRate, now_);
+                _addNewSubscriptionToEpochs(newDeposit, multiplier, mRate);
             } else {
-                moveSubscriptionInEpochs(lastDepositedAt, oldDeposit, now_, newDeposit, multiplier, mRate);
+                _moveSubscriptionInEpochs(lastDepositedAt, oldDeposit, _now(), newDeposit, multiplier, mRate);
             }
         }
 
@@ -252,19 +249,18 @@ abstract contract Subscription is
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
-
         uint256 _lastDepositAt = _lastDepositedAt(tokenId);
         (uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
         uint256 multiplier = _multiplier(tokenId);
-        moveSubscriptionInEpochs(
+        _moveSubscriptionInEpochs(
             _lastDepositAt,
             oldDeposit,
             _lastDepositAt,
             newDeposit,
             multiplier,
             // TODO weird?
-            multipliedRate(multiplier)
+            _multipliedRate(multiplier)
         );
 
         uint256 externalAmount = amount.toExternal(settings.token);
@@ -317,7 +313,7 @@ abstract contract Subscription is
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwnerOrApproved {
-        uint256 amount = handleEpochsClaim(settings.rate);
+        uint256 amount = _handleEpochsClaim(settings.rate);
 
         // convert to external amount
         amount = amount.toExternal(settings.token);
@@ -329,7 +325,7 @@ abstract contract Subscription is
     }
 
     function claimable() public view returns (uint256) {
-        (uint256 amount,,) = processEpochs(settings.rate, _getCurrentEpoch());
+        (uint256 amount,,) = _processEpochs(settings.rate, _currentEpoch());
 
         return amount.toExternal(settings.token);
     }

@@ -13,20 +13,18 @@ abstract contract SubscriptionCore is Initializable {
 
     uint256 private _rate;
 
-
     function __SubscriptionCore_init(uint256 rate) internal onlyInitializing {
         __SubscriptionCore_init_unchained(rate);
     }
 
     function __SubscriptionCore_init_unchained(uint256 rate) internal onlyInitializing {
-      _rate = rate;
+        _rate = rate;
     }
 
-    function multipliedRate(uint256 multiplier) internal view returns (uint256) {
+    function _multipliedRate(uint256 multiplier) internal view returns (uint256) {
         // TODO check gas consumption
         return _rate.multipliedRate(multiplier);
     }
-
 
     // TODO _gap
 }
