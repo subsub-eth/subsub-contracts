@@ -103,7 +103,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testFlow(uint8 decimals) public {
-        vm.assume(decimals <= 64);
+        decimals = uint8(bound(decimals, 0, 64));
 
         currentTime = 100_000;
         uint256 amount = 10 * (10 ** decimals);
@@ -143,7 +143,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testFlow_withdraw(uint8 decimals) public {
-        vm.assume(decimals <= 64);
+        decimals = uint8(bound(decimals, 0, 64));
 
         currentTime = 100_000;
         uint256 amount = 10 * (10 ** decimals);
@@ -151,6 +151,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         createContracts(decimals);
         uint256 tokenId = mintToken(alice, amount);
 
+        assertEq(subscription.claimable(), 0, "in beginning, nothing claimable");
         setCurrentTime(100_001);
         assertTrue(subscription.isActive(tokenId), "sub active");
 
@@ -165,6 +166,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.prank(alice);
         subscription.cancel(tokenId);
         assertEq(testToken.balanceOf(alice), b + (1_333 * rate).toExternal(testToken), "funds returned");
+        assertEq(subscription.claimable(), (2_000 * rate).toExternal(testToken), "after cancel: remaining amount claimable");
 
         setCurrentTime(200_000);
 

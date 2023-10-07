@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
 import "./mocks/TestSubscription.sol";
 
@@ -603,7 +602,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
-    function testWithdraw() public {
+    function testWithdraw1() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");

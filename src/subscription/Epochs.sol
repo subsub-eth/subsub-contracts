@@ -75,7 +75,6 @@ abstract contract Epochs is Initializable, TimeAware {
             amount += _epochs[i].partialFunds + (_activeSubs * _epochSize * rate) / SubscriptionLib.MULTIPLIER_BASE;
             starting += _epochs[i].starting;
             expiring += _epochs[i].expiring;
-
             // add new subs starting in this epoch
             _activeSubs += _epochs[i].starting;
         }
@@ -125,24 +124,28 @@ abstract contract Epochs is Initializable, TimeAware {
         ) * multipliedRate;
     }
 
+    /// @notice moves the subscription based on the
     function moveSubscriptionInEpochs(
-        uint256 _lastDepositAt,
+        uint256 _oldDepositedAt,
         uint256 _oldDeposit,
+        uint256 _newDepositedAt,
         uint256 _newDeposit,
         uint256 multiplier,
-        uint256 multipliedRate,
-        uint256 now_
+        uint256 multipliedRate
     ) internal {
-        // when does the sub currently end?
-        uint256 oldExpiringAt = _oldDeposit.expiresAt(_lastDepositAt, multipliedRate);
-        // update old epoch
-        uint256 oldEpoch = oldExpiringAt / _epochSize;
-        _epochs[oldEpoch].expiring -= multiplier;
-        uint256 removable = (oldExpiringAt - ((oldEpoch * _epochSize).max(now_))) * multipliedRate;
-        _epochs[oldEpoch].partialFunds -= removable;
+        uint256 now_ = _now();
+        {
+            // when does the sub currently end?
+            uint256 oldExpiringAt = _oldDeposit.expiresAt(_oldDepositedAt, multipliedRate);
+            // update old epoch
+            uint256 oldEpoch = oldExpiringAt / _epochSize;
+            _epochs[oldEpoch].expiring -= multiplier;
+            uint256 removable = (oldExpiringAt - ((oldEpoch * _epochSize).max(now_))) * multipliedRate;
+            _epochs[oldEpoch].partialFunds -= removable;
+        }
 
         // update new epoch
-        uint256 newEndingBlock = _newDeposit.expiresAt(_lastDepositAt, multipliedRate);
+        uint256 newEndingBlock = _newDeposit.expiresAt(_newDepositedAt, multipliedRate);
         uint256 newEpoch = newEndingBlock / _epochSize;
         _epochs[newEpoch].expiring += multiplier;
         _epochs[newEpoch].partialFunds += (newEndingBlock - ((newEpoch * _epochSize).max(now_))) * multipliedRate;

@@ -37,6 +37,7 @@ struct SubSettings {
     // locked % of deposited amount
     // 0 - 10000
     // TODO uint32
+    // TODO REMOVE
     uint256 lock;
     // time of contract's inception
     // TODO REMOVE

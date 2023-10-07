@@ -8,6 +8,7 @@ import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
 import {Epochs} from "./Epochs.sol";
+import {SubscriptionDataHandling} from "./SubscriptionDataHandling.sol";
 
 import {FlagSettings} from "../FlagSettings.sol";
 
@@ -30,6 +31,7 @@ abstract contract Subscription is
     ISubscription,
     TimeAware,
     Epochs,
+    SubscriptionDataHandling,
     ERC721EnumerableUpgradeable,
     OwnableByERC721Upgradeable,
     SubscriptionFlags,
@@ -64,35 +66,11 @@ abstract contract Subscription is
 
     using SubscriptionViewLib for Subscription;
 
-    struct SubscriptionData {
-        uint256 mintedAt; // mint date
-        uint256 totalDeposited; // amount of tokens ever deposited
-        uint256 lastDepositAt; // date of last deposit
-        uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
-        uint256 lockedAmount; // amount of funds locked
-        // TODO change type
-        uint256 multiplier;
-    }
-
-    // epochs always start from genesis
-    struct Epoch {
-        uint256 expiring; // number of expiring subscriptions
-        uint256 starting; // number of starting subscriptions
-        uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
-    }
-
-    uint256 public constant LOCK_BASE = 10_000;
-
     Metadata public metadata;
     SubSettings public settings;
 
-    mapping(uint256 => SubscriptionData) internal subData;
-    mapping(uint256 => Epoch) private epochs;
-
     // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
-
-    uint256 private _lastProcessedEpoch;
 
     // external amount
     uint256 public totalClaimed;
@@ -133,13 +111,13 @@ abstract contract Subscription is
         __OwnableByERC721_init_unchained(profileContract, profileTokenId);
         __FlagSettings_init_unchained();
         __Epochs_init_unchained(_settings.epochSize);
+        __SubscriptionCore_init_unchained(_settings.rate);
+        __SubscriptionDataHandling_init_unchained(_settings.lock);
 
         metadata = _metadata;
         settings = _settings;
 
         // TODO check validity of token
-
-        _lastProcessedEpoch = _getCurrentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
     function contractURI() external view returns (string memory) {
@@ -182,16 +160,11 @@ abstract contract Subscription is
         metadata.externalUrl = _externalUrl;
     }
 
-    function multipliedRate(uint256 multiplier) internal view returns (uint256) {
-        // TODO check gas consumption
-        return settings.rate.multipliedRate(multiplier);
-    }
-
     function burn(uint256 tokenId) external {
         // only owner of tokenId can burn
         require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
 
-        delete subData[tokenId];
+        _deleteSubscription(tokenId);
 
         _burn(tokenId);
     }
@@ -216,16 +189,10 @@ abstract contract Subscription is
 
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
 
+        _createSubscription(tokenId, internalAmount, multiplier);
+
+        // TODO now and mRate need rework
         uint256 now_ = _now();
-        subData[tokenId].mintedAt = now_;
-        subData[tokenId].lastDepositAt = now_;
-        subData[tokenId].totalDeposited = internalAmount;
-        subData[tokenId].currentDeposit = internalAmount;
-        subData[tokenId].multiplier = multiplier;
-
-        // set lockedAmount
-        subData[tokenId].lockedAmount = ((internalAmount * settings.lock) / LOCK_BASE).adjustToRate(mRate);
-
         addNewSubscriptionToEpochs(internalAmount, multiplier, mRate, now_);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
@@ -245,50 +212,28 @@ abstract contract Subscription is
         requireExists(tokenId)
     {
         uint256 now_ = _now();
-        uint256 multiplier = subData[tokenId].multiplier;
+        uint256 multiplier = _multiplier(tokenId);
         uint256 mRate = multipliedRate(multiplier);
         uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
         require(internalAmount >= mRate, "SUB: amount too small");
 
-        uint256 remainingDeposit = 0;
         {
-            uint256 oldExpiresAt = _expiresAt(tokenId);
-            if (oldExpiresAt > now_) {
-                // subscription is still active
-                remainingDeposit = (oldExpiresAt - now_) * mRate;
+            (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 lastDepositedAt) =
+                _addToSubscription(tokenId, internalAmount);
 
-                uint256 _currentDeposit = subData[tokenId].currentDeposit;
-                moveSubscriptionInEpochs(
-                    subData[tokenId].lastDepositAt,
-                    _currentDeposit,
-                    _currentDeposit + internalAmount,
-                    multiplier,
-                    mRate,
-                    now_
-                );
+            if (reactived) {
+                // subscription was inactive
+                addNewSubscriptionToEpochs(newDeposit, multiplier, mRate, now_);
             } else {
-                // subscription is inactive
-                addNewSubscriptionToEpochs(internalAmount, multiplier, mRate, now_);
+                moveSubscriptionInEpochs(lastDepositedAt, oldDeposit, now_, newDeposit, multiplier, mRate);
             }
         }
-
-        uint256 deposit = remainingDeposit + internalAmount;
-        subData[tokenId].currentDeposit = deposit;
-        subData[tokenId].lastDepositAt = now_;
-        subData[tokenId].totalDeposited += internalAmount;
-        subData[tokenId].lockedAmount = ((deposit * settings.lock) / LOCK_BASE).adjustToRate(mRate);
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
         settings.token.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit SubscriptionRenewed(
-            tokenId,
-            amount,
-            subData[tokenId].totalDeposited, // TODO use extra var?
-            msg.sender,
-            message
-        );
+        emit SubscriptionRenewed(tokenId, amount, _totalDeposited(tokenId), msg.sender, message);
         emit MetadataUpdate(tokenId);
     }
 
@@ -297,35 +242,35 @@ abstract contract Subscription is
     }
 
     function cancel(uint256 tokenId) external requireExists(tokenId) {
-        _withdraw(tokenId, _withdrawable(tokenId));
+        _withdraw(tokenId, _withdrawableFromSubscription(tokenId));
     }
 
     function _withdraw(uint256 tokenId, uint256 amount) private {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
 
-        uint256 withdrawable_ = _withdrawable(tokenId);
+        // TODO move to withdraw
+        uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
-        uint256 _currentDeposit = subData[tokenId].currentDeposit;
-        uint256 _lastDepositAt = subData[tokenId].lastDepositAt;
 
-        uint256 newDeposit = _currentDeposit - amount;
-        moveSubscriptionInEpochs(_lastDepositAt,
-                                 _currentDeposit,
-                                 newDeposit,
-                                 subData[tokenId].multiplier,
-                                 multipliedRate(subData[tokenId].multiplier),
-                                 _now()
-                                );
+        uint256 _lastDepositAt = _lastDepositedAt(tokenId);
+        (uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
-        // when is is the sub going to end now?
-        subData[tokenId].currentDeposit = newDeposit;
-        subData[tokenId].totalDeposited -= amount;
+        uint256 multiplier = _multiplier(tokenId);
+        moveSubscriptionInEpochs(
+            _lastDepositAt,
+            oldDeposit,
+            _lastDepositAt,
+            newDeposit,
+            multiplier,
+            // TODO weird?
+            multipliedRate(multiplier)
+        );
 
         uint256 externalAmount = amount.toExternal(settings.token);
         settings.token.safeTransfer(_msgSender(), externalAmount);
 
-        emit SubscriptionWithdrawn(tokenId, externalAmount, subData[tokenId].totalDeposited);
+        emit SubscriptionWithdrawn(tokenId, externalAmount, _totalDeposited(tokenId));
         emit MetadataUpdate(tokenId);
     }
 
@@ -333,70 +278,26 @@ abstract contract Subscription is
         return _isActive(tokenId);
     }
 
-    function _isActive(uint256 tokenId) private view returns (bool) {
-        return _now() < _expiresAt(tokenId);
-    }
-
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return subData[tokenId].totalDeposited.toExternal(settings.token);
+        return _totalDeposited(tokenId).toExternal(settings.token);
     }
 
     function expiresAt(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         return _expiresAt(tokenId);
     }
 
-    function _expiresAt(uint256 tokenId) internal view returns (uint256) {
-        // a subscription is active form the starting time slot (including)
-        // to the calculated ending time slot (excluding)
-        // active = [start, + deposit / rate)
-        uint256 lastDeposit = subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        return currentDeposit_.expiresAt(lastDeposit, multipliedRate(subData[tokenId].multiplier));
-    }
-
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _withdrawable(tokenId).toExternal(settings.token);
-    }
-
-    function _withdrawable(uint256 tokenId) private view returns (uint256) {
-        if (!_isActive(tokenId)) {
-            return 0;
-        }
-
-        uint256 lastDeposit = subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = subData[tokenId].currentDeposit;
-        uint256 lockedAmount = subData[tokenId].lockedAmount;
-        uint256 mRate = multipliedRate(subData[tokenId].multiplier);
-        uint256 usedBlocks = _now() - lastDeposit;
-
-        return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (usedBlocks * mRate));
-    }
-
-    function _spent(uint256 tokenId) internal view returns (uint256, uint256) {
-        uint256 totalDeposited = subData[tokenId].totalDeposited;
-
-        uint256 spentAmount;
-
-        if (!_isActive(tokenId)) {
-            spentAmount = totalDeposited;
-        } else {
-            spentAmount = totalDeposited - subData[tokenId].currentDeposit
-                + ((_now() - subData[tokenId].lastDepositAt) * multipliedRate(subData[tokenId].multiplier));
-        }
-
-        uint256 unspentAmount = totalDeposited - spentAmount;
-
-        return (spentAmount.toExternal(settings.token), unspentAmount.toExternal(settings.token));
+        return _withdrawableFromSubscription(tokenId).toExternal(settings.token);
     }
 
     function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (uint256 spentAmount,) = _spent(tokenId);
-        return spentAmount;
+        return spentAmount.toExternal(settings.token);
     }
 
     function unspent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (, uint256 unspentAmount) = _spent(tokenId);
-        return unspentAmount;
+        return unspentAmount.toExternal(settings.token);
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message)
@@ -406,17 +307,11 @@ abstract contract Subscription is
     {
         require(amount > 0, "SUB: amount too small");
 
-        subData[tokenId].totalDeposited += amount.toInternal(settings.token);
+        _incrementTotalDeposited(tokenId, amount.toInternal(settings.token));
 
         settings.token.safeTransferFrom(_msgSender(), address(this), amount);
 
-        emit Tipped(
-            tokenId,
-            amount,
-            subData[tokenId].totalDeposited, // TODO create extra var?
-            _msgSender(),
-            message
-        );
+        emit Tipped(tokenId, amount, _totalDeposited(tokenId), _msgSender(), message);
         emit MetadataUpdate(tokenId);
     }
 

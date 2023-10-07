@@ -15,7 +15,7 @@ contract TestSubscription is Subscription {
     }
 
     function getSubData(uint256 tokenId) public view returns (uint256, uint256, uint256, uint256, uint256, uint256) {
-        SubscriptionData memory s = subData[tokenId];
+        SubscriptionData memory s = _getSubData(tokenId);
         return (s.mintedAt, s.totalDeposited, s.lastDepositAt, s.currentDeposit, s.lockedAmount, s.multiplier);
     }
 }
