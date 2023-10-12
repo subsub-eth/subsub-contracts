@@ -39,7 +39,9 @@ abstract contract Subscription is
 {
     // should the tokenId 0 == owner?
 
-    // TODO merge: seperate funds that are accumulated in the current sub and funds merged in, enable via flag
+    // TODO merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
+    // TODO separate sub deposits, tips, and maybe merged funds
+    // TODO refactor token handling and internal/external representation to separate contract
     // TODO "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
     // TODO max donation / deposit
     // TODO allow 0 amount tip or check for a configurable min tip amount?
@@ -110,8 +112,8 @@ abstract contract Subscription is
         __ERC721_init_unchained(tokenName, tokenSymbol);
         __OwnableByERC721_init_unchained(profileContract, profileTokenId);
         __FlagSettings_init_unchained();
+        __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
-        __SubscriptionCore_init_unchained(_settings.rate);
         __SubscriptionData_init_unchained(_settings.lock);
 
         metadata = _metadata;
@@ -313,7 +315,7 @@ abstract contract Subscription is
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwnerOrApproved {
-        uint256 amount = _handleEpochsClaim(settings.rate);
+        uint256 amount = _handleEpochsClaim(_rate());
 
         // convert to external amount
         amount = amount.toExternal(settings.token);
@@ -325,7 +327,7 @@ abstract contract Subscription is
     }
 
     function claimable() public view returns (uint256) {
-        (uint256 amount,,) = _processEpochs(settings.rate, _currentEpoch());
+        (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
 
         return amount.toExternal(settings.token);
     }

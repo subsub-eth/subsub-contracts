@@ -2,21 +2,22 @@
 pragma solidity ^0.8.20;
 
 import {SubscriptionLib} from "./SubscriptionLib.sol";
-import {SubscriptionCore} from "./SubscriptionCore.sol";
+import {Rate} from "./Rate.sol";
 import {TimeAware} from "./TimeAware.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-abstract contract SubscriptionData is Initializable, TimeAware, SubscriptionCore {
+abstract contract SubscriptionData is Initializable, TimeAware, Rate {
     using SubscriptionLib for uint256;
     using Math for uint256;
 
     struct SubData {
         uint256 mintedAt; // mint date
         uint256 totalDeposited; // amount of tokens ever deposited
-        uint256 lastDepositAt; // date of last deposit
+        uint256 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
+        // it remains untouched on withdrawals and tips
         uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
         uint256 lockedAmount; // amount of funds locked
         // TODO change type
@@ -31,7 +32,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, SubscriptionCore
     mapping(uint256 => SubData) private _subData;
 
     function __SubscriptionData_init(uint256 lock, uint256 rate) internal onlyInitializing {
-        __SubscriptionCore_init(rate);
+        __Rate_init(rate);
         __SubscriptionData_init_unchained(lock);
     }
 
