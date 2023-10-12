@@ -128,12 +128,16 @@ abstract contract Subscription is
         // TODO check validity of token
     }
 
-    function settings() external view returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) {
-      token = paymentToken;
-      rate = _rate();
-      lock = _lock();
-      epochSize = _epochSize();
-      maxSupply = this.maxSupply();
+    function settings()
+        external
+        view
+        returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 _maxSupply)
+    {
+        token = paymentToken;
+        rate = _rate();
+        lock = _lock();
+        epochSize = _epochSize();
+        _maxSupply = maxSupply;
     }
 
     function contractURI() external view returns (string memory) {

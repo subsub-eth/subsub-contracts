@@ -33,18 +33,13 @@ struct SubSettings {
     IERC20Metadata token;
     /// @notice rate per block
     /// @dev the amount of tokens paid per block based on 18 decimals
-    // TODO REMOVE
     uint256 rate;
     // locked % of deposited amount
     // 0 - 10000
-    // TODO uint32
-    // TODO REMOVE
     uint256 lock;
     // time of contract's inception
-    // TODO REMOVE
     uint256 epochSize;
     // max supply of subscriptions that can be minted
-    // TODO remove
     uint256 maxSupply;
 }
 

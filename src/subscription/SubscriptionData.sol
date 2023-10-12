@@ -40,7 +40,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
     }
 
     function _lock() internal view returns (uint256) {
-      return __lock;
+        return __lock;
     }
 
     function _isActive(uint256 tokenId) internal view returns (bool) {

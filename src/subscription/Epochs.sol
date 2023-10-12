@@ -40,7 +40,7 @@ abstract contract Epochs is Initializable, TimeAware {
     }
 
     function _epochSize() internal view returns (uint256) {
-      return __epochSize;
+        return __epochSize;
     }
 
     function _currentEpoch() internal view returns (uint256) {
