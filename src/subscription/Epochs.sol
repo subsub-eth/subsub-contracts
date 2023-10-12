@@ -15,7 +15,35 @@ struct Epoch {
     uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
 }
 
-abstract contract Epochs is Initializable, TimeAware {
+abstract contract HasEpochs {
+    function _epochSize() internal view virtual returns (uint256);
+
+    function _currentEpoch() internal view virtual returns (uint256);
+
+    function _getActiveSubShares() internal view virtual returns (uint256);
+
+    function _processEpochs(uint256 rate, uint256 currentEpoch)
+        internal
+        view
+        virtual
+        returns (uint256 amount, uint256 starting, uint256 expiring);
+
+    function _handleEpochsClaim(uint256 rate) internal virtual returns (uint256);
+
+    function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual;
+
+    /// @notice moves the subscription based on the
+    function _moveSubscriptionInEpochs(
+        uint256 oldDepositedAt,
+        uint256 oldDeposit,
+        uint256 newDepositedAt,
+        uint256 newDeposit,
+        uint256 shares,
+        uint256 rate
+    ) internal virtual;
+}
+
+abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     using Math for uint256;
     using SubscriptionLib for uint256;
 
@@ -39,15 +67,15 @@ abstract contract Epochs is Initializable, TimeAware {
         __lastProcessedEpoch = _currentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
-    function _epochSize() internal view returns (uint256) {
+    function _epochSize() internal view override returns (uint256) {
         return __epochSize;
     }
 
-    function _currentEpoch() internal view returns (uint256) {
+    function _currentEpoch() internal view override returns (uint256) {
         return _now() / __epochSize;
     }
 
-    function _getActiveSubShares() internal view returns (uint256) {
+    function _getActiveSubShares() internal view override returns (uint256) {
         return _activeSubShares;
     }
 
@@ -64,6 +92,7 @@ abstract contract Epochs is Initializable, TimeAware {
     function _processEpochs(uint256 rate, uint256 currentEpoch)
         internal
         view
+        override
         returns (uint256 amount, uint256 starting, uint256 expiring)
     {
         uint256 _activeSubs = _activeSubShares;
@@ -82,7 +111,7 @@ abstract contract Epochs is Initializable, TimeAware {
         }
     }
 
-    function _handleEpochsClaim(uint256 rate) internal returns (uint256) {
+    function _handleEpochsClaim(uint256 rate) internal override returns (uint256) {
         uint256 currentEpoch = _currentEpoch();
         require(currentEpoch > 1, "SUB: cannot handle epoch 0");
 
@@ -104,7 +133,7 @@ abstract contract Epochs is Initializable, TimeAware {
         return amount;
     }
 
-    function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal {
+    function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
         uint256 now_ = _now();
         uint256 expiresAt_ = amount.expiresAt(now_, rate);
 
@@ -132,7 +161,7 @@ abstract contract Epochs is Initializable, TimeAware {
         uint256 newDeposit,
         uint256 shares,
         uint256 rate
-    ) internal {
+    ) internal override {
         uint256 now_ = _now();
         {
             // when does the sub currently end?

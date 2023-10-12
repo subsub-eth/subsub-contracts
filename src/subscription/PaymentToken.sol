@@ -10,8 +10,14 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
+abstract contract HasPaymentToken {
 
-abstract contract PaymentToken is Initializable {
+    function _paymentToken() internal virtual view returns (IERC20Metadata);
+
+    function _decimals() internal virtual view returns (uint8);
+}
+
+abstract contract PaymentToken is Initializable, HasPaymentToken {
 
     IERC20Metadata private __paymentToken;
     uint8 private __decimals;
@@ -25,11 +31,11 @@ abstract contract PaymentToken is Initializable {
       __decimals = token.decimals();
     }
 
-    function _paymentToken() internal view returns (IERC20Metadata) {
+    function _paymentToken() internal override view returns (IERC20Metadata) {
       return __paymentToken;
     }
 
-    function _decimals() internal view returns (uint8) {
+    function _decimals() internal override view returns (uint8) {
       return __decimals;
     }
 

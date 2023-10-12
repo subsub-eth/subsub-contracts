@@ -9,10 +9,7 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
-    using SubscriptionLib for uint256;
-    using Math for uint256;
-
+abstract contract HasSubscriptionData {
     struct SubData {
         uint256 mintedAt; // mint date
         uint256 totalDeposited; // amount of tokens ever deposited
@@ -23,6 +20,46 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         // TODO change type
         uint256 multiplier;
     }
+
+    function _lock() internal view virtual returns (uint256);
+
+    function _isActive(uint256 tokenId) internal view virtual returns (bool);
+
+    function _expiresAt(uint256 tokenId) internal view virtual returns (uint256);
+
+    function _deleteSubscription(uint256 tokenId) internal virtual;
+
+    function _createSubscription(uint256 tokenId, uint256 amount, uint256 multiplier) internal virtual;
+
+    function _addToSubscription(uint256 tokenId, uint256 amount)
+        internal
+        virtual
+        returns (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 oldLastDepositedAt);
+
+    function _withdrawableFromSubscription(uint256 tokenId) internal view virtual returns (uint256);
+
+    /// @notice reduces the deposit amount of the existing subscription without changing the deposit time
+    function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
+        internal
+        virtual
+        returns (uint256 oldDeposit, uint256 newDeposit);
+
+    function _spent(uint256 tokenId) internal view virtual returns (uint256, uint256);
+
+    function _totalDeposited(uint256 tokenId) internal view virtual returns (uint256);
+
+    function _multiplier(uint256 tokenId) internal view virtual returns (uint256);
+
+    function _lastDepositedAt(uint256 tokenId) internal view virtual returns (uint256);
+
+    function _incrementTotalDeposited(uint256 tokenId, uint256 amount) internal virtual;
+
+    function _getSubData(uint256 tokenId) internal view virtual returns (SubData memory);
+}
+
+abstract contract SubscriptionData is Initializable, TimeAware, HasSubscriptionData, HasRate {
+    using SubscriptionLib for uint256;
+    using Math for uint256;
 
     uint256 public constant LOCK_BASE = 10_000;
 
@@ -39,15 +76,15 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         __lock = lock;
     }
 
-    function _lock() internal view returns (uint256) {
+    function _lock() internal view override returns (uint256) {
         return __lock;
     }
 
-    function _isActive(uint256 tokenId) internal view returns (bool) {
+    function _isActive(uint256 tokenId) internal view override returns (bool) {
         return _now() < _expiresAt(tokenId);
     }
 
-    function _expiresAt(uint256 tokenId) internal view returns (uint256) {
+    function _expiresAt(uint256 tokenId) internal view override returns (uint256) {
         // a subscription is active form the starting time slot (including)
         // to the calculated ending time slot (excluding)
         // active = [start, + deposit / rate)
@@ -56,11 +93,11 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         return currentDeposit_.expiresAt(lastDeposit, _multipliedRate(_subData[tokenId].multiplier));
     }
 
-    function _deleteSubscription(uint256 tokenId) internal {
+    function _deleteSubscription(uint256 tokenId) internal override {
         delete _subData[tokenId];
     }
 
-    function _createSubscription(uint256 tokenId, uint256 amount, uint256 multiplier) internal {
+    function _createSubscription(uint256 tokenId, uint256 amount, uint256 multiplier) internal override {
         uint256 now_ = _now();
 
         _subData[tokenId].mintedAt = now_;
@@ -75,6 +112,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
 
     function _addToSubscription(uint256 tokenId, uint256 amount)
         internal
+        override
         returns (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 oldLastDepositedAt)
     {
         uint256 now_ = _now();
@@ -97,7 +135,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         _subData[tokenId].lockedAmount = ((newDeposit * __lock) / LOCK_BASE).adjustToRate(mRate);
     }
 
-    function _withdrawableFromSubscription(uint256 tokenId) internal view returns (uint256) {
+    function _withdrawableFromSubscription(uint256 tokenId) internal view override returns (uint256) {
         if (!_isActive(tokenId)) {
             return 0;
         }
@@ -114,6 +152,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
     /// @notice reduces the deposit amount of the existing subscription without changing the deposit time
     function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
         internal
+        override
         returns (uint256 oldDeposit, uint256 newDeposit)
     {
         oldDeposit = _subData[tokenId].currentDeposit;
@@ -122,7 +161,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         _subData[tokenId].totalDeposited -= amount;
     }
 
-    function _spent(uint256 tokenId) internal view returns (uint256, uint256) {
+    function _spent(uint256 tokenId) internal view override returns (uint256, uint256) {
         uint256 totalDeposited = _subData[tokenId].totalDeposited;
 
         uint256 spentAmount;
@@ -139,23 +178,23 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         return (spentAmount, unspentAmount);
     }
 
-    function _totalDeposited(uint256 tokenId) internal view returns (uint256) {
+    function _totalDeposited(uint256 tokenId) internal view override returns (uint256) {
         return _subData[tokenId].totalDeposited;
     }
 
-    function _multiplier(uint256 tokenId) internal view returns (uint256) {
+    function _multiplier(uint256 tokenId) internal view override returns (uint256) {
         return _subData[tokenId].multiplier;
     }
 
-    function _lastDepositedAt(uint256 tokenId) internal view returns (uint256) {
+    function _lastDepositedAt(uint256 tokenId) internal view override returns (uint256) {
         return _subData[tokenId].lastDepositAt;
     }
 
-    function _incrementTotalDeposited(uint256 tokenId, uint256 amount) internal {
+    function _incrementTotalDeposited(uint256 tokenId, uint256 amount) internal override {
         _subData[tokenId].totalDeposited += amount;
     }
 
-    function _getSubData(uint256 tokenId) internal view returns (SubData memory) {
+    function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {
         return _subData[tokenId];
     }
 
