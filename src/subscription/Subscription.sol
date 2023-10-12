@@ -10,6 +10,7 @@ import {TimeAware} from "./TimeAware.sol";
 import {Epochs} from "./Epochs.sol";
 import {Rate} from "./Rate.sol";
 import {SubscriptionData} from "./SubscriptionData.sol";
+import {PaymentToken} from "./PaymentToken.sol";
 
 import {FlagSettings} from "../FlagSettings.sol";
 
@@ -31,6 +32,7 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 abstract contract Subscription is
     ISubscription,
     TimeAware,
+    PaymentToken,
     Rate,
     Epochs,
     SubscriptionData,
@@ -75,7 +77,6 @@ abstract contract Subscription is
     // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
 
-    IERC20Metadata public paymentToken;
     uint256 public maxSupply;
 
     // external amount
@@ -119,8 +120,8 @@ abstract contract Subscription is
         __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
         __SubscriptionData_init_unchained(_settings.lock);
+        __PaymentToken_init_unchained(_settings.token);
 
-        paymentToken = _settings.token;
         maxSupply = _settings.maxSupply;
 
         metadata = _metadata;
@@ -133,7 +134,7 @@ abstract contract Subscription is
         view
         returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 _maxSupply)
     {
-        token = paymentToken;
+        token = _paymentToken();
         rate = _rate();
         lock = _lock();
         epochSize = _epochSize();
@@ -207,14 +208,14 @@ abstract contract Subscription is
         uint256 tokenId = _tokenIdTracker.current();
         uint256 mRate = _multipliedRate(multiplier);
 
-        uint256 internalAmount = amount.toInternal(paymentToken).adjustToRate(mRate);
+        uint256 internalAmount = amount.toInternal(_decimals()).adjustToRate(mRate);
 
         _createSubscription(tokenId, internalAmount, multiplier);
 
         _addNewSubscriptionToEpochs(internalAmount, multiplier, mRate);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
-        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
+        _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
 
@@ -231,7 +232,7 @@ abstract contract Subscription is
     {
         uint256 multiplier = _multiplier(tokenId);
         uint256 mRate = _multipliedRate(multiplier);
-        uint256 internalAmount = amount.toInternal(paymentToken).adjustToRate(mRate);
+        uint256 internalAmount = amount.toInternal(_decimals()).adjustToRate(mRate);
         require(internalAmount >= mRate, "SUB: amount too small");
 
         {
@@ -248,14 +249,14 @@ abstract contract Subscription is
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
-        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
+        _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
 
         emit SubscriptionRenewed(tokenId, amount, _totalDeposited(tokenId), msg.sender, message);
         emit MetadataUpdate(tokenId);
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external requireExists(tokenId) {
-        _withdraw(tokenId, amount.toInternal(paymentToken));
+        _withdraw(tokenId, amount.toInternal(_decimals()));
     }
 
     function cancel(uint256 tokenId) external requireExists(tokenId) {
@@ -283,8 +284,8 @@ abstract contract Subscription is
             _multipliedRate(multiplier)
         );
 
-        uint256 externalAmount = amount.toExternal(paymentToken);
-        paymentToken.safeTransfer(_msgSender(), externalAmount);
+        uint256 externalAmount = amount.toExternal(_decimals());
+        _paymentToken().safeTransfer(_msgSender(), externalAmount);
 
         emit SubscriptionWithdrawn(tokenId, externalAmount, _totalDeposited(tokenId));
         emit MetadataUpdate(tokenId);
@@ -295,7 +296,7 @@ abstract contract Subscription is
     }
 
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _totalDeposited(tokenId).toExternal(paymentToken);
+        return _totalDeposited(tokenId).toExternal(_decimals());
     }
 
     function expiresAt(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -303,17 +304,17 @@ abstract contract Subscription is
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _withdrawableFromSubscription(tokenId).toExternal(paymentToken);
+        return _withdrawableFromSubscription(tokenId).toExternal(_decimals());
     }
 
     function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (uint256 spentAmount,) = _spent(tokenId);
-        return spentAmount.toExternal(paymentToken);
+        return spentAmount.toExternal(_decimals());
     }
 
     function unspent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (, uint256 unspentAmount) = _spent(tokenId);
-        return unspentAmount.toExternal(paymentToken);
+        return unspentAmount.toExternal(_decimals());
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message)
@@ -323,9 +324,9 @@ abstract contract Subscription is
     {
         require(amount > 0, "SUB: amount too small");
 
-        _incrementTotalDeposited(tokenId, amount.toInternal(paymentToken));
+        _incrementTotalDeposited(tokenId, amount.toInternal(_decimals()));
 
-        paymentToken.safeTransferFrom(_msgSender(), address(this), amount);
+        _paymentToken().safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Tipped(tokenId, amount, _totalDeposited(tokenId), _msgSender(), message);
         emit MetadataUpdate(tokenId);
@@ -336,10 +337,10 @@ abstract contract Subscription is
         uint256 amount = _handleEpochsClaim(_rate());
 
         // convert to external amount
-        amount = amount.toExternal(paymentToken);
+        amount = amount.toExternal(_decimals());
         totalClaimed += amount;
 
-        paymentToken.safeTransfer(to, amount);
+        _paymentToken().safeTransfer(to, amount);
 
         emit FundsClaimed(amount, totalClaimed);
     }
@@ -347,6 +348,6 @@ abstract contract Subscription is
     function claimable() public view returns (uint256) {
         (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
 
-        return amount.toExternal(paymentToken);
+        return amount.toExternal(_decimals());
     }
 }

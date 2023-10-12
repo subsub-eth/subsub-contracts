@@ -8,13 +8,11 @@ library SubscriptionLib {
 
     uint8 public constant INTERNAL_DECIMALS = 18;
 
-    // TODO use stored uint8 instead of call to token? decimals is usually hardcoded?
-    function toInternal(uint256 externalAmount, IERC20Metadata token)
+    function toInternal(uint256 externalAmount, uint8 tokenDecimals)
         internal
-        view
+        pure
         returns (uint256)
     {
-        uint8 tokenDecimals = token.decimals();
         uint256 internalAmount;
 
         if (tokenDecimals < INTERNAL_DECIMALS) {
@@ -30,12 +28,11 @@ library SubscriptionLib {
         return internalAmount;
     }
 
-    function toExternal(uint256 internalAmount, IERC20Metadata token)
+    function toExternal(uint256 internalAmount, uint8 tokenDecimals)
         internal
-        view
+        pure
         returns (uint256)
     {
-        uint8 tokenDecimals = token.decimals();
         uint256 externalAmount;
 
         if (tokenDecimals < INTERNAL_DECIMALS) {
