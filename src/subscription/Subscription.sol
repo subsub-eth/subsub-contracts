@@ -76,6 +76,8 @@ abstract contract Subscription is
     // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
 
+    uint256 public maxSupply;
+
     // external amount
     uint256 public totalClaimed;
 
@@ -117,6 +119,8 @@ abstract contract Subscription is
         __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
         __SubscriptionData_init_unchained(_settings.lock);
+
+        maxSupply = _settings.maxSupply;
 
         metadata = _metadata;
         settings = _settings;
@@ -180,7 +184,7 @@ abstract contract Subscription is
         returns (uint256)
     {
         // check max supply
-        require(totalSupply() < settings.maxSupply, "SUB: max supply reached");
+        require(totalSupply() < maxSupply, "SUB: max supply reached");
         // multiplier must be larger that 1x and less than 1000x
         // TODO in one call
         require(multiplier >= 100 && multiplier <= 100_000, "SUB: multiplier invalid");
