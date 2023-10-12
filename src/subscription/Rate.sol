@@ -8,7 +8,15 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-abstract contract Rate is Initializable {
+abstract contract HasRate {
+
+    function _multipliedRate(uint256 multiplier) internal virtual view returns (uint256);
+
+    function _rate() internal virtual view returns (uint256);
+
+}
+
+abstract contract Rate is Initializable, HasRate {
     using SubscriptionLib for uint256;
 
     uint256 private __rate;
@@ -21,12 +29,12 @@ abstract contract Rate is Initializable {
         __rate = rate;
     }
 
-    function _multipliedRate(uint256 multiplier) internal view returns (uint256) {
+    function _multipliedRate(uint256 multiplier) internal override view returns (uint256) {
         // TODO check gas consumption
         return __rate.multipliedRate(multiplier);
     }
 
-    function _rate() internal view returns (uint256) {
+    function _rate() internal override view returns (uint256) {
       return __rate;
     }
 

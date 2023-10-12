@@ -8,6 +8,7 @@ import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
 import {Epochs} from "./Epochs.sol";
+import {Rate} from "./Rate.sol";
 import {SubscriptionData} from "./SubscriptionData.sol";
 
 import {FlagSettings} from "../FlagSettings.sol";
@@ -30,6 +31,7 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 abstract contract Subscription is
     ISubscription,
     TimeAware,
+    Rate,
     Epochs,
     SubscriptionData,
     ERC721EnumerableUpgradeable,

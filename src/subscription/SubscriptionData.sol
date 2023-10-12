@@ -2,14 +2,14 @@
 pragma solidity ^0.8.20;
 
 import {SubscriptionLib} from "./SubscriptionLib.sol";
-import {Rate} from "./Rate.sol";
+import {HasRate} from "./Rate.sol";
 import {TimeAware} from "./TimeAware.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-abstract contract SubscriptionData is Initializable, TimeAware, Rate {
+abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
     using SubscriptionLib for uint256;
     using Math for uint256;
 
@@ -31,8 +31,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, Rate {
     uint256 private _lock;
     mapping(uint256 => SubData) private _subData;
 
-    function __SubscriptionData_init(uint256 lock, uint256 rate) internal onlyInitializing {
-        __Rate_init(rate);
+    function __SubscriptionData_init(uint256 lock) internal onlyInitializing {
         __SubscriptionData_init_unchained(lock);
     }
 
