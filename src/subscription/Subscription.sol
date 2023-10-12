@@ -71,11 +71,11 @@ abstract contract Subscription is
     using SubscriptionViewLib for Subscription;
 
     Metadata public metadata;
-    SubSettings public settings;
 
     // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
 
+    IERC20Metadata public paymentToken;
     uint256 public maxSupply;
 
     // external amount
@@ -120,12 +120,20 @@ abstract contract Subscription is
         __Epochs_init_unchained(_settings.epochSize);
         __SubscriptionData_init_unchained(_settings.lock);
 
+        paymentToken = _settings.token;
         maxSupply = _settings.maxSupply;
 
         metadata = _metadata;
-        settings = _settings;
 
         // TODO check validity of token
+    }
+
+    function settings() external view returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) {
+      token = paymentToken;
+      rate = _rate();
+      lock = _lock();
+      epochSize = _epochSize();
+      maxSupply = this.maxSupply();
     }
 
     function contractURI() external view returns (string memory) {
@@ -195,14 +203,14 @@ abstract contract Subscription is
         uint256 tokenId = _tokenIdTracker.current();
         uint256 mRate = _multipliedRate(multiplier);
 
-        uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
+        uint256 internalAmount = amount.toInternal(paymentToken).adjustToRate(mRate);
 
         _createSubscription(tokenId, internalAmount, multiplier);
 
         _addNewSubscriptionToEpochs(internalAmount, multiplier, mRate);
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows
-        settings.token.safeTransferFrom(msg.sender, address(this), amount);
+        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
 
@@ -219,7 +227,7 @@ abstract contract Subscription is
     {
         uint256 multiplier = _multiplier(tokenId);
         uint256 mRate = _multipliedRate(multiplier);
-        uint256 internalAmount = amount.toInternal(settings.token).adjustToRate(mRate);
+        uint256 internalAmount = amount.toInternal(paymentToken).adjustToRate(mRate);
         require(internalAmount >= mRate, "SUB: amount too small");
 
         {
@@ -236,14 +244,14 @@ abstract contract Subscription is
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
-        settings.token.safeTransferFrom(msg.sender, address(this), amount);
+        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
 
         emit SubscriptionRenewed(tokenId, amount, _totalDeposited(tokenId), msg.sender, message);
         emit MetadataUpdate(tokenId);
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external requireExists(tokenId) {
-        _withdraw(tokenId, amount.toInternal(settings.token));
+        _withdraw(tokenId, amount.toInternal(paymentToken));
     }
 
     function cancel(uint256 tokenId) external requireExists(tokenId) {
@@ -271,8 +279,8 @@ abstract contract Subscription is
             _multipliedRate(multiplier)
         );
 
-        uint256 externalAmount = amount.toExternal(settings.token);
-        settings.token.safeTransfer(_msgSender(), externalAmount);
+        uint256 externalAmount = amount.toExternal(paymentToken);
+        paymentToken.safeTransfer(_msgSender(), externalAmount);
 
         emit SubscriptionWithdrawn(tokenId, externalAmount, _totalDeposited(tokenId));
         emit MetadataUpdate(tokenId);
@@ -283,7 +291,7 @@ abstract contract Subscription is
     }
 
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _totalDeposited(tokenId).toExternal(settings.token);
+        return _totalDeposited(tokenId).toExternal(paymentToken);
     }
 
     function expiresAt(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -291,17 +299,17 @@ abstract contract Subscription is
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _withdrawableFromSubscription(tokenId).toExternal(settings.token);
+        return _withdrawableFromSubscription(tokenId).toExternal(paymentToken);
     }
 
     function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (uint256 spentAmount,) = _spent(tokenId);
-        return spentAmount.toExternal(settings.token);
+        return spentAmount.toExternal(paymentToken);
     }
 
     function unspent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (, uint256 unspentAmount) = _spent(tokenId);
-        return unspentAmount.toExternal(settings.token);
+        return unspentAmount.toExternal(paymentToken);
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message)
@@ -311,9 +319,9 @@ abstract contract Subscription is
     {
         require(amount > 0, "SUB: amount too small");
 
-        _incrementTotalDeposited(tokenId, amount.toInternal(settings.token));
+        _incrementTotalDeposited(tokenId, amount.toInternal(paymentToken));
 
-        settings.token.safeTransferFrom(_msgSender(), address(this), amount);
+        paymentToken.safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Tipped(tokenId, amount, _totalDeposited(tokenId), _msgSender(), message);
         emit MetadataUpdate(tokenId);
@@ -324,10 +332,10 @@ abstract contract Subscription is
         uint256 amount = _handleEpochsClaim(_rate());
 
         // convert to external amount
-        amount = amount.toExternal(settings.token);
+        amount = amount.toExternal(paymentToken);
         totalClaimed += amount;
 
-        settings.token.safeTransfer(to, amount);
+        paymentToken.safeTransfer(to, amount);
 
         emit FundsClaimed(amount, totalClaimed);
     }
@@ -335,6 +343,6 @@ abstract contract Subscription is
     function claimable() public view returns (uint256) {
         (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
 
-        return amount.toExternal(settings.token);
+        return amount.toExternal(paymentToken);
     }
 }

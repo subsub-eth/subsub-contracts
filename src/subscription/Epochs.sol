@@ -19,7 +19,7 @@ abstract contract Epochs is Initializable, TimeAware {
     using Math for uint256;
     using SubscriptionLib for uint256;
 
-    uint256 private _epochSize;
+    uint256 private __epochSize;
     mapping(uint256 => Epoch) private _epochs;
 
     // number of active subscriptions with a multiplier represented as shares
@@ -35,12 +35,16 @@ abstract contract Epochs is Initializable, TimeAware {
     }
 
     function __Epochs_init_unchained(uint256 epochSize) internal onlyInitializing {
-        _epochSize = epochSize;
+        __epochSize = epochSize;
         __lastProcessedEpoch = _currentEpoch().max(1) - 1; // current epoch -1 or 0
     }
 
+    function _epochSize() internal view returns (uint256) {
+      return __epochSize;
+    }
+
     function _currentEpoch() internal view returns (uint256) {
-        return _now() / _epochSize;
+        return _now() / __epochSize;
     }
 
     function _getActiveSubShares() internal view returns (uint256) {
@@ -70,7 +74,7 @@ abstract contract Epochs is Initializable, TimeAware {
 
             // we do not apply the individual multiplier to `rate` as it is
             // included in _activeSubs, expiring, and starting subs
-            amount += _epochs[i].partialFunds + (_activeSubs * _epochSize * rate) / SubscriptionLib.MULTIPLIER_BASE;
+            amount += _epochs[i].partialFunds + (_activeSubs * __epochSize * rate) / SubscriptionLib.MULTIPLIER_BASE;
             starting += _epochs[i].starting;
             expiring += _epochs[i].expiring;
             // add new subs starting in this epoch
@@ -107,15 +111,15 @@ abstract contract Epochs is Initializable, TimeAware {
         // starting
         uint256 currentEpoch = _currentEpoch();
         _epochs[currentEpoch].starting += shares;
-        uint256 remaining = (_epochSize - (now_ % _epochSize)).min(
+        uint256 remaining = (__epochSize - (now_ % __epochSize)).min(
             expiresAt_ - now_ // subscription ends within the current time slot
         );
         _epochs[currentEpoch].partialFunds += (remaining * rate);
 
         // ending
-        uint256 expiringEpoch = expiresAt_ / _epochSize;
+        uint256 expiringEpoch = expiresAt_ / __epochSize;
         _epochs[expiringEpoch].expiring += shares;
-        _epochs[expiringEpoch].partialFunds += (expiresAt_ - (expiringEpoch * _epochSize)).min(
+        _epochs[expiringEpoch].partialFunds += (expiresAt_ - (expiringEpoch * __epochSize)).min(
             expiresAt_ - now_ // subscription ends within the current time slot
         ) * rate;
     }
@@ -134,17 +138,17 @@ abstract contract Epochs is Initializable, TimeAware {
             // when does the sub currently end?
             uint256 oldExpiringAt = oldDeposit.expiresAt(oldDepositedAt, rate);
             // update old epoch
-            uint256 oldEpoch = oldExpiringAt / _epochSize;
+            uint256 oldEpoch = oldExpiringAt / __epochSize;
             _epochs[oldEpoch].expiring -= shares;
-            uint256 removable = (oldExpiringAt - ((oldEpoch * _epochSize).max(now_))) * rate;
+            uint256 removable = (oldExpiringAt - ((oldEpoch * __epochSize).max(now_))) * rate;
             _epochs[oldEpoch].partialFunds -= removable;
         }
 
         // update new epoch
         uint256 newEndingBlock = newDeposit.expiresAt(newDepositedAt, rate);
-        uint256 newEpoch = newEndingBlock / _epochSize;
+        uint256 newEpoch = newEndingBlock / __epochSize;
         _epochs[newEpoch].expiring += shares;
-        _epochs[newEpoch].partialFunds += (newEndingBlock - ((newEpoch * _epochSize).max(now_))) * rate;
+        _epochs[newEpoch].partialFunds += (newEndingBlock - ((newEpoch * __epochSize).max(now_))) * rate;
     }
 
     // TODO _gap

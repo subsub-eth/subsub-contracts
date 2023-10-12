@@ -28,7 +28,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
 
     // locked % of deposited amount
     // 0 - 10000
-    uint256 private _lock;
+    uint256 private __lock;
     mapping(uint256 => SubData) private _subData;
 
     function __SubscriptionData_init(uint256 lock) internal onlyInitializing {
@@ -36,7 +36,11 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
     }
 
     function __SubscriptionData_init_unchained(uint256 lock) internal onlyInitializing {
-        _lock = lock;
+        __lock = lock;
+    }
+
+    function _lock() internal view returns (uint256) {
+      return __lock;
     }
 
     function _isActive(uint256 tokenId) internal view returns (bool) {
@@ -66,7 +70,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         _subData[tokenId].multiplier = multiplier;
 
         // set lockedAmount
-        _subData[tokenId].lockedAmount = ((amount * _lock) / LOCK_BASE).adjustToRate(_multipliedRate(multiplier));
+        _subData[tokenId].lockedAmount = ((amount * __lock) / LOCK_BASE).adjustToRate(_multipliedRate(multiplier));
     }
 
     function _addToSubscription(uint256 tokenId, uint256 amount)
@@ -90,7 +94,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate {
         _subData[tokenId].currentDeposit = newDeposit;
         _subData[tokenId].lastDepositAt = now_;
         _subData[tokenId].totalDeposited += amount;
-        _subData[tokenId].lockedAmount = ((newDeposit * _lock) / LOCK_BASE).adjustToRate(mRate);
+        _subData[tokenId].lockedAmount = ((newDeposit * __lock) / LOCK_BASE).adjustToRate(mRate);
     }
 
     function _withdrawableFromSubscription(uint256 tokenId) internal view returns (uint256) {

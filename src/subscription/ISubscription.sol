@@ -44,6 +44,7 @@ struct SubSettings {
     // TODO REMOVE
     uint256 epochSize;
     // max supply of subscriptions that can be minted
+    // TODO remove
     uint256 maxSupply;
 }
 
