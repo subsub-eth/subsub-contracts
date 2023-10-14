@@ -3,11 +3,10 @@ pragma solidity ^0.8.20;
 
 import {IProfile} from "./IProfile.sol";
 
-import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
-import {IERC721MetadataUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {CountersUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
 
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
@@ -23,7 +22,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 // TODO bind to another ERC721 for identity verification
 contract Profile is IProfile, ERC721EnumerableUpgradeable {
     using Strings for uint256;
-    using CountersUpgradeable for CountersUpgradeable.Counter;
 
     event Minted(address indexed to, uint256 indexed tokenId);
 
@@ -34,7 +32,7 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         string externalUrl;
     }
 
-    CountersUpgradeable.Counter private _tokenIdTracker;
+    uint256 private nextTokenId;
     mapping(uint256 => ProfileData) private profileData;
 
     constructor() {
@@ -44,6 +42,7 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
 
     function initialize() public initializer {
         __ERC721_init("CreateZ Profile", "crzP");
+        nextTokenId = 1;
     }
 
     function mint(
@@ -53,8 +52,7 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         string memory _externalUrl
     ) external returns (uint256) {
         require(bytes(_name).length > 2, "crzP: name too short");
-        _tokenIdTracker.increment();
-        uint256 tokenId = _tokenIdTracker.current();
+        uint256 tokenId = nextTokenId++;
 
         profileData[tokenId] = ProfileData(
             _name,
@@ -73,7 +71,7 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         public
         view
         virtual
-        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
+        override
         returns (string memory)
     {
         _requireMinted(tokenId);

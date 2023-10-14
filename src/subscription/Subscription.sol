@@ -22,11 +22,9 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {IERC165Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/interfaces/IERC165Upgradeable.sol";
-import {IERC721MetadataUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
-
-import {CountersUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
+import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
+import {IERC721Metadata} from
+    "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
@@ -79,8 +77,7 @@ abstract contract Subscription is
     using SubscriptionViewLib for Subscription;
 
     // TODO replace me?
-    CountersUpgradeable.Counter private _tokenIdTracker;
-
+    uint256 public nextTokenId;
 
     // external amount
     uint256 public totalClaimed;
@@ -189,8 +186,7 @@ abstract contract Subscription is
         // TODO check minimum amount?
         // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
-        _tokenIdTracker.increment();
-        uint256 tokenId = _tokenIdTracker.current();
+        uint256 tokenId = nextTokenId++;
         uint256 mRate = _multipliedRate(multiplier);
 
         uint256 internalAmount = amount.toInternal(_decimals()).adjustToRate(mRate);
@@ -377,6 +373,8 @@ abstract contract DefaultSubscription is
         __PaymentToken_init_unchained(_settings.token);
         __MaxSupply_init_unchained(_settings.maxSupply);
         __Metadata_init_unchained(_metadata);
+
+        nextTokenId = 1;
 
         // TODO check validity of token
     }

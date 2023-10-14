@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
-import {IERC721MetadataUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
-import {IERC4906Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/interfaces/IERC4906Upgradeable.sol";
+import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
+import {IERC721Metadata} from
+    "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import {IERC4906} from "openzeppelin-contracts/contracts/interfaces/IERC4906.sol";
 
 interface SubscriptionEvents {
     event SubscriptionRenewed(
