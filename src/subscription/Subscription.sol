@@ -14,7 +14,7 @@ import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
 import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";
 import {Metadata, HasMetadata} from "./Metadata.sol";
 
-import {FlagSettings} from "../FlagSettings.sol";
+import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -67,7 +67,7 @@ abstract contract Subscription is
     ERC721EnumerableUpgradeable,
     OwnableByERC721Upgradeable,
     SubscriptionFlags,
-    FlagSettings
+    HasFlagSettings
 {
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
@@ -344,6 +344,7 @@ abstract contract DefaultSubscription is
     PaymentToken,
     Epochs,
     SubscriptionData,
+    FlagSettings,
     Subscription
 {
     constructor() {
