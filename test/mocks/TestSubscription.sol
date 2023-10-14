@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "../../src/subscription/Subscription.sol";
 
-contract TestSubscription is Subscription {
+contract TestSubscription is DefaultSubscription {
     uint256 private __now;
 
     function _now() internal view override returns (uint256) {

@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {ISubscriptionManager} from "./ISubscriptionManager.sol";
 
-import {Metadata, SubSettings} from "./subscription/ISubscription.sol";
+import {MetadataStruct, SubSettings} from "./subscription/ISubscription.sol";
 import {Subscription} from "./subscription/Subscription.sol";
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 
@@ -46,7 +46,7 @@ contract SubscriptionManager is
     function createSubscription(
         string calldata _name,
         string calldata _symbol,
-        Metadata calldata _metadata,
+        MetadataStruct calldata _metadata,
         SubSettings calldata _settings,
         uint256 _profileTokenId
     ) external returns (address) {

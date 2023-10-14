@@ -21,6 +21,8 @@ abstract contract HasSubscriptionData {
         uint256 multiplier;
     }
 
+    uint256 public constant LOCK_BASE = 10_000;
+
     function _lock() internal view virtual returns (uint256);
 
     function _isActive(uint256 tokenId) internal view virtual returns (bool);
@@ -57,11 +59,9 @@ abstract contract HasSubscriptionData {
     function _getSubData(uint256 tokenId) internal view virtual returns (SubData memory);
 }
 
-abstract contract SubscriptionData is Initializable, TimeAware, HasSubscriptionData, HasRate {
+abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubscriptionData {
     using SubscriptionLib for uint256;
     using Math for uint256;
-
-    uint256 public constant LOCK_BASE = 10_000;
 
     // locked % of deposited amount
     // 0 - 10000

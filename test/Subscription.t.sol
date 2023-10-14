@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "../src/subscription/Subscription.sol";
 import "./mocks/TestSubscription.sol";
 
-import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings, SubscriptionFlags} from "../src/subscription/ISubscription.sol";
+import {SubscriptionEvents, ClaimEvents, MetadataStruct, SubSettings, SubscriptionFlags} from "../src/subscription/ISubscription.sol";
 import {Profile} from "../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
@@ -32,7 +32,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     string public message;
 
-    Metadata public metadata;
+    MetadataStruct public metadata;
     SubSettings public settings;
 
     uint256 public currentTime;
@@ -52,7 +52,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         message = "Hello World";
 
-        metadata = Metadata("test", "test", "test");
+        metadata = MetadataStruct("test", "test", "test");
 
         rate = 5;
         lock = 100;

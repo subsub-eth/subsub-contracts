@@ -21,7 +21,7 @@ import "../src/subscription/BlockSubscription.sol";
 import "../src/SubscriptionManager.sol";
 
 contract DeployScript is Script {
-    Metadata private metadata;
+    MetadataStruct private metadata;
     SubSettings private settings;
 
     // TODO replace with json array of addresses
@@ -29,7 +29,7 @@ contract DeployScript is Script {
     address private anvilUser2 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
 
     function setUp() public {
-        metadata = Metadata(
+        metadata = MetadataStruct(
             "You gain access to my heart",
             "https://example.com/profiles/peter-t1.png",
             "https://example.com"

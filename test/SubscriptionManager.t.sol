@@ -31,7 +31,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
     IBeacon private beacon;
     Subscription private subscription;
 
-    Metadata private metadata;
+    MetadataStruct private metadata;
     SubSettings private settings;
 
     address[] private createdContracts; // side effect?
@@ -43,7 +43,7 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         profileTokenId = 10;
         token = new ERC20DecimalsMock(18);
 
-        metadata = Metadata("test", "test", "test");
+        metadata = MetadataStruct("test", "test", "test");
         settings.token = token;
         settings.rate = 1;
         settings.lock = 10;

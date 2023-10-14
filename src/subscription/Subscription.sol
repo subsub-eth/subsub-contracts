@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscription, Metadata, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
+import {ISubscription, MetadataStruct, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
 import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {SubscriptionLib} from "./SubscriptionLib.sol";
 import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
-import {Epochs} from "./Epochs.sol";
-import {Rate} from "./Rate.sol";
-import {SubscriptionData} from "./SubscriptionData.sol";
-import {PaymentToken} from "./PaymentToken.sol";
+import {Epochs, HasEpochs} from "./Epochs.sol";
+import {Rate, HasRate} from "./Rate.sol";
+import {SubscriptionData, HasSubscriptionData} from "./SubscriptionData.sol";
+import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
+import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";
+import {Metadata, HasMetadata} from "./Metadata.sol";
 
 import {FlagSettings} from "../FlagSettings.sol";
 
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
@@ -29,18 +32,6 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-abstract contract Subscription is
-    ISubscription,
-    TimeAware,
-    PaymentToken,
-    Rate,
-    Epochs,
-    SubscriptionData,
-    ERC721EnumerableUpgradeable,
-    OwnableByERC721Upgradeable,
-    SubscriptionFlags,
-    FlagSettings
-{
     // should the tokenId 0 == owner?
 
     // TODO merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
@@ -63,6 +54,21 @@ abstract contract Subscription is
 
     // TODO add natspec comments
 
+abstract contract Subscription is 
+    Initializable,
+    ISubscription,
+    TimeAware,
+    HasMaxSupply,
+    HasMetadata,
+    HasRate,
+    HasSubscriptionData,
+    HasPaymentToken,
+    HasEpochs,
+    ERC721EnumerableUpgradeable,
+    OwnableByERC721Upgradeable,
+    SubscriptionFlags,
+    FlagSettings
+{
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
     using SubscriptionLib for uint256;
@@ -72,15 +78,20 @@ abstract contract Subscription is
 
     using SubscriptionViewLib for Subscription;
 
-    Metadata public metadata;
-
     // TODO replace me?
     CountersUpgradeable.Counter private _tokenIdTracker;
 
-    uint256 public maxSupply;
 
     // external amount
     uint256 public totalClaimed;
+
+
+    function __Subscription_init() internal onlyInitializing {
+        __Subscription_init_unchained();
+    }
+
+    function __Subscription_init_unchained() internal onlyInitializing {
+    }
 
     modifier requireExists(uint256 tokenId) {
         require(_exists(tokenId), "SUB: subscription does not exist");
@@ -93,52 +104,45 @@ abstract contract Subscription is
         _;
     }
 
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize(
         string calldata tokenName,
         string calldata tokenSymbol,
-        Metadata calldata _metadata,
+        MetadataStruct calldata _metadata,
         SubSettings calldata _settings,
         address profileContract,
         uint256 profileTokenId
-    ) external initializer {
-        require(_settings.epochSize > 0, "SUB: invalid epochSize");
-        require(address(_settings.token) != address(0), "SUB: token cannot be 0 address");
-        require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
-        require(_settings.rate > 0, "SUB: rate cannot be 0");
-        // check that profileContract is a contract of ERC721 and does have a tokenId
-        require(profileContract != address(0), "SUB: profile address not set");
-
-        // call initializers of inherited contracts
-        // TODO set metadata
-        __ERC721_init_unchained(tokenName, tokenSymbol);
-        __OwnableByERC721_init_unchained(profileContract, profileTokenId);
-        __FlagSettings_init_unchained();
-        __Rate_init_unchained(_settings.rate);
-        __Epochs_init_unchained(_settings.epochSize);
-        __SubscriptionData_init_unchained(_settings.lock);
-        __PaymentToken_init_unchained(_settings.token);
-
-        maxSupply = _settings.maxSupply;
-
-        metadata = _metadata;
-
-        // TODO check validity of token
-    }
+    ) external virtual;
 
     function settings()
         external
         view
-        returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 _maxSupply)
+        returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply_)
     {
         token = _paymentToken();
         rate = _rate();
         lock = _lock();
         epochSize = _epochSize();
-        _maxSupply = maxSupply;
+        maxSupply_ = _maxSupply();
+    }
+
+    function setFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
+        _setFlags(flags);
+    }
+
+    function unsetFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
+        _unsetFlags(flags);
+    }
+
+    function setDescription(string calldata _description) external onlyOwnerOrApproved {
+        _setDescription(_description);
+    }
+
+    function setImage(string calldata _image) external onlyOwnerOrApproved {
+      _setImage(_image);
+    }
+
+    function setExternalUrl(string calldata _externalUrl) external onlyOwnerOrApproved {
+      _setExternalUrl(_externalUrl);
     }
 
     function contractURI() external view returns (string memory) {
@@ -161,25 +165,6 @@ abstract contract Subscription is
         return this.tokenData(tokenId);
     }
 
-    function setFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
-        _setFlags(flags);
-    }
-
-    function unsetFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
-        _unsetFlags(flags);
-    }
-
-    function setDescription(string calldata _description) external onlyOwnerOrApproved {
-        metadata.description = _description;
-    }
-
-    function setImage(string calldata _image) external onlyOwnerOrApproved {
-        metadata.image = _image;
-    }
-
-    function setExternalUrl(string calldata _externalUrl) external onlyOwnerOrApproved {
-        metadata.externalUrl = _externalUrl;
-    }
 
     function burn(uint256 tokenId) external {
         // only owner of tokenId can burn
@@ -197,7 +182,7 @@ abstract contract Subscription is
         returns (uint256)
     {
         // check max supply
-        require(totalSupply() < maxSupply, "SUB: max supply reached");
+        require(totalSupply() < _maxSupply(), "SUB: max supply reached");
         // multiplier must be larger that 1x and less than 1000x
         // TODO in one call
         require(multiplier >= 100 && multiplier <= 100_000, "SUB: multiplier invalid");
@@ -349,5 +334,49 @@ abstract contract Subscription is
         (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
 
         return amount.toExternal(_decimals());
+    }
+}
+
+abstract contract DefaultSubscription is
+    MaxSupply,
+    Metadata,
+    Rate,
+    PaymentToken,
+    Epochs,
+    SubscriptionData,
+    Subscription
+{
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        string calldata tokenName,
+        string calldata tokenSymbol,
+        MetadataStruct calldata _metadata,
+        SubSettings calldata _settings,
+        address profileContract,
+        uint256 profileTokenId
+    ) external override initializer {
+        require(_settings.epochSize > 0, "SUB: invalid epochSize");
+        require(address(_settings.token) != address(0), "SUB: token cannot be 0 address");
+        require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
+        require(_settings.rate > 0, "SUB: rate cannot be 0");
+        // check that profileContract is a contract of ERC721 and does have a tokenId
+        require(profileContract != address(0), "SUB: profile address not set");
+
+        // call initializers of inherited contracts
+        // TODO set metadata
+        __ERC721_init_unchained(tokenName, tokenSymbol);
+        __OwnableByERC721_init_unchained(profileContract, profileTokenId);
+        __FlagSettings_init_unchained();
+        __Rate_init_unchained(_settings.rate);
+        __Epochs_init_unchained(_settings.epochSize);
+        __SubscriptionData_init_unchained(_settings.lock);
+        __PaymentToken_init_unchained(_settings.token);
+        __MaxSupply_init_unchained(_settings.maxSupply);
+        __Metadata_init_unchained(_metadata);
+
+        // TODO check validity of token
     }
 }

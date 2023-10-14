@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Subscription} from "./Subscription.sol";
+import {DefaultSubscription} from "./Subscription.sol";
 
-contract BlockSubscription is Subscription {
+contract BlockSubscription is DefaultSubscription {
 
     function _now() internal override view returns (uint256) {
       return block.number;

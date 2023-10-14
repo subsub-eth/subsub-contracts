@@ -34,7 +34,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
     string public message;
 
-    Metadata public metadata;
+    MetadataStruct public metadata;
     SubSettings public settings;
 
     uint256 public currentTime;
@@ -50,7 +50,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
         message = "Hello World";
 
-        metadata = Metadata("test", "test", "test");
+        metadata = MetadataStruct("test", "test", "test");
 
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;

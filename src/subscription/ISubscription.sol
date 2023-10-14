@@ -23,7 +23,7 @@ interface SubscriptionEvents {
     );
 }
 
-struct Metadata {
+struct MetadataStruct {
     string description;
     string image;
     string externalUrl;
