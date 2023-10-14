@@ -6,6 +6,7 @@ import {IProfile} from "./IProfile.sol";
 import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
+import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
@@ -71,7 +72,7 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         public
         view
         virtual
-        override
+        override(ERC721Upgradeable, IERC721Metadata)
         returns (string memory)
     {
       // TODO FIXME
