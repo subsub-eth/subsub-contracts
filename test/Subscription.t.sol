@@ -336,7 +336,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testBurn_nonExisting() public {
-        vm.expectRevert("ERC721: invalid token ID");
+        vm.expectRevert("SUB: not the owner");
         subscription.burn(123123);
     }
 
@@ -346,7 +346,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.startPrank(alice);
         subscription.burn(tokenId);
 
-        vm.expectRevert("ERC721: invalid token ID");
+        vm.expectRevert("SUB: not the owner");
         subscription.burn(tokenId);
     }
 

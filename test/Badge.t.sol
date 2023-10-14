@@ -116,7 +116,7 @@ contract BadgeTest is Test, IBadgeEvents {
         badge.setMintAllowed(alice, tokenId, true);
 
         vm.prank(alice);
-        vm.expectRevert("Badge: exceeds max supply");
+        vm.expectRevert("Badge: exceeds token's max supply");
         badge.mint(bob, tokenId, amount, "");
     }
 
@@ -130,9 +130,12 @@ contract BadgeTest is Test, IBadgeEvents {
     }
 
     function testMintBatch(uint256[] memory amounts) public {
+        uint256 maxSupply = 100_000_000_000_000;
+
         delete _tokenIds;
         for (uint256 i = 0; i < amounts.length; i++) {
-            uint256 tokenId = createToken(type(uint256).max);
+            amounts[i] = bound(amounts[i], 0, maxSupply);
+            uint256 tokenId = createToken(maxSupply);
 
             vm.prank(owner);
             badge.setMintAllowed(alice, tokenId, true);
@@ -180,7 +183,7 @@ contract BadgeTest is Test, IBadgeEvents {
         }
 
         vm.prank(alice);
-        vm.expectRevert("Badge: exceeds max supply");
+        vm.expectRevert("Badge: exceeds token's max supply");
         badge.mintBatch(bob, _tokenIds, amounts, "");
     }
 
@@ -231,9 +234,10 @@ contract BadgeTest is Test, IBadgeEvents {
 
     function testBurnBatch(uint256[] memory amounts) public {
         delete _tokenIds;
-        uint256 max = type(uint256).max;
+        uint256 max = 100_000_000_000_000;
 
         for (uint256 i = 0; i < amounts.length; i++) {
+            amounts[i] = bound(amounts[i], 0, max);
             uint256 tokenId = createToken(max);
             vm.prank(owner);
             badge.setMintAllowed(alice, tokenId, true);
@@ -255,9 +259,10 @@ contract BadgeTest is Test, IBadgeEvents {
 
     function testBurnBatch_notOwner(uint256[] memory amounts) public {
         delete _tokenIds;
-        uint256 max = type(uint256).max;
+        uint256 max = 100_000_000_000_000;
 
         for (uint256 i = 0; i < amounts.length; i++) {
+            amounts[i] = bound(amounts[i], 0, max);
             uint256 tokenId = createToken(max);
             vm.prank(owner);
             badge.setMintAllowed(alice, tokenId, true);

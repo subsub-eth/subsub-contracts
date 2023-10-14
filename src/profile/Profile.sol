@@ -75,8 +75,7 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         override(ERC721Upgradeable, IERC721Metadata)
         returns (string memory)
     {
-      // TODO FIXME
-        // _requireMinted(tokenId);
+        require(_ownerOf(tokenId) != address(0), "crzP: Token does not exist");
 
         string memory output = Base64.encode(
             bytes(

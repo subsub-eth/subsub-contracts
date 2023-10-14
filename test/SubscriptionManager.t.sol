@@ -70,8 +70,6 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
 
         address result = manager.createSubscription("My Subscription", "SUB", metadata, settings, profileTokenId);
         assertFalse(result == address(0), "contract not created");
-        // TODO FIXME
-        // assertTrue(result.isContract(), "result is actually a contract");
 
         (IERC20Metadata resToken,,,,) = Subscription(result).settings();
         assertEq(address(token), address(resToken), "new contract initialized, token is set");
@@ -95,8 +93,6 @@ contract SubscriptionManagerTest is Test, SubscriptionManagerEvents {
         for (uint256 i = 0; i < 100; i++) {
             address result = manager.createSubscription("My Subscription", "SUB", metadata, settings, profileTokenId);
             assertFalse(result == address(0), "contract not created");
-            // TODO FIXME
-            // assertTrue(result.isContract(), "result is actually a contract");
 
             (IERC20Metadata resToken,,,,) = Subscription(result).settings();
             assertEq(address(token), address(resToken), "new contract initialized, token is set");

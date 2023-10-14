@@ -90,8 +90,7 @@ abstract contract Subscription is
     }
 
     modifier requireExists(uint256 tokenId) {
-      // TODO FIXME
-        // require(_exists(tokenId), "SUB: subscription does not exist");
+        require(_ownerOf(tokenId) != address(0), "SUB: subscription does not exist");
         _;
     }
 
@@ -157,8 +156,7 @@ abstract contract Subscription is
         override(ERC721Upgradeable, IERC721Metadata)
         returns (string memory)
     {
-      // TODO FIXME
-        // _requireMinted(tokenId);
+        require(_ownerOf(tokenId) != address(0), "SUB: Token does not exist");
 
         return this.tokenData(tokenId);
     }
@@ -166,7 +164,7 @@ abstract contract Subscription is
 
     function burn(uint256 tokenId) external {
         // only owner of tokenId can burn
-        require(msg.sender == ownerOf(tokenId), "SUB: not the owner");
+        require(_msgSender() == _ownerOf(tokenId), "SUB: not the owner");
 
         _deleteSubscription(tokenId);
 
@@ -246,8 +244,7 @@ abstract contract Subscription is
     }
 
     function _withdraw(uint256 tokenId, uint256 amount) private {
-      // TODO FIXME
-        // require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
+        require(_isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved");
 
         // TODO move to withdraw
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
