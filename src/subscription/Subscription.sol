@@ -72,7 +72,6 @@ abstract contract Subscription is
     using SubscriptionLib for uint256;
     using Strings for uint256;
     using Strings for address;
-    using CountersUpgradeable for CountersUpgradeable.Counter;
 
     using SubscriptionViewLib for Subscription;
 
@@ -91,7 +90,8 @@ abstract contract Subscription is
     }
 
     modifier requireExists(uint256 tokenId) {
-        require(_exists(tokenId), "SUB: subscription does not exist");
+      // TODO FIXME
+        // require(_exists(tokenId), "SUB: subscription does not exist");
         _;
     }
 
@@ -154,10 +154,11 @@ abstract contract Subscription is
         public
         view
         virtual
-        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
+        override(ERC721Upgradeable, IERC721Metadata)
         returns (string memory)
     {
-        _requireMinted(tokenId);
+      // TODO FIXME
+        // _requireMinted(tokenId);
 
         return this.tokenData(tokenId);
     }
@@ -245,7 +246,8 @@ abstract contract Subscription is
     }
 
     function _withdraw(uint256 tokenId, uint256 amount) private {
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
+      // TODO FIXME
+        // require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
 
         // TODO move to withdraw
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);

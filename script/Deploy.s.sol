@@ -49,11 +49,12 @@ contract DeployScript is Script {
 
         Subscription subscriptionImplementation = new BlockSubscription();
         UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(subscriptionImplementation)
+            address(subscriptionImplementation),
+            address(this)
         );
 
         Profile profileImplementation = new Profile();
-        ProxyAdmin profileAdmin = new ProxyAdmin();
+        ProxyAdmin profileAdmin = new ProxyAdmin(address(this));
         TransparentUpgradeableProxy profileProxy = new TransparentUpgradeableProxy(
                 address(profileImplementation),
                 address(profileAdmin),
@@ -67,7 +68,7 @@ contract DeployScript is Script {
         );
 
         SubscriptionManager managerImpl = new SubscriptionManager();
-        ProxyAdmin managerAdmin = new ProxyAdmin();
+        ProxyAdmin managerAdmin = new ProxyAdmin(address(this));
         TransparentUpgradeableProxy managerProxy = new TransparentUpgradeableProxy(
                 address(managerImpl),
                 address(managerAdmin),

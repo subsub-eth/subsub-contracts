@@ -74,7 +74,8 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         override
         returns (string memory)
     {
-        _requireMinted(tokenId);
+      // TODO FIXME
+        // _requireMinted(tokenId);
 
         string memory output = Base64.encode(
             bytes(

@@ -57,7 +57,10 @@ contract Badge is
         _mintBatch(to, ids, amounts, data);
     }
 
-    function burn(address account, uint256 id, uint256 value) public override(IBadgeOperations, ERC1155BurnableUpgradeable) {
+    function burn(address account, uint256 id, uint256 value)
+        public
+        override(IBadgeOperations, ERC1155BurnableUpgradeable)
+    {
         super.burn(account, id, value);
     }
 
@@ -95,14 +98,11 @@ contract Badge is
         return _tokenData[id].maxSupply > 0;
     }
 
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override(ERC1155SupplyUpgradeable, ERC1155Upgradeable) {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
+        internal
+        virtual
+        override(ERC1155SupplyUpgradeable, ERC1155Upgradeable)
+    {
+        super._update(from, to, ids, values);
     }
 }

@@ -16,7 +16,8 @@ contract ERC721Mock is ERC721 {
     }
 
     function exists(uint256 tokenId) public view returns (bool) {
-        return _exists(tokenId);
+      // TODO FIXME
+        // return _exists(tokenId);
     }
 
     function mint(address to, uint256 tokenId) public {

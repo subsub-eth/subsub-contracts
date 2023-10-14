@@ -23,7 +23,7 @@ contract ProfileTest is Test {
         alice = address(10);
         bob = address(20);
 
-        admin = new ProxyAdmin();
+        admin = new ProxyAdmin(address(this));
         implementation = new Profile();
         proxy = new TransparentUpgradeableProxy(
             address(implementation),

@@ -108,9 +108,9 @@ interface SubscriptionCreation {
 }
 
 interface ISubscription is
-    IERC721Upgradeable,
-    IERC721MetadataUpgradeable,
-    IERC4906Upgradeable,
+    IERC721,
+    IERC721Metadata,
+    IERC4906,
     Subscribable,
     Claimable,
     SubscriptionCreation,
