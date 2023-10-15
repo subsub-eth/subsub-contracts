@@ -17,23 +17,36 @@ abstract contract HasRate {
 abstract contract Rate is Initializable, HasRate {
     using SubscriptionLib for uint256;
 
-    uint256 private __rate;
+    struct RateStorage {
+        uint256 _rate;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Rate")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant RateStorageLocation = 0xe56147cf33567ea17c70c1c3a37ecf7bbea223c6f2347f6e350fdeb3b5396d00;
+
+    function _getRateStorage() private pure returns (RateStorage storage $) {
+        assembly {
+            $.slot := RateStorageLocation
+        }
+    }
 
     function __Rate_init(uint256 rate) internal onlyInitializing {
         __Rate_init_unchained(rate);
     }
 
     function __Rate_init_unchained(uint256 rate) internal onlyInitializing {
-        __rate = rate;
+        RateStorage storage $ = _getRateStorage();
+        $._rate = rate;
     }
 
     function _multipliedRate(uint256 multiplier) internal view override returns (uint256) {
-        // TODO check gas consumption
-        return __rate.multipliedRate(multiplier);
+        RateStorage storage $ = _getRateStorage();
+        return $._rate.multipliedRate(multiplier);
     }
 
     function _rate() internal view override returns (uint256) {
-        return __rate;
+        RateStorage storage $ = _getRateStorage();
+        return $._rate;
     }
 
     // TODO _gap

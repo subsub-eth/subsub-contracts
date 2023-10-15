@@ -23,36 +23,35 @@ import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/to
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
-import {IERC721Metadata} from
-    "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-    // should the tokenId 0 == owner?
+// should the tokenId 0 == owner?
 
-    // TODO merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
-    // TODO separate sub deposits, tips, and maybe merged funds
-    // TODO refactor token handling and internal/external representation to separate contract
-    // TODO "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
-    // TODO max donation / deposit
-    // TODO allow 0 amount tip or check for a configurable min tip amount?
-    // TODO refactor event deposited to spent amount?
-    // TODO define metadata
-    // TODO upgrade function / flow, migrating one token into another
-    // TODO fast block time + small epoch size => out of gas?
-    // TODO split owner and user sides into separate abstract contracts?
-    //      use structs to combine fields/members?
-    // TODO optimize variable sizes
-    //      add gaps
-    // TODO instead of multiple instances have everything in 1 ERC721 instance?
-    // TODO generate simple image on chain to illustrate sub status
-    // TODO add royalties?
+// TODO merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
+// TODO separate sub deposits, tips, and maybe merged funds
+// TODO refactor token handling and internal/external representation to separate contract
+// TODO "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
+// TODO max donation / deposit
+// TODO allow 0 amount tip or check for a configurable min tip amount?
+// TODO refactor event deposited to spent amount?
+// TODO define metadata
+// TODO upgrade function / flow, migrating one token into another
+// TODO fast block time + small epoch size => out of gas?
+// TODO split owner and user sides into separate abstract contracts?
+//      use structs to combine fields/members?
+// TODO optimize variable sizes
+//      add gaps
+// TODO instead of multiple instances have everything in 1 ERC721 instance?
+// TODO generate simple image on chain to illustrate sub status
+// TODO add royalties?
 
-    // TODO add natspec comments
+// TODO add natspec comments
 
-abstract contract Subscription is 
+abstract contract Subscription is
     Initializable,
     ISubscription,
     TimeAware,
@@ -81,13 +80,11 @@ abstract contract Subscription is
     // external amount
     uint256 public totalClaimed;
 
-
     function __Subscription_init() internal onlyInitializing {
         __Subscription_init_unchained();
     }
 
-    function __Subscription_init_unchained() internal onlyInitializing {
-    }
+    function __Subscription_init_unchained() internal onlyInitializing {}
 
     modifier requireExists(uint256 tokenId) {
         require(_ownerOf(tokenId) != address(0), "SUB: subscription does not exist");
@@ -134,11 +131,11 @@ abstract contract Subscription is
     }
 
     function setImage(string calldata _image) external onlyOwnerOrApproved {
-      _setImage(_image);
+        _setImage(_image);
     }
 
     function setExternalUrl(string calldata _externalUrl) external onlyOwnerOrApproved {
-      _setExternalUrl(_externalUrl);
+        _setExternalUrl(_externalUrl);
     }
 
     function contractURI() external view returns (string memory) {
@@ -160,7 +157,6 @@ abstract contract Subscription is
 
         return this.tokenData(tokenId);
     }
-
 
     function burn(uint256 tokenId) external {
         // only owner of tokenId can burn
@@ -244,7 +240,9 @@ abstract contract Subscription is
     }
 
     function _withdraw(uint256 tokenId, uint256 amount) private {
-        require(_isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved");
+        require(
+            _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
+        );
 
         // TODO move to withdraw
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
@@ -371,7 +369,7 @@ abstract contract DefaultSubscription is
         __SubscriptionData_init_unchained(_settings.lock);
         __PaymentToken_init_unchained(_settings.token);
         __MaxSupply_init_unchained(_settings.maxSupply);
-        __Metadata_init_unchained(_metadata);
+        __Metadata_init_unchained(_metadata.description, _metadata.image, _metadata.externalUrl);
 
         nextTokenId = 1;
 

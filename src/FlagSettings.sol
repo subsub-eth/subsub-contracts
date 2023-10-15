@@ -38,38 +38,47 @@ abstract contract HasFlagSettings {
 }
 
 abstract contract FlagSettings is Initializable, ContextUpgradeable, FlagEvents, HasFlagSettings {
-    uint256 private _flags;
+    struct FlagStorage {
+        uint256 _flags;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.FlagSettings")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FlagStorageLocation = 0xef76360c7e011776eb025551396387367250d165806b070a47601953eabbc300;
+
+    function _getFlagStorage() private pure returns (FlagStorage storage $) {
+        assembly {
+            $.slot := FlagStorageLocation
+        }
+    }
 
     function __FlagSettings_init() internal onlyInitializing {
         __FlagSettings_init_unchained();
     }
 
     function __FlagSettings_init_unchained() internal onlyInitializing {
-        _flags = 0;
+        FlagStorage storage $ = _getFlagStorage();
+        $._flags = 0;
     }
 
     function _setFlags(uint256 flags) internal override {
-        _flags = _flags | flags;
-        emit FlagSet(_msgSender(), flags, _flags);
+        FlagStorage storage $ = _getFlagStorage();
+        $._flags = $._flags | flags;
+        emit FlagSet(_msgSender(), flags, $._flags);
     }
 
     function _unsetFlags(uint256 flags) internal override {
-        _flags = _flags ^ flags;
-        emit FlagUnset(_msgSender(), flags, _flags);
+        FlagStorage storage $ = _getFlagStorage();
+        $._flags = $._flags ^ flags;
+        emit FlagUnset(_msgSender(), flags, $._flags);
     }
 
     function flagsEnabled(uint256 flags) public view override returns (bool) {
-        return (_flags & flags) == flags;
+        FlagStorage storage $ = _getFlagStorage();
+        return ($._flags & flags) == flags;
     }
 
     function getFlags() public view override returns (uint256) {
-        return _flags;
+        FlagStorage storage $ = _getFlagStorage();
+        return $._flags;
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[49] private __gap;
 }

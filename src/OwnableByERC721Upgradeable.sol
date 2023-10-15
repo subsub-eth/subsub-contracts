@@ -25,8 +25,20 @@ import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol
 // TODO fix comments
 // TODO check contract to an ERC721 contract
 abstract contract OwnableByERC721Upgradeable is Initializable, ContextUpgradeable {
-    address private _ownerContract;
-    uint256 private _ownerTokenId;
+    struct OwnableByERC721Storage {
+        address _ownerContract;
+        uint256 _ownerTokenId;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.OwnableByERC721")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant OwnableByERC721StorageLocation =
+        0xa78a34013f9a428a84ac0d319baa6ed0f0fdf3d94a253ec4b1b045a1bdc65e00;
+
+    function _getOwnableByERC721Storage() private pure returns (OwnableByERC721Storage storage $) {
+        assembly {
+            $.slot := OwnableByERC721StorageLocation
+        }
+    }
 
     event OwnershipTransferred(
         address indexed previousOwnerContract,
@@ -66,7 +78,8 @@ abstract contract OwnableByERC721Upgradeable is Initializable, ContextUpgradeabl
      * @dev Returns the ERC721 contract address and the tokenId
      */
     function owner() public view virtual returns (address, uint256) {
-        return (_ownerContract, _ownerTokenId);
+        OwnableByERC721Storage storage $ = _getOwnableByERC721Storage();
+        return ($._ownerContract, $._ownerTokenId);
     }
 
     /**
@@ -74,10 +87,11 @@ abstract contract OwnableByERC721Upgradeable is Initializable, ContextUpgradeabl
      * if the contract is set to address(0)
      */
     function ownerAddress() public view virtual returns (address) {
-        if (_ownerContract == address(0)) {
+        OwnableByERC721Storage storage $ = _getOwnableByERC721Storage();
+        if ($._ownerContract == address(0)) {
             return address(0);
         }
-        return IERC721(_ownerContract).ownerOf(_ownerTokenId);
+        return IERC721($._ownerContract).ownerOf($._ownerTokenId);
     }
 
     /**
@@ -91,10 +105,11 @@ abstract contract OwnableByERC721Upgradeable is Initializable, ContextUpgradeabl
      * @dev Throws if the sender is not approved
      */
     function _checkOwnerOrApproved() internal view virtual {
+        OwnableByERC721Storage storage $ = _getOwnableByERC721Storage();
         address _owner = ownerAddress();
         require(
-            _owner == _msgSender() || IERC721(_ownerContract).isApprovedForAll(_owner, _msgSender())
-                || IERC721(_ownerContract).getApproved(_ownerTokenId) == _msgSender(),
+            _owner == _msgSender() || IERC721($._ownerContract).isApprovedForAll(_owner, _msgSender())
+                || IERC721($._ownerContract).getApproved($._ownerTokenId) == _msgSender(),
             "Ownable: caller is not owner or approved"
         );
     }
@@ -104,19 +119,13 @@ abstract contract OwnableByERC721Upgradeable is Initializable, ContextUpgradeabl
      * Internal function without access restriction.
      */
     function _transferOwnership(address newOwnerContract, uint256 newOwnerTokenId) internal virtual {
-        address oldOwnerContract = _ownerContract;
-        uint256 oldOwnerTokenId = _ownerTokenId;
-        _ownerContract = newOwnerContract;
-        _ownerTokenId = newOwnerTokenId;
+        OwnableByERC721Storage storage $ = _getOwnableByERC721Storage();
+        address oldOwnerContract = $._ownerContract;
+        uint256 oldOwnerTokenId = $._ownerTokenId;
+        $._ownerContract = newOwnerContract;
+        $._ownerTokenId = newOwnerTokenId;
         emit OwnershipTransferred(oldOwnerContract, oldOwnerTokenId, newOwnerContract, newOwnerTokenId);
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[48] private __gap;
 }
 
 abstract contract TransferableOwnableByERC721Upgradeable is OwnableByERC721Upgradeable {

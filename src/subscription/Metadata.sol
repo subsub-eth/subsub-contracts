@@ -6,8 +6,11 @@ import {MetadataStruct} from "./ISubscription.sol";
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 abstract contract HasMetadata {
-
-    function metadata() external virtual view returns (string memory description, string memory image, string memory externalUrl);
+    function metadata()
+        external
+        view
+        virtual
+        returns (string memory description, string memory image, string memory externalUrl);
 
     function _setDescription(string calldata _description) internal virtual;
 
@@ -17,36 +20,63 @@ abstract contract HasMetadata {
 }
 
 abstract contract Metadata is Initializable, HasMetadata {
-
-    MetadataStruct private __metadata;
-
-    function __Metadata_init(MetadataStruct memory _metadata) internal onlyInitializing {
-        __Metadata_init_unchained(_metadata);
+    struct MetadataStorage {
+        string _description;
+        string _image;
+        string _externalUrl;
     }
 
-    function __Metadata_init_unchained(MetadataStruct memory _metadata) internal onlyInitializing {
-      __metadata = _metadata;
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Metadata")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant MetadataStorageLocation =
+        0x4e23e702febef80da955bb4f7960279aadd3c90263ad7e053e89ad2bb31bf100;
+
+    function _getMetadataStorage() private pure returns (MetadataStorage storage $) {
+        assembly {
+            $.slot := MetadataStorageLocation
+        }
     }
 
+    function __Metadata_init(string memory description, string memory image, string memory externalUrl)
+        internal
+        onlyInitializing
+    {
+        __Metadata_init_unchained(description, image, externalUrl);
+    }
 
-    function metadata() external override view returns (string memory description, string memory image, string memory externalUrl) {
-      description = __metadata.description;
-      image = __metadata.image;
-      externalUrl = __metadata.externalUrl;
+    function __Metadata_init_unchained(string memory description, string memory image, string memory externalUrl)
+        internal
+        onlyInitializing
+    {
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._description = description;
+        $._image = image;
+        $._externalUrl = externalUrl;
+    }
+
+    function metadata()
+        external
+        view
+        override
+        returns (string memory description, string memory image, string memory externalUrl)
+    {
+        MetadataStorage storage $ = _getMetadataStorage();
+        description = $._description;
+        image = $._image;
+        externalUrl = $._externalUrl;
     }
 
     function _setDescription(string calldata _description) internal override {
-        __metadata.description = _description;
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._description = _description;
     }
 
     function _setImage(string calldata _image) internal override {
-        __metadata.image = _image;
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._image = _image;
     }
 
     function _setExternalUrl(string calldata _externalUrl) internal override {
-        __metadata.externalUrl = _externalUrl;
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._externalUrl = _externalUrl;
     }
-
-    // TODO _gap
 }
-

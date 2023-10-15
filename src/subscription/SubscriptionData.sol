@@ -63,21 +63,35 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
     using SubscriptionLib for uint256;
     using Math for uint256;
 
-    // locked % of deposited amount
-    // 0 - 10000
-    uint256 private __lock;
-    mapping(uint256 => SubData) private _subData;
+    struct SubscriptionDataStorage {
+        // locked % of deposited amount
+        // 0 - 10000
+        uint256 _lock;
+        mapping(uint256 => SubData) _subData;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.SubscriptionData")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant SubscriptionDataStorageLocation =
+        0x92a1a7e1e22636ec2397092498332daad545b7c2098d4e9a35ca6ae5ce900d00;
+
+    function _getSubscriptionDataStorage() private pure returns (SubscriptionDataStorage storage $) {
+        assembly {
+            $.slot := SubscriptionDataStorageLocation
+        }
+    }
 
     function __SubscriptionData_init(uint256 lock) internal onlyInitializing {
         __SubscriptionData_init_unchained(lock);
     }
 
     function __SubscriptionData_init_unchained(uint256 lock) internal onlyInitializing {
-        __lock = lock;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        $._lock = lock;
     }
 
     function _lock() internal view override returns (uint256) {
-        return __lock;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._lock;
     }
 
     function _isActive(uint256 tokenId) internal view override returns (bool) {
@@ -88,26 +102,29 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
         // a subscription is active form the starting time slot (including)
         // to the calculated ending time slot (excluding)
         // active = [start, + deposit / rate)
-        uint256 lastDeposit = _subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = _subData[tokenId].currentDeposit;
-        return currentDeposit_.expiresAt(lastDeposit, _multipliedRate(_subData[tokenId].multiplier));
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        uint256 lastDeposit = $._subData[tokenId].lastDepositAt;
+        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
+        return currentDeposit_.expiresAt(lastDeposit, _multipliedRate($._subData[tokenId].multiplier));
     }
 
     function _deleteSubscription(uint256 tokenId) internal override {
-        delete _subData[tokenId];
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        delete $._subData[tokenId];
     }
 
     function _createSubscription(uint256 tokenId, uint256 amount, uint256 multiplier) internal override {
         uint256 now_ = _now();
 
-        _subData[tokenId].mintedAt = now_;
-        _subData[tokenId].lastDepositAt = now_;
-        _subData[tokenId].totalDeposited = amount;
-        _subData[tokenId].currentDeposit = amount;
-        _subData[tokenId].multiplier = multiplier;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        $._subData[tokenId].mintedAt = now_;
+        $._subData[tokenId].lastDepositAt = now_;
+        $._subData[tokenId].totalDeposited = amount;
+        $._subData[tokenId].currentDeposit = amount;
+        $._subData[tokenId].multiplier = multiplier;
 
         // set lockedAmount
-        _subData[tokenId].lockedAmount = ((amount * __lock) / LOCK_BASE).adjustToRate(_multipliedRate(multiplier));
+        $._subData[tokenId].lockedAmount = ((amount * $._lock) / LOCK_BASE).adjustToRate(_multipliedRate(multiplier));
     }
 
     function _addToSubscription(uint256 tokenId, uint256 amount)
@@ -116,8 +133,9 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
         returns (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 oldLastDepositedAt)
     {
         uint256 now_ = _now();
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
 
-        oldDeposit = _subData[tokenId].currentDeposit;
+        oldDeposit = $._subData[tokenId].currentDeposit;
         uint256 mRate = _multipliedRate(_multiplier(tokenId));
 
         oldLastDepositedAt = _lastDepositedAt(tokenId);
@@ -129,10 +147,10 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
             newDeposit = remainingDeposit + amount;
         }
 
-        _subData[tokenId].currentDeposit = newDeposit;
-        _subData[tokenId].lastDepositAt = now_;
-        _subData[tokenId].totalDeposited += amount;
-        _subData[tokenId].lockedAmount = ((newDeposit * __lock) / LOCK_BASE).adjustToRate(mRate);
+        $._subData[tokenId].currentDeposit = newDeposit;
+        $._subData[tokenId].lastDepositAt = now_;
+        $._subData[tokenId].totalDeposited += amount;
+        $._subData[tokenId].lockedAmount = ((newDeposit * $._lock) / LOCK_BASE).adjustToRate(mRate);
     }
 
     function _withdrawableFromSubscription(uint256 tokenId) internal view override returns (uint256) {
@@ -140,10 +158,11 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
             return 0;
         }
 
-        uint256 lastDeposit = _subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = _subData[tokenId].currentDeposit;
-        uint256 lockedAmount = _subData[tokenId].lockedAmount;
-        uint256 mRate = _multipliedRate(_subData[tokenId].multiplier);
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        uint256 lastDeposit = $._subData[tokenId].lastDepositAt;
+        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
+        uint256 lockedAmount = $._subData[tokenId].lockedAmount;
+        uint256 mRate = _multipliedRate($._subData[tokenId].multiplier);
         uint256 usedBlocks = _now() - lastDeposit;
 
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (usedBlocks * mRate));
@@ -155,22 +174,24 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
         override
         returns (uint256 oldDeposit, uint256 newDeposit)
     {
-        oldDeposit = _subData[tokenId].currentDeposit;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        oldDeposit = $._subData[tokenId].currentDeposit;
         newDeposit = oldDeposit - amount;
-        _subData[tokenId].currentDeposit = newDeposit;
-        _subData[tokenId].totalDeposited -= amount;
+        $._subData[tokenId].currentDeposit = newDeposit;
+        $._subData[tokenId].totalDeposited -= amount;
     }
 
     function _spent(uint256 tokenId) internal view override returns (uint256, uint256) {
-        uint256 totalDeposited = _subData[tokenId].totalDeposited;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        uint256 totalDeposited = $._subData[tokenId].totalDeposited;
 
         uint256 spentAmount;
 
         if (!_isActive(tokenId)) {
             spentAmount = totalDeposited;
         } else {
-            spentAmount = totalDeposited - _subData[tokenId].currentDeposit
-                + ((_now() - _subData[tokenId].lastDepositAt) * _multipliedRate(_subData[tokenId].multiplier));
+            spentAmount = totalDeposited - $._subData[tokenId].currentDeposit
+                + ((_now() - $._subData[tokenId].lastDepositAt) * _multipliedRate($._subData[tokenId].multiplier));
         }
 
         uint256 unspentAmount = totalDeposited - spentAmount;
@@ -179,24 +200,27 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
     }
 
     function _totalDeposited(uint256 tokenId) internal view override returns (uint256) {
-        return _subData[tokenId].totalDeposited;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._subData[tokenId].totalDeposited;
     }
 
     function _multiplier(uint256 tokenId) internal view override returns (uint256) {
-        return _subData[tokenId].multiplier;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._subData[tokenId].multiplier;
     }
 
     function _lastDepositedAt(uint256 tokenId) internal view override returns (uint256) {
-        return _subData[tokenId].lastDepositAt;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._subData[tokenId].lastDepositAt;
     }
 
     function _incrementTotalDeposited(uint256 tokenId, uint256 amount) internal override {
-        _subData[tokenId].totalDeposited += amount;
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        $._subData[tokenId].totalDeposited += amount;
     }
 
     function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {
-        return _subData[tokenId];
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._subData[tokenId];
     }
-
-    // TODO _gap
 }
