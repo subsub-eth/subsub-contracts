@@ -7,11 +7,22 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 import "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
 
 abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, IMintAllowedUpgradeable {
-    // tokenId => minterAddress => is allowed to mint
-    mapping(uint256 => mapping(address => bool)) private _mintAllowed;
+    struct MintAllowedStorage {
+        // tokenId => minterAddress => is allowed to mint
+        mapping(uint256 => mapping(address => bool)) _mintAllowed;
+        // tokenId => isFrozen
+        mapping(uint256 => bool) _mintAllowedFrozen;
+    }
 
-    // tokenId => isFrozen
-    mapping(uint256 => bool) private _mintAllowedFrozen;
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.MintAllowed")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant MintAllowedStorageLocation =
+        0x8ef62f37b4b05bdca28aef13f3f2ccb52b250f60113b18e89910071d573a0600;
+
+    function _getMintAllowedStorage() private pure returns (MintAllowedStorage storage $) {
+        assembly {
+            $.slot := MintAllowedStorageLocation
+        }
+    }
 
     function __MintAllowedUpgradeable_init() internal onlyInitializing {
         __MintAllowedUpgradeable_init_unchained();
@@ -22,24 +33,28 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
     function setMintAllowed(address minter, uint256 id, bool allow) public virtual {
         require(_idExists(id), "MintAllowed: token does not exist");
         require(!isMintAllowedFrozen(id), "MintAllowed: Minter list is frozen");
-        _mintAllowed[id][minter] = allow;
+        MintAllowedStorage storage $ = _getMintAllowedStorage();
+        $._mintAllowed[id][minter] = allow;
 
         emit MintAllowed(_msgSender(), minter, id, allow);
     }
 
     function isMintAllowed(address minter, uint256 id) public view virtual returns (bool) {
-        return _mintAllowed[id][minter];
+        MintAllowedStorage storage $ = _getMintAllowedStorage();
+        return $._mintAllowed[id][minter];
     }
 
     function freezeMintAllowed(uint256 id) external {
         require(_idExists(id), "MintAllowed: token does not exist");
-        _mintAllowedFrozen[id] = true;
+        MintAllowedStorage storage $ = _getMintAllowedStorage();
+        $._mintAllowedFrozen[id] = true;
 
         emit MintAllowedFrozen(_msgSender(), id);
     }
 
     function isMintAllowedFrozen(uint256 id) public view returns (bool) {
-        return _mintAllowedFrozen[id];
+        MintAllowedStorage storage $ = _getMintAllowedStorage();
+        return $._mintAllowedFrozen[id];
     }
 
     function _idExists(uint256 id) internal view virtual returns (bool);
@@ -47,6 +62,4 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
     function _requireMintAllowed(uint256 id) internal view virtual {
         require(isMintAllowed(_msgSender(), id), "MintAllowed: sender not allowed to mint");
     }
-
-    uint256[48] private __gap;
 }

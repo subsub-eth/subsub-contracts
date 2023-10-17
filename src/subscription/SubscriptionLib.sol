@@ -4,15 +4,15 @@ pragma solidity ^0.8.20;
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 library SubscriptionLib {
+    uint256 public constant MULTIPLIER_BASE = 100;
+
     uint8 public constant INTERNAL_DECIMALS = 18;
 
-    // TODO use stored uint8 instead of call to token? decimals is usually hardcoded?
-    function toInternal(uint256 externalAmount, IERC20Metadata token)
+    function toInternal(uint256 externalAmount, uint8 tokenDecimals)
         internal
-        view
+        pure
         returns (uint256)
     {
-        uint8 tokenDecimals = token.decimals();
         uint256 internalAmount;
 
         if (tokenDecimals < INTERNAL_DECIMALS) {
@@ -28,12 +28,11 @@ library SubscriptionLib {
         return internalAmount;
     }
 
-    function toExternal(uint256 internalAmount, IERC20Metadata token)
+    function toExternal(uint256 internalAmount, uint8 tokenDecimals)
         internal
-        view
+        pure
         returns (uint256)
     {
-        uint8 tokenDecimals = token.decimals();
         uint256 externalAmount;
 
         if (tokenDecimals < INTERNAL_DECIMALS) {
@@ -56,5 +55,14 @@ library SubscriptionLib {
     {
         // TODO gas optimization: return amount - (amount % rate);
         return (amount / rate) * rate;
+    }
+
+
+    function expiresAt(uint256 amount, uint256 depositedAt, uint256 mRate) internal pure returns (uint256) {
+        return depositedAt + (amount / mRate);
+    }
+
+    function multipliedRate(uint256 rate, uint256 multiplier) internal pure returns (uint256) {
+        return (rate * multiplier) / MULTIPLIER_BASE;
     }
 }

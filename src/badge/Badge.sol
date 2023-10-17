@@ -43,7 +43,8 @@ contract Badge is
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external {
         _requireMintAllowed(id);
-        require(_tokenData[id].maxSupply >= amount + totalSupply(id), "Badge: exceeds max supply");
+        require(_tokenData[id].maxSupply - totalSupply(id) >= amount, "Badge: exceeds token's max supply");
+        require(type(uint256).max - totalSupply() >= amount, "Badge: exceeds contract's max supply");
 
         _mint(to, id, amount, data);
     }
@@ -51,13 +52,19 @@ contract Badge is
     function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external {
         for (uint256 i = 0; i < ids.length; i++) {
             _requireMintAllowed(ids[i]);
-            require(_tokenData[ids[i]].maxSupply >= amounts[i] + totalSupply(ids[i]), "Badge: exceeds max supply");
+            require(
+                _tokenData[ids[i]].maxSupply - totalSupply(ids[i]) >= amounts[i], "Badge: exceeds token's max supply"
+            );
+            require(type(uint256).max - totalSupply() >= amounts[i], "Badge: exceeds contract's max supply");
         }
 
         _mintBatch(to, ids, amounts, data);
     }
 
-    function burn(address account, uint256 id, uint256 value) public override(IBadgeOperations, ERC1155BurnableUpgradeable) {
+    function burn(address account, uint256 id, uint256 value)
+        public
+        override(IBadgeOperations, ERC1155BurnableUpgradeable)
+    {
         super.burn(account, id, value);
     }
 
@@ -95,14 +102,11 @@ contract Badge is
         return _tokenData[id].maxSupply > 0;
     }
 
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override(ERC1155SupplyUpgradeable, ERC1155Upgradeable) {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
+        internal
+        virtual
+        override(ERC1155SupplyUpgradeable, ERC1155Upgradeable)
+    {
+        super._update(from, to, ids, values);
     }
 }

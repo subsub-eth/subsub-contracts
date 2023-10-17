@@ -24,7 +24,7 @@ contract SubscriptionLibTest is Test {
         );
 
         uint256 externalAmount = 10_000;
-        uint256 internalAmount = externalAmount.toInternal(token);
+        uint256 internalAmount = externalAmount.toInternal(token.decimals());
 
         assertEq(
             externalAmount,
@@ -37,7 +37,7 @@ contract SubscriptionLibTest is Test {
         ERC20DecimalsMock token = createToken(6);
 
         uint256 externalAmount = 10_000;
-        uint256 internalAmount = externalAmount.toInternal(token);
+        uint256 internalAmount = externalAmount.toInternal(token.decimals());
 
         assertEq(10_000_000_000_000_000, internalAmount, "add more decimals");
     }
@@ -46,7 +46,7 @@ contract SubscriptionLibTest is Test {
         ERC20DecimalsMock token = createToken(24);
 
         uint256 externalAmount = 10_000_000;
-        uint256 internalAmount = externalAmount.toInternal(token);
+        uint256 internalAmount = externalAmount.toInternal(token.decimals());
 
         assertEq(10, internalAmount, "remove decimals");
     }
@@ -55,7 +55,7 @@ contract SubscriptionLibTest is Test {
         ERC20DecimalsMock token = createToken(0);
 
         uint256 externalAmount = 10_000;
-        uint256 internalAmount = externalAmount.toInternal(token);
+        uint256 internalAmount = externalAmount.toInternal(token.decimals());
 
         assertEq(
             10_000_000_000_000_000_000_000,
@@ -70,7 +70,7 @@ contract SubscriptionLibTest is Test {
         );
 
         uint256 internalAmount = 10_000;
-        uint256 externalAmount = internalAmount.toExternal(token);
+        uint256 externalAmount = internalAmount.toExternal(token.decimals());
 
         assertEq(
             internalAmount,
@@ -83,7 +83,7 @@ contract SubscriptionLibTest is Test {
         ERC20DecimalsMock token = createToken(6);
 
         uint256 internalAmount = 10_000_000_000_000_000;
-        uint256 externalAmount = internalAmount.toExternal(token);
+        uint256 externalAmount = internalAmount.toExternal(token.decimals());
 
         assertEq(10_000, externalAmount, "remove decimals");
     }
@@ -92,7 +92,7 @@ contract SubscriptionLibTest is Test {
         ERC20DecimalsMock token = createToken(24);
 
         uint256 internalAmount = 10;
-        uint256 externalAmount = internalAmount.toExternal(token);
+        uint256 externalAmount = internalAmount.toExternal(token.decimals());
 
         assertEq(10_000_000, externalAmount, "add more decimals");
     }
@@ -101,7 +101,7 @@ contract SubscriptionLibTest is Test {
         ERC20DecimalsMock token = createToken(0);
 
         uint256 internalAmount = 10_000_000_000_000_000_000_000;
-        uint256 externalAmount = internalAmount.toExternal(token);
+        uint256 externalAmount = internalAmount.toExternal(token.decimals());
 
         assertEq(10_000, externalAmount, "remove 18 decimals");
     }

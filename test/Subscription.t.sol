@@ -2,11 +2,10 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 import "../src/subscription/Subscription.sol";
 import "./mocks/TestSubscription.sol";
 
-import {SubscriptionEvents, ClaimEvents, Metadata, SubSettings, SubscriptionFlags} from "../src/subscription/ISubscription.sol";
+import {SubscriptionEvents, ClaimEvents, MetadataStruct, SubSettings, SubscriptionFlags} from "../src/subscription/ISubscription.sol";
 import {Profile} from "../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
@@ -33,7 +32,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     string public message;
 
-    Metadata public metadata;
+    MetadataStruct public metadata;
     SubSettings public settings;
 
     uint256 public currentTime;
@@ -53,7 +52,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         message = "Hello World";
 
-        metadata = Metadata("test", "test", "test");
+        metadata = MetadataStruct("test", "test", "test");
 
         rate = 5;
         lock = 100;
@@ -337,7 +336,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testBurn_nonExisting() public {
-        vm.expectRevert("ERC721: invalid token ID");
+        vm.expectRevert("SUB: not the owner");
         subscription.burn(123123);
     }
 
@@ -347,7 +346,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.startPrank(alice);
         subscription.burn(tokenId);
 
-        vm.expectRevert("ERC721: invalid token ID");
+        vm.expectRevert("SUB: not the owner");
         subscription.burn(tokenId);
     }
 
@@ -603,7 +602,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(subscription)), initialDeposit, "token balance not changed");
     }
 
-    function testWithdraw() public {
+    function testWithdraw1() public {
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
@@ -932,7 +931,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), claimable, "claimable funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 1 * subscription.MULTIPLIER_BASE(), "subscriptions updated");
+        assertEq(subscription.activeSubShares(), 1 * SubscriptionLib.MULTIPLIER_BASE, "subscriptions updated");
 
         assertEq(subscription.claimable(), 0, "no funds claimable right after claim");
 
@@ -1003,7 +1002,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         uint256 ownerBalance = testToken.balanceOf(owner);
         assertEq(ownerBalance, claimable, "claimable funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 1 * subscription.MULTIPLIER_BASE(), "subscriptions updated");
+        assertEq(subscription.activeSubShares(), 1 * SubscriptionLib.MULTIPLIER_BASE, "subscriptions updated");
 
         assertEq(subscription.claimable(), 0, "no funds claimable right after claim");
 
@@ -1019,7 +1018,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), ownerBalance + claimable, "new funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 1 * subscription.MULTIPLIER_BASE(), "subscriptions updated");
+        assertEq(subscription.activeSubShares(), 1 * SubscriptionLib.MULTIPLIER_BASE, "subscriptions updated");
 
         assertEq(subscription.deposited(tokenId), 1_000, "1000 tokens deposited");
     }

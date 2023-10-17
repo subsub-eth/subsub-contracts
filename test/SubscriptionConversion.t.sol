@@ -34,7 +34,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
     string public message;
 
-    Metadata public metadata;
+    MetadataStruct public metadata;
     SubSettings public settings;
 
     uint256 public currentTime;
@@ -50,7 +50,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         message = "Hello World";
 
-        metadata = Metadata("test", "test", "test");
+        metadata = MetadataStruct("test", "test", "test");
 
         rate = 3 ether / 1000; // 0.003 tokens per block
         lock = 100;
@@ -86,24 +86,24 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
-            subscription.totalSupply() + 1, amount, amount.toInternal(testToken).adjustToRate(rate), user, message
+            subscription.totalSupply() + 1, amount, amount.toInternal(testToken.decimals()).adjustToRate(rate), user, message
         );
 
         tokenId = subscription.mint(amount, 100, message);
         vm.stopPrank();
         assertEq(testToken.balanceOf(address(subscription)), amount, "amount send to subscription contract");
 
-        uint256 lockedAmount = (amount.toInternal(testToken) * lock) / subscription.LOCK_BASE();
+        uint256 lockedAmount = (amount.toInternal(testToken.decimals()) * lock) / subscription.LOCK_BASE();
         lockedAmount = lockedAmount.adjustToRate(rate);
         assertEq(
             subscription.withdrawable(tokenId),
-            (amount.toInternal(testToken).adjustToRate(rate) - lockedAmount).toExternal(testToken),
+            (amount.toInternal(testToken.decimals()).adjustToRate(rate) - lockedAmount).toExternal(testToken.decimals()),
             "deposited amount partially locked"
         );
     }
 
     function testFlow(uint8 decimals) public {
-        vm.assume(decimals <= 64);
+        decimals = uint8(bound(decimals, 0, 64));
 
         currentTime = 100_000;
         uint256 amount = 10 * (10 ** decimals);
@@ -118,7 +118,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         setCurrentTime(102_001);
 
-        assertEq(subscription.claimable(), (2_000 * rate).toExternal(testToken), "claimable");
+        assertEq(subscription.claimable(), (2_000 * rate).toExternal(decimals), "claimable");
 
         vm.startPrank(alice);
         testToken.approve(address(subscription), amount);
@@ -134,7 +134,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 claimable = subscription.claimable();
         assertEq(
             claimable,
-            (amount * 2).toInternal(testToken).adjustToRate(rate).toExternal(testToken),
+            (amount * 2).toInternal(decimals).adjustToRate(rate).toExternal(decimals),
             "full sub amount claimable"
         );
 
@@ -143,7 +143,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     }
 
     function testFlow_withdraw(uint8 decimals) public {
-        vm.assume(decimals <= 64);
+        decimals = uint8(bound(decimals, 0, 64));
 
         currentTime = 100_000;
         uint256 amount = 10 * (10 ** decimals);
@@ -151,6 +151,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         createContracts(decimals);
         uint256 tokenId = mintToken(alice, amount);
 
+        assertEq(subscription.claimable(), 0, "in beginning, nothing claimable");
         setCurrentTime(100_001);
         assertTrue(subscription.isActive(tokenId), "sub active");
 
@@ -159,18 +160,19 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         setCurrentTime(102_000);
 
         uint256 withdrawable = subscription.withdrawable(tokenId);
-        assertEq(withdrawable, (1_333 * rate).toExternal(testToken), "partial withdrawable");
+        assertEq(withdrawable, (1_333 * rate).toExternal(decimals), "partial withdrawable");
 
         uint256 b = testToken.balanceOf(alice);
         vm.prank(alice);
         subscription.cancel(tokenId);
-        assertEq(testToken.balanceOf(alice), b + (1_333 * rate).toExternal(testToken), "funds returned");
+        assertEq(testToken.balanceOf(alice), b + (1_333 * rate).toExternal(decimals), "funds returned");
+        assertEq(subscription.claimable(), (2_000 * rate).toExternal(decimals), "after cancel: remaining amount claimable");
 
         setCurrentTime(200_000);
 
         vm.startPrank(owner);
         uint256 claimable = subscription.claimable();
-        assertEq(claimable, (2_000 * rate).toExternal(testToken), "claimable");
+        assertEq(claimable, (2_000 * rate).toExternal(decimals), "claimable");
 
         subscription.claim(owner);
         assertEq(testToken.balanceOf(owner), claimable, "claimable amount claimed");
