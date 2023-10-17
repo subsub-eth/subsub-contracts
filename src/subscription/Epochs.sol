@@ -48,17 +48,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     using SubscriptionLib for uint256;
 
     struct EpochsStorage {
-    uint256 _epochSize;
-    mapping(uint256 => Epoch) _epochs;
-
-    // number of active subscriptions with a multiplier represented as shares
-    // base 100:
-    // 1 Sub * 1x == 100 shares
-    // 1 Sub * 2.5x == 250 shares
-    uint256 _activeSubShares;
-
-    uint256 _lastProcessedEpoch;
-
+        uint256 _epochSize;
+        mapping(uint256 => Epoch) _epochs;
+        // number of active subscriptions with a multiplier represented as shares
+        // base 100:
+        // 1 Sub * 1x == 100 shares
+        // 1 Sub * 2.5x == 250 shares
+        uint256 _activeSubShares;
+        uint256 _lastProcessedEpoch;
     }
 
     // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Epochs")) - 1)) & ~bytes32(uint256(0xff))
