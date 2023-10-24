@@ -31,26 +31,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 // should the tokenId 0 == owner?
 
-// TODO merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
-// TODO separate sub deposits, tips, and maybe merged funds
-// TODO refactor token handling and internal/external representation to separate contract
-// TODO "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
-// TODO max donation / deposit
-// TODO allow 0 amount tip or check for a configurable min tip amount?
-// TODO refactor event deposited to spent amount?
-// TODO define metadata
-// TODO upgrade function / flow, migrating one token into another
-// TODO fast block time + small epoch size => out of gas?
-// TODO split owner and user sides into separate abstract contracts?
-//      use structs to combine fields/members?
-// TODO optimize variable sizes
-//      add gaps
-// TODO instead of multiple instances have everything in 1 ERC721 instance?
-// TODO generate simple image on chain to illustrate sub status
-// TODO add royalties?
-
-// TODO add natspec comments
-
 abstract contract Subscription is
     Initializable,
     ISubscription,
