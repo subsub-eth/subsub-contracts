@@ -17,8 +17,7 @@ abstract contract HasSubscriptionData {
         // it remains untouched on withdrawals and tips
         uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
         uint256 lockedAmount; // amount of funds locked
-        // TODO change type
-        uint256 multiplier;
+        uint24 multiplier;
     }
 
     uint256 public constant LOCK_BASE = 10_000;
@@ -31,7 +30,7 @@ abstract contract HasSubscriptionData {
 
     function _deleteSubscription(uint256 tokenId) internal virtual;
 
-    function _createSubscription(uint256 tokenId, uint256 amount, uint256 multiplier) internal virtual;
+    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal virtual;
 
     function _addToSubscription(uint256 tokenId, uint256 amount)
         internal
@@ -113,7 +112,7 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
         delete $._subData[tokenId];
     }
 
-    function _createSubscription(uint256 tokenId, uint256 amount, uint256 multiplier) internal override {
+    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal override {
         uint256 now_ = _now();
 
         SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();

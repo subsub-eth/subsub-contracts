@@ -148,7 +148,7 @@ abstract contract Subscription is
     }
 
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, uint256 multiplier, string calldata message)
+    function mint(uint256 amount, uint24 multiplier, string calldata message)
         external
         whenDisabled(MINTING_PAUSED)
         returns (uint256)

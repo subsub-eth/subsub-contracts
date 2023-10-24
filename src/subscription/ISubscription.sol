@@ -100,7 +100,7 @@ abstract contract SubscriptionFlags {
 
 interface SubscriptionCreation {
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, uint256 multiplier, string calldata message) external returns (uint256);
+    function mint(uint256 amount, uint24 multiplier, string calldata message) external returns (uint256);
 
     /// @notice "Burns" a subscription token, deletes all achieved subscription
     ///         data and does not withdraw any withdrawable funds

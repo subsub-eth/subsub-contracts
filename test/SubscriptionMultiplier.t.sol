@@ -89,7 +89,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     function mintToken(
         address user,
         uint256 amount,
-        uint256 multiplier
+        uint24 multiplier
     ) private returns (uint256 tokenId) {
         uint256 mRate = (rate * multiplier) / SubscriptionLib.MULTIPLIER_BASE;
         vm.startPrank(user);
@@ -123,8 +123,8 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
-    function testFlow(uint256 multiplier) public {
-        multiplier = bound(multiplier, 100, 100_000);
+    function testFlow(uint24 multiplier) public {
+        multiplier = uint24(bound(multiplier, 100, 100_000));
 
         setCurrentTime(100_000);
         uint256 amount = (10 * (10**decimals) * multiplier) /
@@ -182,8 +182,8 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         );
     }
 
-    function testFlow_withdraw(uint256 multiplier) public {
-        multiplier = bound(multiplier, 100, 100_000);
+    function testFlow_withdraw(uint24 multiplier) public {
+        multiplier = uint24(bound(multiplier, 100, 100_000));
 
         setCurrentTime(100_000);
         uint256 amount = (10 * (10**decimals) * multiplier) /
