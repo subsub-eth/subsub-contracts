@@ -33,6 +33,7 @@ jobs:
         with:
           name: json-abi
           path: out/
+          retention-days: 1
 
 
   generate-types:
@@ -70,6 +71,7 @@ jobs:
         with:
           name: ts-types
           path: types/
+          retention-days: 1
 
   publish:
     name: Publish Release
