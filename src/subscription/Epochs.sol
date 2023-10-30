@@ -22,6 +22,8 @@ abstract contract HasEpochs {
 
     function _getActiveSubShares() internal view virtual returns (uint256);
 
+    function _claimed() internal view virtual returns (uint256);
+
     function _processEpochs(uint256 rate, uint256 currentEpoch)
         internal
         view
@@ -56,6 +58,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // 1 Sub * 2.5x == 250 shares
         uint256 _activeSubShares;
         uint256 _lastProcessedEpoch;
+        uint256 _claimed;
     }
 
     // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Epochs")) - 1)) & ~bytes32(uint256(0xff))
@@ -90,6 +93,11 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     function _getActiveSubShares() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
         return $._activeSubShares;
+    }
+
+    function _claimed() internal view override returns (uint256) {
+        EpochsStorage storage $ = _getEpochsStorage();
+        return $._claimed;
     }
 
     function _lastProcessedEpoch() private view returns (uint256 i) {
@@ -145,6 +153,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         }
 
         $._lastProcessedEpoch = currentEpoch - 1;
+        $._claimed += amount;
 
         return amount;
     }

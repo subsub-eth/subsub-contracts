@@ -89,7 +89,9 @@ interface Claimable is ClaimEvents {
 
     function claimable() external view returns (uint256);
 
-    function totalClaimed() external view returns (uint256);
+    function claimedDeposits() external view returns (uint256);
+
+    function claimedTips() external view returns (uint256);
 }
 
 abstract contract SubscriptionFlags {

@@ -56,8 +56,10 @@ library SubscriptionViewLib {
                     output,
                     ',{"trait_type":"claimable","value":"',
                     s.claimable().toString(),
-                    '"},{"trait_type":"total_claimed","value":"',
-                    s.totalClaimed().toString(),
+                    '"},{"trait_type":"depoists_claimed","value":"',
+                    s.claimedDeposits().toString(),
+                    '"},{"trait_type":"tips_claimed","value":"',
+                    s.claimedTips().toString(),
                     '"},{"trait_type":"paused","value":"',
                     s.getFlags().toString(),
                     '"}'

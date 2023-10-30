@@ -57,9 +57,6 @@ abstract contract Subscription is
     // TODO replace me?
     uint256 public nextTokenId;
 
-    // external amount
-    uint256 public totalClaimed;
-
     function __Subscription_init() internal onlyInitializing {
         __Subscription_init_unchained();
     }
@@ -120,6 +117,14 @@ abstract contract Subscription is
 
     function contractURI() external view returns (string memory) {
         return this.contractData();
+    }
+
+    function claimedDeposits() external view returns (uint256) {
+        return _claimed();
+    }
+
+    function claimedTips() external view returns (uint256) {
+        return _claimedTips();
     }
 
     function activeSubShares() external view returns (uint256) {
@@ -301,11 +306,10 @@ abstract contract Subscription is
 
         // convert to external amount
         amount = amount.toExternal(_decimals());
-        totalClaimed += amount;
 
         _paymentToken().safeTransfer(to, amount);
 
-        emit FundsClaimed(amount, totalClaimed);
+        emit FundsClaimed(amount, _claimed() + _claimedTips());
     }
 
     function claimable() public view returns (uint256) {
