@@ -31,6 +31,7 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 // should the tokenId 0 == owner?
 
+// responsbile for handling conversion of token amounts between internal and external representation
 abstract contract Subscription is
     Initializable,
     ISubscription,
