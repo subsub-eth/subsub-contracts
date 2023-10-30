@@ -6,7 +6,7 @@ import "../src/OwnableByERC721Upgradeable.sol";
 
 import {ERC721Mock} from "./mocks/ERC721Mock.sol";
 
-contract MyOwnable is TransferableOwnableByERC721Upgradeable {
+contract MyOwnableByERC721 is TransferableOwnableByERC721Upgradeable {
 
   // simple default implementation
   function init(address kontract, uint256 tokenId) initializer public {
@@ -28,7 +28,7 @@ contract OwnableByERC721UpgradeableTest is Test {
     ERC721Mock private nft;
 
 
-    MyOwnable private myOwnable;
+    MyOwnableByERC721 private myOwnable;
 
     address private alice;
     address private bob;
@@ -44,7 +44,7 @@ contract OwnableByERC721UpgradeableTest is Test {
     function testInitOwnership(uint256 tokenId) public {
       nft.mint(address(this), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
 
       (address _contract, uint256 _id) = mo.owner();
       assertEq(_contract, address(0), "contract is set to 0");
@@ -75,7 +75,7 @@ contract OwnableByERC721UpgradeableTest is Test {
       nft.mint(address(this), initId);
       nft.mint(address(this), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), initId);
 
       vm.expectEmit(true, true, true, true);
@@ -100,7 +100,7 @@ contract OwnableByERC721UpgradeableTest is Test {
       nft.mint(address(this), initId);
       nft.mint(address(this), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), initId);
 
       vm.expectRevert("Ownable: caller is not the owner");
@@ -113,7 +113,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), initId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), initId);
 
       vm.expectRevert("Ownable: new owner contract is the zero address");
@@ -125,7 +125,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), initId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), initId);
 
       vm.expectEmit(true, true, true, true);
@@ -149,7 +149,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), initId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), initId);
 
       vm.expectRevert("Ownable: caller is not the owner");
@@ -161,7 +161,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       mo.runOnlyOwner();
@@ -171,7 +171,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(10), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.expectRevert("Ownable: caller is not the owner");
@@ -183,7 +183,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), 10);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.expectRevert(); // fails in ERC721
@@ -191,7 +191,7 @@ contract OwnableByERC721UpgradeableTest is Test {
     }
 
     function testOnlyOwner_nftContractDoesNotExist(address addr, uint256 tokenId) public {
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(addr), tokenId);
 
       vm.expectRevert();
@@ -203,7 +203,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       mo.runOwnerOrApproved();
@@ -213,7 +213,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
       nft.mint(address(this), tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.prank(bob);
@@ -223,7 +223,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
     function testOnlyOwnerOrApproved_tokenContractDoesNotExist(address addr, uint256 tokenId) public {
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(addr), tokenId);
 
       vm.expectRevert();
@@ -232,7 +232,7 @@ contract OwnableByERC721UpgradeableTest is Test {
 
     function testOnlyOwnerOrApproved_tokenDoesNotExist(uint256 tokenId) public {
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.expectRevert();
@@ -244,7 +244,7 @@ contract OwnableByERC721UpgradeableTest is Test {
       nft.mint(address(this), tokenId);
       nft.setApprovalForAll(alice, true);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.prank(alice);
@@ -256,7 +256,7 @@ contract OwnableByERC721UpgradeableTest is Test {
       nft.mint(address(this), tokenId);
       nft.setApprovalForAll(alice, true);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.prank(bob);
@@ -269,7 +269,7 @@ contract OwnableByERC721UpgradeableTest is Test {
       nft.mint(address(this), tokenId);
       nft.approve(alice, tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.prank(alice);
@@ -281,7 +281,7 @@ contract OwnableByERC721UpgradeableTest is Test {
       nft.mint(address(this), tokenId);
       nft.approve(alice, tokenId);
 
-      MyOwnable mo = new MyOwnable();
+      MyOwnableByERC721 mo = new MyOwnableByERC721();
       mo.init(address(nft), tokenId);
 
       vm.prank(bob);
