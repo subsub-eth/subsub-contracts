@@ -5,7 +5,13 @@ import "forge-std/Test.sol";
 import "../src/subscription/Subscription.sol";
 import "./mocks/TestSubscription.sol";
 
-import {SubscriptionEvents, ClaimEvents, MetadataStruct, SubSettings, SubscriptionFlags} from "../src/subscription/ISubscription.sol";
+import {
+    SubscriptionEvents,
+    ClaimEvents,
+    MetadataStruct,
+    SubSettings,
+    SubscriptionFlags
+} from "../src/subscription/ISubscription.sol";
 import {Profile} from "../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
@@ -914,6 +920,20 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(subscription.claimable(), 100, "all funds claimable");
     }
 
+    function testClaimable_tips() public {
+        uint256 initAmount = 1_000;
+        uint256 tokenId = mintToken(alice, initAmount);
+        uint256 tipAmount = 100_000;
+
+        subscription.tip(tokenId, tipAmount, "");
+
+        assertEq(subscription.claimable(), tipAmount, "tipped funds claimable");
+
+        setCurrentTime(currentTime + (epochSize * 300));
+
+        assertEq(subscription.claimable(), tipAmount + initAmount, "all funds claimable");
+    }
+
     function testClaim() public {
         uint256 tokenId = mintToken(alice, 1_000);
 
@@ -1047,6 +1067,29 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
     }
 
+    function testClaim_tips() public {
+        setCurrentTime(currentTime + (epochSize * 300));
+
+        uint256 initAmount = 1_000;
+        uint256 tokenId = mintToken(alice, initAmount);
+        uint256 tipAmount = 100_000;
+
+        subscription.tip(tokenId, tipAmount, "");
+
+        assertEq(testToken.balanceOf(address(subscription)), initAmount + tipAmount, "amount in sub contract");
+
+        vm.prank(owner);
+        subscription.claim(owner);
+
+        assertEq(testToken.balanceOf(owner), tipAmount, "tips claimed");
+        assertEq(testToken.balanceOf(address(subscription)), initAmount, "sub deposit remains");
+
+        vm.prank(owner);
+        subscription.claim(owner);
+        assertEq(testToken.balanceOf(owner), tipAmount, "no additional funds added on 2nd claim");
+        assertEq(testToken.balanceOf(address(subscription)), initAmount, "no funds transfered on 2nd claim");
+    }
+
     function testFuzz_SetUnsetFlags(uint256 flags) public {
         flags = bound(flags, 1, ALL_FLAGS);
         vm.prank(owner);
@@ -1096,33 +1139,37 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 tokenId = mintToken(alice, 100);
 
         uint256 amount = 100;
-        uint256 target = 200;
+        uint256 tokenBalance = 200;
         vm.startPrank(alice);
 
         testToken.approve(address(subscription), amount);
 
-        vm.expectEmit(true, true, true, true);
-        emit Tipped(tokenId, amount, target, alice, "hello world");
+        assertEq(subscription.tips(tokenId), 0, "no tips in sub yet");
+
+        vm.expectEmit();
+        emit Tipped(tokenId, amount, amount, alice, "hello world");
 
         vm.expectEmit();
         emit MetadataUpdate(tokenId);
 
         subscription.tip(tokenId, amount, "hello world");
 
-        assertEq(subscription.deposited(tokenId), target, "deposit increased");
-        assertEq(testToken.balanceOf(address(subscription)), target, "funds transferred");
+        assertEq(subscription.deposited(tokenId), 100, "deposit stays the same");
+        assertEq(subscription.tips(tokenId), 100, "tips increased by sent amount");
+        assertEq(testToken.balanceOf(address(subscription)), tokenBalance, "funds transferred");
         vm.stopPrank();
 
         // tip from 'random' account
         amount = 200;
-        target = 400;
+        tokenBalance = 400;
 
-        vm.expectEmit(true, true, true, true);
-        emit Tipped(tokenId, amount, target, address(this), "hello world");
+        vm.expectEmit();
+        emit Tipped(tokenId, amount, 300, address(this), "hello world");
 
         subscription.tip(tokenId, amount, "hello world");
-        assertEq(subscription.deposited(tokenId), target, "deposit increased");
-        assertEq(testToken.balanceOf(address(subscription)), target, "funds transferred");
+        assertEq(subscription.deposited(tokenId), 100, "deposit still the same");
+        assertEq(subscription.tips(tokenId), 300, "tips increased by new sent amount");
+        assertEq(testToken.balanceOf(address(subscription)), tokenBalance, "funds transferred 2");
     }
 
     function testTip_nonExisiting() public {
@@ -1143,7 +1190,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 tokenId = mintToken(alice, 0);
 
         subscription.tip(tokenId, 1, "min amount");
-        assertEq(subscription.deposited(tokenId), 1, "min amount deposited");
+        assertEq(subscription.tips(tokenId), 1, "min amount of tips deposited");
     }
 
     function testTip_whenPaused() public {
@@ -1155,5 +1202,4 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.expectRevert("Flag: setting enabled");
         subscription.tip(tokenId, 100, "");
     }
-
 }

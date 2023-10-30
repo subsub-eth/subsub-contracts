@@ -275,6 +275,10 @@ abstract contract Subscription is
         return unspentAmount.toExternal(_decimals());
     }
 
+    function tips(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
+        return _tips(tokenId).toExternal(_decimals());
+    }
+
     function tip(uint256 tokenId, uint256 amount, string calldata message)
         external
         requireExists(tokenId)
@@ -282,17 +286,18 @@ abstract contract Subscription is
     {
         require(amount > 0, "SUB: amount too small");
 
-        _incrementTotalDeposited(tokenId, amount.toInternal(_decimals()));
+        _addTip(tokenId, amount.toInternal(_decimals()));
 
         _paymentToken().safeTransferFrom(_msgSender(), address(this), amount);
 
-        emit Tipped(tokenId, amount, _totalDeposited(tokenId), _msgSender(), message);
+        emit Tipped(tokenId, amount, _tips(tokenId).toExternal(_decimals()), _msgSender(), message);
         emit MetadataUpdate(tokenId);
     }
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwnerOrApproved {
         uint256 amount = _handleEpochsClaim(_rate());
+        amount += _claimTips();
 
         // convert to external amount
         amount = amount.toExternal(_decimals());
@@ -305,6 +310,8 @@ abstract contract Subscription is
 
     function claimable() public view returns (uint256) {
         (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
+
+        amount += _claimableTips();
 
         return amount.toExternal(_decimals());
     }

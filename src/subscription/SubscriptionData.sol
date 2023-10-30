@@ -17,6 +17,7 @@ abstract contract HasSubscriptionData {
         // it remains untouched on withdrawals and tips
         uint256 currentDeposit; // unspent amount of tokens at lastDepositAt
         uint256 lockedAmount; // amount of funds locked
+        uint256 tips; // amount of tips sent to this subscription
         uint24 multiplier;
     }
 
@@ -53,7 +54,17 @@ abstract contract HasSubscriptionData {
 
     function _lastDepositedAt(uint256 tokenId) internal view virtual returns (uint256);
 
-    function _incrementTotalDeposited(uint256 tokenId, uint256 amount) internal virtual;
+    function _addTip(uint256 tokenId, uint256 amount) internal virtual;
+
+    function _tips(uint256 tokenId) internal view virtual returns (uint256);
+
+    function _allTips() internal view virtual returns (uint256);
+
+    function _claimedTips() internal view virtual returns (uint256);
+
+    function _claimableTips() internal view virtual returns (uint256);
+
+    function _claimTips() internal virtual returns (uint256);
 
     function _getSubData(uint256 tokenId) internal view virtual returns (SubData memory);
 }
@@ -67,6 +78,8 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
         // 0 - 10000
         uint256 _lock;
         mapping(uint256 => SubData) _subData;
+        uint256 _allTips;
+        uint256 _claimedTips;
     }
 
     // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.SubscriptionData")) - 1)) & ~bytes32(uint256(0xff))
@@ -213,9 +226,37 @@ abstract contract SubscriptionData is Initializable, TimeAware, HasRate, HasSubs
         return $._subData[tokenId].lastDepositAt;
     }
 
-    function _incrementTotalDeposited(uint256 tokenId, uint256 amount) internal override {
+    function _addTip(uint256 tokenId, uint256 amount) internal override {
         SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
-        $._subData[tokenId].totalDeposited += amount;
+        // TODO change me
+        $._subData[tokenId].tips += amount;
+        $._allTips += amount;
+    }
+
+    function _tips(uint256 tokenId) internal view override returns (uint256) {
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._subData[tokenId].tips;
+    }
+
+    function _allTips() internal view override returns (uint256) {
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._allTips;
+    }
+
+    function _claimedTips() internal view override returns (uint256) {
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._claimedTips;
+    }
+
+    function _claimableTips() internal view override returns (uint256) {
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        return $._allTips - $._claimedTips;
+    }
+
+    function _claimTips() internal override returns (uint256 claimable) {
+        SubscriptionDataStorage storage $ = _getSubscriptionDataStorage();
+        claimable = $._allTips - $._claimedTips;
+        $._claimedTips = $._allTips;
     }
 
     function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {

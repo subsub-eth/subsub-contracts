@@ -42,6 +42,8 @@ contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
     // adds funds to the subscription, but does not extend an active sub
     function tip(uint256 tokenId, uint256 amount, string calldata message) external {}
 
+    function tips(uint256 tokenId) external view returns (uint256){}
+
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint24 multiplier, string calldata message) external returns (uint256) {}
 

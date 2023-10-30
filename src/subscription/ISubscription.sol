@@ -74,6 +74,9 @@ interface Subscribable is SubscriptionEvents {
 
     // adds funds to the subscription, but does not extend an active sub
     function tip(uint256 tokenId, uint256 amount, string calldata message) external;
+
+    // returns the amount of tips ever sent to a subscription
+    function tips(uint256 tokenId) external view returns (uint256);
 }
 
 interface ClaimEvents {
