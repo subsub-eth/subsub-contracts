@@ -2,15 +2,15 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/badge/IBadge.sol";
-import "../src/subscription/ISubscription.sol";
+import "../../src/badge/IBadge.sol";
+import "../../src/subscription/ISubscription.sol";
 
-import "../src/badge/SpentAmountSingleBadgeMinter.sol";
+import "../../src/badge/SpentAmountSingleBadgeMinter.sol";
 
-import {ERC721Mock} from "./mocks/ERC721Mock.sol";
-import {ERC1155Mock} from "./mocks/ERC1155Mock.sol";
-import {SubscriptionMock} from "./mocks/SubscriptionMock.sol";
-import {BadgeMock} from "./mocks/BadgeMock.sol";
+import {ERC721Mock} from "../mocks/ERC721Mock.sol";
+import {ERC1155Mock} from "../mocks/ERC1155Mock.sol";
+import {SubscriptionMock} from "../mocks/SubscriptionMock.sol";
+import {BadgeMock} from "../mocks/BadgeMock.sol";
 
 contract SpentAmountSingleBadgeMinterTest is Test {
     event SpentAmountSingleBadgeMinted(address indexed to, uint256 indexed subscriptionId, bytes data);

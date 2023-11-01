@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/subscription/SubscriptionData.sol";
+import "../../src/subscription/SubscriptionData.sol";
 
 contract TestSubscriptionData is SubscriptionData {
     constructor(uint256 lock) initializer {

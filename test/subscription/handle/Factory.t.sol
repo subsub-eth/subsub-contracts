@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/manager/Factory.sol";
-import "../../src/subscription/Subscription.sol";
-import "../../src/subscription/ISubscription.sol";
+import "../../../src/subscription/handle/Factory.sol";
+import "../../../src/subscription/Subscription.sol";
+import "../../../src/subscription/ISubscription.sol";
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 

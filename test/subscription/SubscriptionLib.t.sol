@@ -3,11 +3,11 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import "../src/subscription/Subscription.sol";
+import "../../src/subscription/Subscription.sol";
 
-import {SubscriptionLib} from "../src/subscription/SubscriptionLib.sol";
+import {SubscriptionLib} from "../../src/subscription/SubscriptionLib.sol";
 
-import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
+import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 
 contract SubscriptionLibTest is Test {
     using SubscriptionLib for uint256;

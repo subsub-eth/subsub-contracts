@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscriptionManager} from "./ISubscriptionManager.sol";
-import {HasFactory, Factory} from "./manager/Factory.sol";
+import {ISubscriptionHandle} from "./ISubscriptionHandle.sol";
+import {HasFactory, Factory} from "./Factory.sol";
 
-import {MetadataStruct, SubSettings} from "./subscription/ISubscription.sol";
-import {Subscription} from "./subscription/Subscription.sol";
+import {MetadataStruct, SubSettings} from "../ISubscription.sol";
+import {Subscription} from "../Subscription.sol";
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -16,12 +16,12 @@ import {ERC721EnumerableUpgradeable} from
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {IBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol";
 
-abstract contract SubscriptionManager is
+abstract contract SubscriptionHandle is
     Initializable,
     ContextUpgradeable,
     HasFactory,
     ERC721EnumerableUpgradeable,
-    ISubscriptionManager
+    ISubscriptionHandle
 {
     // TODO deploy block and time based subs?
     // TODO? store subscription contract in manager for validity check -> isManaged()?
@@ -47,7 +47,7 @@ abstract contract SubscriptionManager is
     }
 }
 
-contract DefaultSubscriptionManager is SubscriptionManager, Factory {
+contract DefaultSubscriptionHandle is SubscriptionHandle, Factory {
 
     constructor() {
         _disableInitializers();

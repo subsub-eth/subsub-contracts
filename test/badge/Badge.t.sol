@@ -2,10 +2,10 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/badge/Badge.sol";
-import "../src/badge/IBadge.sol";
+import "../../src/badge/Badge.sol";
+import "../../src/badge/IBadge.sol";
 
-import {ERC721Mock} from "./mocks/ERC721Mock.sol";
+import {ERC721Mock} from "../mocks/ERC721Mock.sol";
 
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 

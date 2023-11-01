@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/subscription/Subscription.sol";
-import "./mocks/TestSubscription.sol";
+import "../../src/subscription/Subscription.sol";
+import "../mocks/TestSubscription.sol";
 
 import {
     SubscriptionEvents,
@@ -11,10 +11,10 @@ import {
     MetadataStruct,
     SubSettings,
     SubscriptionFlags
-} from "../src/subscription/ISubscription.sol";
-import {Profile} from "../src/profile/Profile.sol";
+} from "../../src/subscription/ISubscription.sol";
+import {Profile} from "../../src/profile/Profile.sol";
 
-import {ERC20DecimalsMock} from "./mocks/ERC20DecimalsMock.sol";
+import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // TODO test mint/renew with amount==0

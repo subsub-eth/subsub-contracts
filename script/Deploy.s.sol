@@ -18,7 +18,7 @@ import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
 import "../src/subscription/Subscription.sol";
 import "../src/subscription/BlockSubscription.sol";
-import "../src/SubscriptionManager.sol";
+import "../src/subscription/handle/SubscriptionHandle.sol";
 
 contract DeployScript is Script {
     MetadataStruct private metadata;
@@ -67,11 +67,11 @@ contract DeployScript is Script {
             "PeterTest", "I am a super cool influencer", "https://example.com/profiles/peter.png", "https://example.com"
         );
 
-        DefaultSubscriptionManager managerImpl = new DefaultSubscriptionManager();
-        ProxyAdmin managerAdmin = new ProxyAdmin(address(this));
-        TransparentUpgradeableProxy managerProxy = new TransparentUpgradeableProxy(
-                address(managerImpl),
-                address(managerAdmin),
+        DefaultSubscriptionHandle handleImpl = new DefaultSubscriptionHandle();
+        ProxyAdmin handleAdmin = new ProxyAdmin(address(this));
+        TransparentUpgradeableProxy handleProxy = new TransparentUpgradeableProxy(
+                address(handleImpl),
+                address(handleAdmin),
                 abi.encodeWithSignature(
                     "initialize(address,address)",
                     address(beacon),
@@ -79,8 +79,8 @@ contract DeployScript is Script {
                 )
             );
 
-        SubscriptionManager manager = SubscriptionManager(address(managerProxy));
-        console.log("Manager Contract", address(manager));
+        SubscriptionHandle handle = SubscriptionHandle(address(handleProxy));
+        console.log("Handle Contract", address(handle));
 
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
             ERC20DecimalsMock token = new ERC20DecimalsMock(18);
@@ -94,7 +94,7 @@ contract DeployScript is Script {
                 settings.token = token;
                 for (int256 i = 0; i < 6; i++) {
                     address subscription =
-                        manager.mint("My Tier 1 Subscription", "SUBt1", metadata, settings);
+                        handle.mint("My Tier 1 Subscription", "SUBt1", metadata, settings);
                     console.log("Subscription Contract", subscription);
 
                     for (uint256 j = 0; j < 11; j++) {
