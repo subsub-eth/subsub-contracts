@@ -22,8 +22,8 @@ abstract contract Factory is Initializable, HasFactory {
         address _beacon;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.manager.Factory")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant FactoryStorageLocation = 0xfaab449ce6ae6b64b8e8791cb54a47fdcd59089e77337ddf9f0e70677c57c000;
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.handle.Factory")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FactoryStorageLocation = 0x3e9b6f2fbc74ae9ad3597cdc06e857459b85656c03d920b66d1f4501648c1500;
 
     function _getFactoryStorage() private pure returns (FactoryStorage storage $) {
         assembly {

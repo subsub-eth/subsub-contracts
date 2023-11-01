@@ -7,14 +7,14 @@ import "../../src/subscription/Subscription.sol";
 import "../mocks/TestSubscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../../src/subscription/ISubscription.sol";
-import {SubscriptionLib} from "../../src/subscription/SubscriptionLib.sol";
+import {Lib} from "../../src/subscription/Lib.sol";
 import {Profile} from "../../src/profile/Profile.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
-    using SubscriptionLib for uint256;
+    using Lib for uint256;
 
     ERC1967Proxy public subscriptionProxy;
     TestSubscription public subscriptionImplementation;

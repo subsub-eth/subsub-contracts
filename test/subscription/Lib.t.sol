@@ -5,12 +5,12 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../../src/subscription/Subscription.sol";
 
-import {SubscriptionLib} from "../../src/subscription/SubscriptionLib.sol";
+import {Lib} from "../../src/subscription/Lib.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 
-contract SubscriptionLibTest is Test {
-    using SubscriptionLib for uint256;
+contract LibTest is Test {
+    using Lib for uint256;
 
     function setUp() public {}
 
@@ -20,7 +20,7 @@ contract SubscriptionLibTest is Test {
 
     function testToInternal_18() public {
         ERC20DecimalsMock token = createToken(
-            SubscriptionLib.INTERNAL_DECIMALS
+            Lib.INTERNAL_DECIMALS
         );
 
         uint256 externalAmount = 10_000;
@@ -66,7 +66,7 @@ contract SubscriptionLibTest is Test {
 
     function testToExternal_18() public {
         ERC20DecimalsMock token = createToken(
-            SubscriptionLib.INTERNAL_DECIMALS
+            Lib.INTERNAL_DECIMALS
         );
 
         uint256 internalAmount = 10_000;

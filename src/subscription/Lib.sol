@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-library SubscriptionLib {
+library Lib {
     uint256 public constant MULTIPLIER_BASE = 100;
 
     uint8 public constant INTERNAL_DECIMALS = 18;

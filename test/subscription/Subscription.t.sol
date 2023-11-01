@@ -951,7 +951,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), claimable, "claimable funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 1 * SubscriptionLib.MULTIPLIER_BASE, "subscriptions updated");
+        assertEq(subscription.activeSubShares(), 1 * Lib.MULTIPLIER_BASE, "subscriptions updated");
 
         assertEq(subscription.claimable(), 0, "no funds claimable right after claim");
 
@@ -1022,7 +1022,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         uint256 ownerBalance = testToken.balanceOf(owner);
         assertEq(ownerBalance, claimable, "claimable funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 1 * SubscriptionLib.MULTIPLIER_BASE, "subscriptions updated");
+        assertEq(subscription.activeSubShares(), 1 * Lib.MULTIPLIER_BASE, "subscriptions updated");
 
         assertEq(subscription.claimable(), 0, "no funds claimable right after claim");
 
@@ -1038,7 +1038,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), ownerBalance + claimable, "new funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 1 * SubscriptionLib.MULTIPLIER_BASE, "subscriptions updated");
+        assertEq(subscription.activeSubShares(), 1 * Lib.MULTIPLIER_BASE, "subscriptions updated");
 
         assertEq(subscription.deposited(tokenId), 1_000, "1000 tokens deposited");
     }

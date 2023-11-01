@@ -3,13 +3,13 @@ pragma solidity ^0.8.20;
 
 import {ISubscription, MetadataStruct, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
 import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
-import {SubscriptionLib} from "./SubscriptionLib.sol";
-import {SubscriptionViewLib} from "./SubscriptionViewLib.sol";
+import {Lib} from "./Lib.sol";
+import {ViewLib} from "./ViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
 import {Epochs, HasEpochs} from "./Epochs.sol";
 import {Rate, HasRate} from "./Rate.sol";
-import {SubscriptionData, HasSubscriptionData} from "./SubscriptionData.sol";
+import {UserData, HasUserData} from "./UserData.sol";
 import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
 import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";
 import {Metadata, HasMetadata} from "./Metadata.sol";
@@ -39,7 +39,7 @@ abstract contract Subscription is
     HasMaxSupply,
     HasMetadata,
     HasRate,
-    HasSubscriptionData,
+    HasUserData,
     HasPaymentToken,
     HasEpochs,
     ERC721EnumerableUpgradeable,
@@ -49,11 +49,11 @@ abstract contract Subscription is
 {
     using SafeERC20 for IERC20Metadata;
     using Math for uint256;
-    using SubscriptionLib for uint256;
+    using Lib for uint256;
     using Strings for uint256;
     using Strings for address;
 
-    using SubscriptionViewLib for Subscription;
+    using ViewLib for Subscription;
 
     // TODO replace me?
     uint256 public nextTokenId;
@@ -326,7 +326,7 @@ abstract contract DefaultSubscription is
     Rate,
     PaymentToken,
     Epochs,
-    SubscriptionData,
+    UserData,
     FlagSettings,
     Subscription
 {
@@ -352,7 +352,7 @@ abstract contract DefaultSubscription is
         __FlagSettings_init_unchained();
         __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
-        __SubscriptionData_init_unchained(_settings.lock);
+        __UserData_init_unchained(_settings.lock);
         __PaymentToken_init_unchained(_settings.token);
         __MaxSupply_init_unchained(_settings.maxSupply);
         __Metadata_init_unchained(_metadata.description, _metadata.image, _metadata.externalUrl);

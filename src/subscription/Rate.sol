@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {SubscriptionLib} from "./SubscriptionLib.sol";
+import {Lib} from "./Lib.sol";
 import {TimeAware} from "./TimeAware.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -15,7 +15,7 @@ abstract contract HasRate {
 }
 
 abstract contract Rate is Initializable, HasRate {
-    using SubscriptionLib for uint256;
+    using Lib for uint256;
 
     struct RateStorage {
         uint256 _rate;

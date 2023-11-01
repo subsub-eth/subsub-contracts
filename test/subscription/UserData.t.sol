@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/subscription/SubscriptionData.sol";
+import "../../src/subscription/UserData.sol";
 
-contract TestSubscriptionData is SubscriptionData {
+contract TestUserData is UserData {
     constructor(uint256 lock) initializer {
-        __SubscriptionData_init(lock);
+        __UserData_init(lock);
     }
 
     function _now() internal view override returns (uint256) {
@@ -42,15 +42,15 @@ contract TestSubscriptionData is SubscriptionData {
     }
 }
 
-contract SubscriptionDataTest is Test {
-    TestSubscriptionData private sd;
+contract UserDataTest is Test {
+    TestUserData private sd;
 
     uint256 private lock;
 
     function setUp() public {
         lock = 100;
 
-        sd = new TestSubscriptionData(lock);
+        sd = new TestUserData(lock);
     }
 
     function testAddTip(uint256 tokenId, uint256 amount) public {

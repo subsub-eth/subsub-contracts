@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {SubscriptionLib} from "./SubscriptionLib.sol";
+import {Lib} from "./Lib.sol";
 import {TimeAware} from "./TimeAware.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -47,7 +47,7 @@ abstract contract HasEpochs {
 
 abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     using Math for uint256;
-    using SubscriptionLib for uint256;
+    using Lib for uint256;
 
     struct EpochsStorage {
         uint256 _epochSize;
@@ -126,7 +126,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
             // we do not apply the individual multiplier to `rate` as it is
             // included in _activeSubs, expiring, and starting subs
-            amount += $._epochs[i].partialFunds + (_activeSubs * $._epochSize * rate) / SubscriptionLib.MULTIPLIER_BASE;
+            amount += $._epochs[i].partialFunds + (_activeSubs * $._epochSize * rate) / Lib.MULTIPLIER_BASE;
             starting += $._epochs[i].starting;
             expiring += $._epochs[i].expiring;
             // add new subs starting in this epoch
