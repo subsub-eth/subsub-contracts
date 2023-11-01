@@ -73,7 +73,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         );
         subscription = TestSubscription(address(subscriptionProxy));
         subscription.setNow(currentTime);
-        subscription.initialize("test", "test", metadata, settings, address(profile), ownerTokenId);
+        subscription.initialize("test", "test", metadata, settings);
 
         testToken.approve(address(subscription), type(uint256).max);
 

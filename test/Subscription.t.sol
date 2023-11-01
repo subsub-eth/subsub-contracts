@@ -79,7 +79,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         );
         subscription = TestSubscription(address(subscriptionProxy));
         setCurrentTime(1);
-        subscription.initialize("test", "test", metadata, settings, address(profile), ownerTokenId);
+        subscription.initialize("test", "test", metadata, settings);
 
         testToken.approve(address(subscription), type(uint256).max);
 
@@ -102,7 +102,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         settings.epochSize = 10;
 
         vm.expectRevert("SUB: token cannot be 0 address");
-        sub.initialize("test", "test", metadata, settings, address(1), 1);
+        sub.initialize("test", "test", metadata, settings);
     }
 
     function testConstruct_not0rate() public {
@@ -112,7 +112,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         settings.lock = 0;
         settings.epochSize = 10;
         vm.expectRevert("SUB: rate cannot be 0");
-        sub.initialize("test", "test", metadata, settings, address(1), 1);
+        sub.initialize("test", "test", metadata, settings);
     }
 
     function testConstruct_not0epochSize() public {
@@ -122,7 +122,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         settings.lock = 10_000;
         settings.epochSize = 0;
         vm.expectRevert("SUB: invalid epochSize");
-        sub.initialize("test", "test", metadata, settings, address(1), 1);
+        sub.initialize("test", "test", metadata, settings);
     }
 
     function testConstruct_lockTooLarge() public {
@@ -132,7 +132,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         settings.lock = 10_001;
         settings.epochSize = 10;
         vm.expectRevert("SUB: lock percentage out of range");
-        sub.initialize("test", "test", metadata, settings, address(0), 1);
+        sub.initialize("test", "test", metadata, settings);
     }
 
     function testConstruct_not0OwnerContract() public {
@@ -142,7 +142,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         settings.lock = 0;
         settings.epochSize = 10;
         vm.expectRevert("SUB: profile address not set");
-        sub.initialize("test", "test", metadata, settings, address(0), 1);
+        sub.initialize("test", "test", metadata, settings);
     }
 
     function testSetExternalUrl() public {
@@ -267,7 +267,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testMaxSupply() public {
         Subscription sub = createSubWithProxy();
         settings.maxSupply = 1;
-        sub.initialize("test", "test", metadata, settings, address(1), 1);
+        sub.initialize("test", "test", metadata, settings);
 
         assertEq(0, sub.totalSupply());
 
@@ -283,7 +283,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testMaxSupply_none() public {
         Subscription sub = createSubWithProxy();
         settings.maxSupply = 0;
-        sub.initialize("test", "test", metadata, settings, address(1), 1);
+        sub.initialize("test", "test", metadata, settings);
 
         vm.startPrank(alice);
         vm.expectRevert("SUB: max supply reached");
@@ -293,7 +293,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testMaxSupply_withBurn() public {
         Subscription sub = createSubWithProxy();
         settings.maxSupply = 1;
-        sub.initialize("test", "test", metadata, settings, address(1), 1);
+        sub.initialize("test", "test", metadata, settings);
 
         assertEq(0, sub.totalSupply());
 

@@ -67,7 +67,7 @@ contract DeployScript is Script {
             "PeterTest", "I am a super cool influencer", "https://example.com/profiles/peter.png", "https://example.com"
         );
 
-        SubscriptionManager managerImpl = new SubscriptionManager();
+        DefaultSubscriptionManager managerImpl = new DefaultSubscriptionManager();
         ProxyAdmin managerAdmin = new ProxyAdmin(address(this));
         TransparentUpgradeableProxy managerProxy = new TransparentUpgradeableProxy(
                 address(managerImpl),
@@ -94,7 +94,7 @@ contract DeployScript is Script {
                 settings.token = token;
                 for (int256 i = 0; i < 6; i++) {
                     address subscription =
-                        manager.createSubscription("My Tier 1 Subscription", "SUBt1", metadata, settings, profileId);
+                        manager.mint("My Tier 1 Subscription", "SUBt1", metadata, settings);
                     console.log("Subscription Contract", subscription);
 
                     for (uint256 j = 0; j < 11; j++) {

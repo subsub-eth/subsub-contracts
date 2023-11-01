@@ -112,6 +112,15 @@ interface SubscriptionCreation {
     function burn(uint256 tokenId) external;
 }
 
+interface SubscriptionInitialize {
+    function initialize(
+        string calldata tokenName,
+        string calldata tokenSymbol,
+        MetadataStruct calldata _metadata,
+        SubSettings calldata _settings
+    ) external;
+}
+
 interface ISubscription is
     IERC721,
     IERC721Metadata,
@@ -119,5 +128,6 @@ interface ISubscription is
     Subscribable,
     Claimable,
     SubscriptionCreation,
-    SubscriptionMetadata
+    SubscriptionMetadata,
+    SubscriptionInitialize
 {}

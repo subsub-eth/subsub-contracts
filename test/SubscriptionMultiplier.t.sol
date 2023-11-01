@@ -76,9 +76,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
             "test",
             "test",
             metadata,
-            settings,
-            address(profile),
-            ownerTokenId
+            settings
         );
 
         testToken.approve(address(subscription), type(uint256).max);

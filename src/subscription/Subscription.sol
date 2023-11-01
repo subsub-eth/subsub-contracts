@@ -79,9 +79,7 @@ abstract contract Subscription is
         string calldata tokenName,
         string calldata tokenSymbol,
         MetadataStruct calldata _metadata,
-        SubSettings calldata _settings,
-        address profileContract,
-        uint256 profileTokenId
+        SubSettings calldata _settings
     ) external virtual;
 
     function settings()
@@ -333,6 +331,7 @@ abstract contract DefaultSubscription is
     Subscription
 {
     constructor() {
+      // TODO add manager contract address
         _disableInitializers();
     }
 
@@ -340,21 +339,16 @@ abstract contract DefaultSubscription is
         string calldata tokenName,
         string calldata tokenSymbol,
         MetadataStruct calldata _metadata,
-        SubSettings calldata _settings,
-        address profileContract,
-        uint256 profileTokenId
+        SubSettings calldata _settings
     ) external override initializer {
         require(_settings.epochSize > 0, "SUB: invalid epochSize");
         require(address(_settings.token) != address(0), "SUB: token cannot be 0 address");
         require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
         require(_settings.rate > 0, "SUB: rate cannot be 0");
-        // check that profileContract is a contract of ERC721 and does have a tokenId
-        require(profileContract != address(0), "SUB: profile address not set");
 
         // call initializers of inherited contracts
         // TODO set metadata
         __ERC721_init_unchained(tokenName, tokenSymbol);
-        __OwnableByERC721_init_unchained(profileContract, profileTokenId);
         __FlagSettings_init_unchained();
         __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
