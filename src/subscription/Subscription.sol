@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import {ISubscription, MetadataStruct, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
-import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {Lib} from "./Lib.sol";
 import {ViewLib} from "./ViewLib.sol";
 
@@ -13,6 +12,7 @@ import {UserData, HasUserData} from "./UserData.sol";
 import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
 import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";
 import {Metadata, HasMetadata} from "./Metadata.sol";
+import {HandleOwned, HasHandleOwned} from "./HandleOwned.sol";
 
 import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 
@@ -42,8 +42,8 @@ abstract contract Subscription is
     HasUserData,
     HasPaymentToken,
     HasEpochs,
+    HasHandleOwned,
     ERC721EnumerableUpgradeable,
-    OwnableByERC721Upgradeable,
     SubscriptionFlags,
     HasFlagSettings
 {
@@ -94,23 +94,23 @@ abstract contract Subscription is
         maxSupply_ = _maxSupply();
     }
 
-    function setFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
+    function setFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
         _setFlags(flags);
     }
 
-    function unsetFlags(uint256 flags) external onlyOwnerOrApproved requireValidFlags(flags) {
+    function unsetFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
         _unsetFlags(flags);
     }
 
-    function setDescription(string calldata _description) external onlyOwnerOrApproved {
+    function setDescription(string calldata _description) external onlyOwner {
         _setDescription(_description);
     }
 
-    function setImage(string calldata _image) external onlyOwnerOrApproved {
+    function setImage(string calldata _image) external onlyOwner {
         _setImage(_image);
     }
 
-    function setExternalUrl(string calldata _externalUrl) external onlyOwnerOrApproved {
+    function setExternalUrl(string calldata _externalUrl) external onlyOwner {
         _setExternalUrl(_externalUrl);
     }
 
@@ -299,7 +299,7 @@ abstract contract Subscription is
     }
 
     /// @notice The owner claims their rewards
-    function claim(address to) external onlyOwnerOrApproved {
+    function claim(address to) external onlyOwner {
         uint256 amount = _handleEpochsClaim(_rate());
         amount += _claimTips();
 
@@ -327,10 +327,11 @@ abstract contract DefaultSubscription is
     PaymentToken,
     Epochs,
     UserData,
+    HandleOwned,
     FlagSettings,
     Subscription
 {
-    constructor() {
+    constructor() HandleOwned(address(0)) {
       // TODO add manager contract address
         _disableInitializers();
     }

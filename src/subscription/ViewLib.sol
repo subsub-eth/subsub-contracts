@@ -36,16 +36,11 @@ library ViewLib {
         }
 
         {
-            (address ownerContract, uint256 ownerId) = s.owner();
             output = string(
                 abi.encodePacked(
                     output,
-                    ',{"trait_type":"owner_contract","value":"',
-                    ownerContract.toHexString(),
-                    '"},{"trait_type":"owner_id","value":',
-                    ownerId.toString(),
-                    '},{"trait_type":"owner_address","value":"',
-                    s.ownerAddress().toHexString(),
+                    ',{"trait_type":"owner","value":"',
+                    s.owner().toHexString(),
                     '"}'
                 )
             );
