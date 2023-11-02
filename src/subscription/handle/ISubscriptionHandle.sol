@@ -23,6 +23,8 @@ interface SubscriptionFactory is SubscriptionHandleEvents {
 
     // register an existing implementation
     function register(address _contract) external;
+
+    function isManaged(uint256 tokenId) external view returns (bool);
 }
 
 interface ISubscriptionHandle is SubscriptionFactory, IERC721Enumerable {}

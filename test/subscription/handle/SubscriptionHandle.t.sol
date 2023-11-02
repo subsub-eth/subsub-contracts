@@ -10,19 +10,44 @@ import "../../mocks/TestSubscription.sol";
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+
 contract TestSubscriptionHandle is SubscriptionHandle {
+    struct Details {
+        bool set;
+        bool managed;
+    }
+
     address public deployAddress;
+    mapping(address => Details) public registry;
+
+    using Strings for string;
 
     function setDeployAddress(address addr) public {
         deployAddress = addr;
     }
 
-    function _deploySubscription(
-        string calldata _name,
-        string calldata _symbol,
-        MetadataStruct calldata _metadata,
-        SubSettings calldata _settings
-    ) internal override returns (address) {
+    function _addToRegistry(address addr, bool isManaged) internal override returns (bool set) {
+        set = !registry[addr].set;
+        registry[addr].set = true;
+        registry[addr].managed = isManaged;
+    }
+
+    function _isManaged(address addr) internal view override returns (bool) {
+        return registry[addr].managed;
+    }
+
+    function setManaged(address addr, bool managed) external {
+        registry[addr].managed = managed;
+    }
+
+    function _deploySubscription(string calldata _name, string calldata, MetadataStruct calldata, SubSettings calldata)
+        internal
+        view
+        override
+        returns (address)
+    {
+        require(!_name.equal("fail"), "Deployment failed");
         return deployAddress;
     }
 }
@@ -52,9 +77,111 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
         vm.expectEmit();
         emit SubscriptionContractCreated(uint256(uint160(handle.deployAddress())), handle.deployAddress());
 
-        address result = handle.mint("test", "test", metadata, settings);
+        address result = handle.mint("", "", metadata, settings);
         assertEq(result, handle.deployAddress(), "address of contract returned");
+        assertTrue(handle.isManaged(uint256(uint160(result))), "minted contract marked as managed");
 
+        assertEq(handle.balanceOf(user), 1, "sender has 1 token");
         assertEq(handle.ownerOf(uint256(uint160(result))), user, "tokenId/address minted to sender");
+        assertEq(handle.totalSupply(), 1, "1 token minted to supply");
+    }
+
+    function testMint_deployFail() public {
+        vm.expectRevert();
+        handle.mint("fail", "", metadata, settings);
+    }
+
+    function testBurn() public {
+        vm.startPrank(user); // not a contract!
+
+        address result = handle.mint("", "", metadata, settings);
+        uint256 tokenId = uint256(uint160(result));
+
+        assertEq(handle.balanceOf(user), 1, "sender has 1 token");
+        assertEq(handle.ownerOf(tokenId), user, "tokenId/address minted to sender");
+        assertEq(handle.totalSupply(), 1, "1 token minted to supply");
+
+        handle.burn(tokenId);
+        assertEq(handle.balanceOf(user), 0, "sender has no tokens");
+        assertEq(handle.totalSupply(), 0, "no tokens existing");
+
+        vm.expectRevert();
+        handle.ownerOf(tokenId);
+    }
+
+    function testRegister(address addr) public {
+        vm.startPrank(user); // not a contract!
+
+        uint256 tokenId = uint256(uint160(addr));
+
+        handle.register(addr);
+        assertFalse(handle.isManaged(uint256(uint160(addr))), "registered contract marked as unmanaged");
+
+        assertEq(handle.balanceOf(user), 1, "sender has 1 token");
+        assertEq(handle.ownerOf(tokenId), user, "tokenId/address minted to sender");
+        assertEq(handle.totalSupply(), 1, "1 token minted to supply");
+    }
+
+    function testRegister_twice(address addr) public {
+        vm.startPrank(user); // not a contract!
+
+        handle.register(addr);
+
+        vm.expectRevert();
+        handle.register(addr);
+    }
+
+    function testRegister_existingMint() public {
+        vm.startPrank(user); // not a contract!
+
+        address addr = handle.mint("", "", metadata, settings);
+
+        vm.expectRevert();
+        handle.register(addr);
+    }
+
+    function testRegister_existingRegistered(address addr) public {
+        vm.startPrank(user); // not a contract!
+
+        handle.register(addr);
+
+        vm.expectRevert();
+        handle.register(addr);
+    }
+
+    function testRegister_previouslyMintBurned() public {
+        vm.startPrank(user); // not a contract!
+
+        address addr = handle.mint("", "", metadata, settings);
+        uint256 tokenId = uint256(uint160(addr));
+
+        handle.burn(tokenId);
+
+        vm.expectRevert();
+        handle.register(addr);
+    }
+
+    function testRegister_previouslyRegisteredBurned(address addr) public {
+        vm.startPrank(user); // not a contract!
+
+        handle.register(addr);
+        uint256 tokenId = uint256(uint160(addr));
+
+        handle.burn(tokenId);
+
+        vm.expectRevert();
+        handle.register(addr);
+    }
+
+    function testManaged(address addr, bool managed) public {
+        handle.setManaged(addr, managed);
+
+        assertEq(handle.isManaged(uint256(uint160(addr))), managed, "managed value set");
+    }
+
+    function testManaged_largeValue(uint256 tokenId) public {
+        tokenId = bound(tokenId, uint256(type(uint160).max) + 1, type(uint256).max);
+
+        assertFalse(handle.isManaged(tokenId), "out of bounds tokenId is always false");
     }
 }

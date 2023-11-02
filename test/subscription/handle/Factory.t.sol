@@ -29,20 +29,16 @@ contract TestFactory is Factory {
 }
 
 contract TestSubscriptionInitialize is SubscriptionInitialize {
+    using Strings for string;
 
-  using Strings for string;
-
-    function initialize(
-        string calldata tokenName,
-        string calldata tokenSymbol,
-        MetadataStruct calldata _metadata,
-        SubSettings calldata _settings
-    ) external {
+    function initialize(string calldata tokenName, string calldata, MetadataStruct calldata, SubSettings calldata)
+        external pure
+    {
         require(!tokenName.equal("fail"), "failing");
     }
 
-    function hello() public returns (string memory) {
-      return "world";
+    function hello() public pure returns (string memory) {
+        return "world";
     }
 }
 
@@ -77,6 +73,6 @@ contract FactoryTest is Test {
 
     function testCreateSubscription_initFail() public {
         vm.expectRevert();
-        address result = factory.deploySubscription("fail", "test", metadata, settings);
+        factory.deploySubscription("fail", "test", metadata, settings);
     }
 }
