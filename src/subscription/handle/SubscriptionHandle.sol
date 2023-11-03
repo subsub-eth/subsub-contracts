@@ -54,7 +54,7 @@ abstract contract SubscriptionHandle is
 
     function isManaged(uint256 tokenId) external view returns (bool) {
         if (tokenId > type(uint160).max) {
-          return false;
+            return false;
         }
         address addr = address(uint160(tokenId));
         return _isManaged(addr);
@@ -94,6 +94,15 @@ contract DefaultSubscriptionHandle is SubscriptionHandle, Factory, ContractRegis
     }
 
     function initialize(address beacon) external initializer {
+        __Factory_init_unchained(beacon);
+        __Context_init_unchained();
+        __ERC721Enumerable_init_unchained();
+    }
+}
+
+// is not upgradeable
+contract SimpleSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry {
+    constructor(address beacon) initializer {
         __Factory_init_unchained(beacon);
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();

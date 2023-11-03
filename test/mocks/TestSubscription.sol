@@ -6,6 +6,8 @@ import "../../src/subscription/Subscription.sol";
 contract TestSubscription is DefaultSubscription {
     uint256 private __now;
 
+    constructor(address handleContract) DefaultSubscription(handleContract) {}
+
     function _now() internal view override returns (uint256) {
         return __now;
     }

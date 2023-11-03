@@ -12,7 +12,7 @@ import {
     SubSettings,
     SubscriptionFlags
 } from "../../src/subscription/ISubscription.sol";
-import {Profile} from "../../src/profile/Profile.sol";
+import "../../src/subscription/handle/SubscriptionHandle.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -24,7 +24,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     TestSubscription public subscriptionImplementation;
     TestSubscription public subscription;
     ERC20DecimalsMock private testToken;
-    Profile public profile;
+    SubscriptionHandle public handle;
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
@@ -64,15 +64,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         lock = 100;
         epochSize = 10;
         maxSupply = 10_000;
-        profile = new Profile();
-        vm.prank(owner);
-        ownerTokenId = profile.mint("test", "test", "test", "test");
+
+        handle = new SimpleSubscriptionHandle(address(0));
 
         testToken = new ERC20DecimalsMock(18);
         settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
 
         // init simple proxy setup
-        subscriptionImplementation = new TestSubscription();
+        subscriptionImplementation = new TestSubscription(address(handle));
         subscriptionProxy = new ERC1967Proxy(
             address(subscriptionImplementation),
             ""
@@ -80,6 +79,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription = TestSubscription(address(subscriptionProxy));
         setCurrentTime(1);
         subscription.initialize("test", "test", metadata, settings);
+
+        vm.prank(owner);
+        handle.register(address(subscription));
 
         testToken.approve(address(subscription), type(uint256).max);
 
@@ -89,7 +91,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function createSubWithProxy() private returns (Subscription) {
-        Subscription impl = new TestSubscription();
+        Subscription impl = new TestSubscription(address(handle));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
         return Subscription(address(proxy));
     }
@@ -132,16 +134,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         settings.lock = 10_001;
         settings.epochSize = 10;
         vm.expectRevert("SUB: lock percentage out of range");
-        sub.initialize("test", "test", metadata, settings);
-    }
-
-    function testConstruct_not0OwnerContract() public {
-        Subscription sub = createSubWithProxy();
-        settings.token = testToken;
-        settings.rate = 10;
-        settings.lock = 0;
-        settings.epochSize = 10;
-        vm.expectRevert("SUB: profile address not set");
         sub.initialize("test", "test", metadata, settings);
     }
 

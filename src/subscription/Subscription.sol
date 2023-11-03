@@ -331,8 +331,7 @@ abstract contract DefaultSubscription is
     FlagSettings,
     Subscription
 {
-    constructor() HandleOwned(address(0)) {
-      // TODO add manager contract address
+    constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
     }
 

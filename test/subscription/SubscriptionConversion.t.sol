@@ -8,7 +8,7 @@ import "../mocks/TestSubscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../../src/subscription/ISubscription.sol";
 import {Lib} from "../../src/subscription/Lib.sol";
-import {Profile} from "../../src/profile/Profile.sol";
+import "../../src/subscription/handle/SubscriptionHandle.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -20,7 +20,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     TestSubscription public subscriptionImplementation;
     TestSubscription public subscription;
     ERC20DecimalsMock public testToken;
-    Profile public profile;
+    SubscriptionHandle public handle;
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
@@ -56,9 +56,8 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         lock = 100;
         epochSize = 100;
         maxSupply = 10_000;
-        profile = new Profile();
-        vm.prank(owner);
-        ownerTokenId = profile.mint("test", "test", "test", "test");
+
+        handle = new SimpleSubscriptionHandle(address(0));
     }
 
     function createContracts(uint8 decimals) private {
@@ -66,7 +65,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
 
         // init simple proxy setup
-        subscriptionImplementation = new TestSubscription();
+        subscriptionImplementation = new TestSubscription(address(handle));
         subscriptionProxy = new ERC1967Proxy(
             address(subscriptionImplementation),
             ""
@@ -74,6 +73,9 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         subscription = TestSubscription(address(subscriptionProxy));
         subscription.setNow(currentTime);
         subscription.initialize("test", "test", metadata, settings);
+
+        vm.prank(owner);
+        handle.register(address(subscription));
 
         testToken.approve(address(subscription), type(uint256).max);
 

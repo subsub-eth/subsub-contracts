@@ -47,11 +47,7 @@ contract DeployScript is Script {
 
         // simple Test Deployment
 
-        Subscription subscriptionImplementation = new BlockSubscription();
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            address(subscriptionImplementation),
-            address(this)
-        );
+        // TODO fix me
 
         Profile profileImplementation = new Profile();
         ProxyAdmin profileAdmin = new ProxyAdmin(address(this));
@@ -73,14 +69,21 @@ contract DeployScript is Script {
                 address(handleImpl),
                 address(handleAdmin),
                 abi.encodeWithSignature(
-                    "initialize(address,address)",
-                    address(beacon),
-                    address(profile)
+                    "initialize(address)",
+                    // address(beacon) TODO
+                    address(0)
                 )
             );
 
         SubscriptionHandle handle = SubscriptionHandle(address(handleProxy));
         console.log("Handle Contract", address(handle));
+
+
+        Subscription subscriptionImplementation = new BlockSubscription(address(handle));
+        UpgradeableBeacon beacon = new UpgradeableBeacon(
+            address(subscriptionImplementation),
+            address(this)
+        );
 
         if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
             ERC20DecimalsMock token = new ERC20DecimalsMock(18);

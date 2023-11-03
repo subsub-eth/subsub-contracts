@@ -8,7 +8,7 @@ import "../mocks/TestSubscription.sol";
 
 import {SubscriptionEvents, ClaimEvents} from "../../src/subscription/ISubscription.sol";
 import {Lib} from "../../src/subscription/Lib.sol";
-import {Profile} from "../../src/profile/Profile.sol";
+import "../../src/subscription/handle/SubscriptionHandle.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -20,7 +20,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     TestSubscription public subscriptionImplementation;
     TestSubscription public subscription;
     ERC20DecimalsMock private testToken;
-    Profile public profile;
+    SubscriptionHandle public handle;
     uint256 public rate;
     uint256 public lock;
     uint256 public epochSize;
@@ -57,15 +57,14 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         epochSize = 100;
         maxSupply = 10_000;
         decimals = 6;
-        profile = new Profile();
-        vm.prank(owner);
-        ownerTokenId = profile.mint("test", "test", "test", "test");
+
+        handle = new SimpleSubscriptionHandle(address(0));
 
         testToken = new ERC20DecimalsMock(decimals);
         settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
 
         // init simple proxy setup
-        subscriptionImplementation = new TestSubscription();
+        subscriptionImplementation = new TestSubscription(address(handle));
         subscriptionProxy = new ERC1967Proxy(
             address(subscriptionImplementation),
             ""
@@ -78,6 +77,9 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
             metadata,
             settings
         );
+
+        vm.prank(owner);
+        handle.register(address(subscription));
 
         testToken.approve(address(subscription), type(uint256).max);
 
