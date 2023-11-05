@@ -89,14 +89,19 @@ abstract contract SubscriptionHandle is
 }
 
 contract DefaultSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry {
-    constructor() {
+    constructor(address beacon) {
         _disableInitializers();
     }
 
-    function initialize(address beacon) external initializer {
-        __Factory_init_unchained(beacon);
+    function initialize() external initializer {
+      // TODO FIXME
+        __Factory_init_unchained(address(0));
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
+    }
+
+    function upgradeToAndCall(address, bytes calldata) external payable {
+
     }
 }
 
