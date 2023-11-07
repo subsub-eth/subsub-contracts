@@ -18,27 +18,17 @@ abstract contract HasFactory {
 }
 
 abstract contract Factory is Initializable, HasFactory {
-    struct FactoryStorage {
-        address _beacon;
+    address private immutable _beacon;
+
+    constructor(address beacon) {
+        _beacon = beacon;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.handle.Factory")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant FactoryStorageLocation = 0x3e9b6f2fbc74ae9ad3597cdc06e857459b85656c03d920b66d1f4501648c1500;
-
-    function _getFactoryStorage() private pure returns (FactoryStorage storage $) {
-        assembly {
-            $.slot := FactoryStorageLocation
-        }
+    function __Factory_init() internal onlyInitializing {
+        __Factory_init_unchained();
     }
 
-    function __Factory_init(address beacon) internal onlyInitializing {
-        __Factory_init_unchained(beacon);
-    }
-
-    function __Factory_init_unchained(address beacon) internal onlyInitializing {
-        FactoryStorage storage $ = _getFactoryStorage();
-        $._beacon = beacon;
-    }
+    function __Factory_init_unchained() internal onlyInitializing {}
 
     // deploy a new subscription
     function _deploySubscription(
@@ -47,13 +37,11 @@ abstract contract Factory is Initializable, HasFactory {
         MetadataStruct calldata _metadata,
         SubSettings calldata _settings
     ) internal virtual override returns (address) {
-        FactoryStorage storage $ = _getFactoryStorage();
-
-        SubscriptionInitialize implementation = SubscriptionInitialize(IBeacon($._beacon).implementation());
+        SubscriptionInitialize implementation = SubscriptionInitialize(IBeacon(_beacon).implementation());
 
         // TODO use create2 to prevent users re-using contract addresses on other chains
         BeaconProxy proxy = new BeaconProxy(
-            $._beacon,
+            _beacon,
             abi.encodeWithSelector(
                 implementation.initialize.selector,
                 _name,

@@ -88,14 +88,13 @@ abstract contract SubscriptionHandle is
     }
 }
 
-contract DefaultSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry {
-    constructor(address beacon) {
+contract UpgradeableSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry {
+    constructor(address beacon) Factory(beacon) {
         _disableInitializers();
     }
 
     function initialize() external initializer {
-      // TODO FIXME
-        __Factory_init_unchained(address(0));
+        __Factory_init_unchained();
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
     }
@@ -107,8 +106,8 @@ contract DefaultSubscriptionHandle is SubscriptionHandle, Factory, ContractRegis
 
 // is not upgradeable
 contract SimpleSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry {
-    constructor(address beacon) initializer {
-        __Factory_init_unchained(beacon);
+    constructor(address beacon) Factory(beacon) initializer {
+        __Factory_init_unchained();
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
     }

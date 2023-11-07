@@ -14,8 +14,8 @@ import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/U
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract TestFactory is Factory {
-    constructor(address beacon) initializer {
-        __Factory_init(beacon);
+    constructor(address beacon) Factory(beacon) initializer {
+        __Factory_init();
     }
 
     function deploySubscription(

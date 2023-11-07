@@ -30,6 +30,16 @@ contract DeployScript is Script {
 
     string private anvilSeed = "test test test test test test test test test test test junk";
 
+    address private deployer;
+    address private alice;
+    address private bob;
+    address private charlie;
+
+    ERC20DecimalsMock private testUsd;
+
+    Profile private profile;
+    SubscriptionHandle private subHandle;
+
     function setUp() public {
         metadata = MetadataStruct(
             "You gain access to my heart", "https://example.com/profiles/peter-t1.png", "https://example.com"
@@ -43,80 +53,176 @@ contract DeployScript is Script {
     }
 
     function run() public {
-        uint256 deployerKey = vm.envOr("PRIVATE_KEY", uint256(0));
+        {
+            uint256 deployerKey = vm.envOr("PRIVATE_KEY", uint256(0));
 
-        if (deployerKey == 0) {
-            // if no private key is set, we will get a test key
-            deployerKey = vm.deriveKey(anvilSeed, 0);
+            if (deployerKey == 0) {
+                // if no private key is set, we will get a test key
+                deployerKey = vm.deriveKey(anvilSeed, 0);
+            }
+            deployer = vm.rememberKey(deployerKey);
         }
-        address deployer = vm.rememberKey(deployerKey);
 
-        vm.startBroadcast(deployer);
-        vm.recordLogs();
-        Vm.Log[] memory logs;
+        {
+            vm.startBroadcast(deployer);
+            vm.recordLogs();
 
-        // simple Test Deployment
+            // simple Test Deployment
 
-        //////////////////////////////////////////////////////////////////////
-        // DEPLOY PROFILE
-        //////////////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY PROFILE
+            //////////////////////////////////////////////////////////////////////
 
-        Profile profileImplementation = new Profile();
-        TransparentUpgradeableProxy profileProxy = new TransparentUpgradeableProxy(
+            Profile profileImplementation = new Profile();
+            TransparentUpgradeableProxy profileProxy = new TransparentUpgradeableProxy(
                 address(profileImplementation),
                 deployer,
                 abi.encodeWithSignature("initialize()")
             );
 
-        logs = vm.getRecordedLogs();
+            address proxyAdminAddress;
+            {
+                Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        // get the ProxyAdmin address
-        address proxyAdminAddress = getProxyAdminAddressFromLogs(logs);
+                // get the ProxyAdmin address
+                proxyAdminAddress = getProxyAdminAddressFromLogs(logs);
+            }
 
-        Profile profile = Profile(address(profileProxy));
+            profile = Profile(address(profileProxy));
 
-        console.log("Profile Contract Implementation", address(profileImplementation));
-        console.log("Profile Proxy Admin", proxyAdminAddress);
-        console.log("Profile Contract Proxy", address(profile));
+            console.log("Profile Contract Implementation", address(profileImplementation));
+            console.log("Profile Proxy Admin", proxyAdminAddress);
+            console.log("Profile Contract Proxy", address(profile));
 
-        //////////////////////////////////////////////////////////////////////
-        // DEPLOY SUBSCRIPTION + SUBSCRIPTION_HANDLE
-        //////////////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY SUBSCRIPTION + SUBSCRIPTION_HANDLE
+            //////////////////////////////////////////////////////////////////////
 
-        address dummySubscriptionBeacon = address(new BadBeaconNotContract());
+            address dummySubscriptionBeacon = address(new BadBeaconNotContract());
 
-        // Handling chicken & egg problem: handle + subscription reference each other
-        // create handle implementation with a dummy subscription beacon
-        DefaultSubscriptionHandle subHandleImpl = new DefaultSubscriptionHandle(address(dummySubscriptionBeacon));
-        TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(
+            // Handling chicken & egg problem: handle + subscription reference each other
+            // create handle implementation with a dummy subscription beacon
+            UpgradeableSubscriptionHandle subHandleImpl =
+                new UpgradeableSubscriptionHandle(address(dummySubscriptionBeacon));
+            TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(
                 address(subHandleImpl),
                 deployer,
                 abi.encodeWithSignature("initialize()")
             );
-        // TODO make this kind of error shit impossible or something
-        logs = vm.getRecordedLogs();
-        address subHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
 
-        SubscriptionHandle subHandle = SubscriptionHandle(address(subHandleProxy));
-        console.log("Handle Contract", address(subHandle));
+            address subHandleAdminAddress;
+            {
+                Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        // create Subscription Implementation with a reference to the CORRECT handle proxy
-        Subscription subscriptionImplementation = new BlockSubscription(address(subHandle));
-        UpgradeableBeacon subscriptionBeacon = new UpgradeableBeacon(
+                // get the ProxyAdmin address
+                subHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
+            }
+
+            subHandle = SubscriptionHandle(address(subHandleProxy));
+
+            // create Subscription Implementation with a reference to the CORRECT handle proxy
+            Subscription subscriptionImplementation = new BlockSubscription(address(subHandle));
+            UpgradeableBeacon subscriptionBeacon = new UpgradeableBeacon(
             address(subscriptionImplementation),
             deployer
         );
 
-        // fix the handle => sub reference by upgrading the handle implementation with the corrent beacon ref
-        // TODO change handle implementation for immutable beacon ref
-        subHandleImpl = new DefaultSubscriptionHandle(address(subscriptionBeacon));
-        ProxyAdmin(subHandleAdminAddress).upgradeAndCall(
-            ITransparentUpgradeableProxy(address(subHandleProxy)), address(subHandleImpl), ""
-        );
+            // fix the handle => sub reference by upgrading the handle implementation with the corrent beacon ref
+            subHandleImpl = new UpgradeableSubscriptionHandle(address(subscriptionBeacon));
+            ProxyAdmin(subHandleAdminAddress).upgradeAndCall(
+                ITransparentUpgradeableProxy(address(subHandleProxy)), address(subHandleImpl), ""
+            );
 
-        uint256 profileId = profile.mint(
-            "PeterTest", "I am a super cool influencer", "https://example.com/profiles/peter.png", "https://example.com"
-        );
+            console.log("SubHandle Implementation", address(subHandleImpl));
+            console.log("SubHandle Proxy Admin", subHandleAdminAddress);
+            console.log("SubHandle Proxy Contract", address(subHandle));
+
+            console.log("Subscription Implementation", address(subscriptionImplementation));
+            console.log("Subscription Beacon", address(subscriptionBeacon));
+
+            // end test deployment
+            vm.stopBroadcast();
+        }
+
+        //////////////////////////////////////////////////////////////////////
+        // DEPLOY TEST DATA
+        //////////////////////////////////////////////////////////////////////
+
+        if (vm.envOr("DEPLOY_TEST_DATA", false)) {
+            alice = vm.rememberKey(vm.deriveKey(anvilSeed, 1));
+            bob = vm.rememberKey(vm.deriveKey(anvilSeed, 2));
+            charlie = vm.rememberKey(vm.deriveKey(anvilSeed, 3));
+
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY TEST ERC20 TOKEN
+            //////////////////////////////////////////////////////////////////////
+
+            vm.startBroadcast(deployer);
+
+            testUsd = new ERC20DecimalsMock(18);
+            console.log("TestUSD ERC20 Token Contract", address(testUsd));
+            settings.token = testUsd;
+
+            testUsd.mint(deployer, 100_000 ether);
+            testUsd.mint(alice, 100_000 ether);
+            testUsd.mint(bob, 100_000 ether);
+            testUsd.mint(charlie, 100_000 ether);
+
+            vm.stopBroadcast();
+
+            //////////////////////////////////////////////////////////////////////
+            // ALICE's TEST DATA
+            //////////////////////////////////////////////////////////////////////
+
+            vm.startBroadcast(alice);
+            uint256 pAlice = profile.mint(
+                "Alice",
+                "Hi, I am Alice, a super cool influencer",
+                "https://example.com/profiles/alice.png",
+                "https://example.com"
+            );
+
+            // TODO use tokenbound account to mint subscription
+            address aliceSubscription1 = subHandle.mint("Tier 1 Sub", "SUBt1", metadata, settings);
+
+            vm.stopBroadcast();
+
+
+            //////////////////////////////////////////////////////////////////////
+            // BOB's TEST DATA
+            //////////////////////////////////////////////////////////////////////
+
+            vm.startBroadcast(bob);
+            uint256 pBob = profile.mint(
+                "Bob",
+                "Hi, I am Bob, a super cool influencer",
+                "https://example.com/profiles/bob.png",
+                "https://example.com"
+            );
+
+            // TODO use tokenbound account to mint subscription
+            address bobSubscription1 = subHandle.mint("Tier 1 Sub", "SUBt1", metadata, settings);
+
+            vm.stopBroadcast();
+
+
+            //////////////////////////////////////////////////////////////////////
+            // CHARLIE's TEST DATA
+            //////////////////////////////////////////////////////////////////////
+
+            vm.startBroadcast(charlie);
+            uint256 pCharlie = profile.mint(
+                "Charlie",
+                "Hi, I am Charlie, a super cool influencer",
+                "https://example.com/profiles/charlie.png",
+                "https://example.com"
+            );
+
+            address charlieSubscription1 = subHandle.mint("Tier 1 Sub", "SUBt1", metadata, settings);
+
+            vm.stopBroadcast();
+
+        }
 
         // if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
         //     ERC20DecimalsMock token = new ERC20DecimalsMock(18);
@@ -141,8 +247,6 @@ contract DeployScript is Script {
         //         }
         //     }
         // }
-
-        vm.stopBroadcast();
     }
 
     function getProxyAdminAddressFromLogs(Vm.Log[] memory logs) private pure returns (address) {
