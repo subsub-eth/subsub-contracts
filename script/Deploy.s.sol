@@ -5,6 +5,8 @@ import "forge-std/Script.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console.sol";
 
+import {ERC6551Registry} from "erc6551/src/ERC6551Registry.sol";
+
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -153,6 +155,20 @@ contract DeployScript is Script {
             bob = vm.rememberKey(vm.deriveKey(anvilSeed, 2));
             charlie = vm.rememberKey(vm.deriveKey(anvilSeed, 3));
 
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY ERC6551 REGISTRY
+            //////////////////////////////////////////////////////////////////////
+            vm.startBroadcast(deployer);
+
+            address registry = address(new ERC6551Registry());
+            bytes memory code = registry.code;
+            address targetAddress = address(0x000000006551c19487814612e58FE06813775758);
+            vm.etch(targetAddress, code);
+
+            ERC6551Registry erc6551Registry = ERC6551Registry(targetAddress);
+            console.log("nft account", erc6551Registry.account(alice, keccak256("blaa"), 1, address(profile), 2));
+
+            vm.stopBroadcast();
             //////////////////////////////////////////////////////////////////////
             // DEPLOY TEST ERC20 TOKEN
             //////////////////////////////////////////////////////////////////////
