@@ -186,10 +186,10 @@ contract DeployScript is Script {
 
             // TODO FIXME
             erc6551AccountImplementation =
-                deployCode("lib/erc6551/out/ERC6551AccountUpgradeable.sol/ERC6551AccountUpgradeable.json");
+                deployCode("lib-precompiled/erc6551/0.3.1/ERC6551AccountUpgradeable.sol/ERC6551AccountUpgradeable.json");
             console.log("ERC6551 Account Implementation", erc6551AccountImplementation);
             erc6551AccountProxy = deployCode(
-                "lib/erc6551/out/ERC6551AccountProxy.sol/ERC6551AccountProxy.json",
+                "lib-precompiled/erc6551/0.3.1/ERC6551AccountProxy.sol/ERC6551AccountProxy.json",
                 abi.encode(erc6551AccountImplementation)
             );
             console.log("ERC6551 Account Proxy", erc6551AccountProxy);
@@ -217,22 +217,23 @@ contract DeployScript is Script {
 
             vm.startBroadcast(alice);
             {
-            uint256 pAlice = profile.mint(
-                "Alice",
-                "Hi, I am Alice, a super cool influencer",
-                "https://example.com/profiles/alice.png",
-                "https://example.com"
-            );
+                uint256 pAlice = profile.mint(
+                    "Alice",
+                    "Hi, I am Alice, a super cool influencer",
+                    "https://example.com/profiles/alice.png",
+                    "https://example.com"
+                );
 
-            address pAliceAccount =
-                erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pAlice);
+                address pAliceAccount =
+                    erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pAlice);
 
-            address aliceSubscription1 = createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                address aliceSubscription1 =
+                    createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
 
-            require(
-                subHandle.ownerOf(uint256(uint160(aliceSubscription1))) == pAliceAccount,
-                "ERC6551 account not the owner"
-            );
+                require(
+                    subHandle.ownerOf(uint256(uint160(aliceSubscription1))) == pAliceAccount,
+                    "ERC6551 account not the owner"
+                );
             }
             vm.stopBroadcast();
 
@@ -242,17 +243,17 @@ contract DeployScript is Script {
 
             vm.startBroadcast(bob);
             {
-            uint256 pBob = profile.mint(
-                "Bob",
-                "Hi, I am Bob, a super cool influencer",
-                "https://example.com/profiles/bob.png",
-                "https://example.com"
-            );
+                uint256 pBob = profile.mint(
+                    "Bob",
+                    "Hi, I am Bob, a super cool influencer",
+                    "https://example.com/profiles/bob.png",
+                    "https://example.com"
+                );
 
-            address pBobAccount =
-                erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pBob);
+                address pBobAccount =
+                    erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pBob);
 
-            createSubscriptionPlanWithErc6551(pBobAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                createSubscriptionPlanWithErc6551(pBobAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
             }
 
             vm.stopBroadcast();
@@ -263,17 +264,17 @@ contract DeployScript is Script {
 
             vm.startBroadcast(charlie);
             {
-            uint256 pCharlie = profile.mint(
-                "Charlie",
-                "Hi, I am Charlie, a super cool influencer",
-                "https://example.com/profiles/charlie.png",
-                "https://example.com"
-            );
+                uint256 pCharlie = profile.mint(
+                    "Charlie",
+                    "Hi, I am Charlie, a super cool influencer",
+                    "https://example.com/profiles/charlie.png",
+                    "https://example.com"
+                );
 
-            address pCharlieAccount =
-                erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pCharlie);
+                address pCharlieAccount =
+                    erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pCharlie);
 
-            createSubscriptionPlanWithErc6551(pCharlieAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                createSubscriptionPlanWithErc6551(pCharlieAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
             }
             vm.stopBroadcast();
 
