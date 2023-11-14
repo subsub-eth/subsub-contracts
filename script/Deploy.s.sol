@@ -208,6 +208,7 @@ contract DeployScript is Script {
             testUsd.mint(alice, 100_000 ether);
             testUsd.mint(bob, 100_000 ether);
             testUsd.mint(charlie, 100_000 ether);
+            testUsd.mint(dora, 100_000 ether);
 
             vm.stopBroadcast();
 
@@ -215,8 +216,8 @@ contract DeployScript is Script {
             // ALICE's TEST DATA
             //////////////////////////////////////////////////////////////////////
 
-            vm.startBroadcast(alice);
             {
+                vm.startBroadcast(alice);
                 uint256 pAlice = profile.mint(
                     "Alice",
                     "Hi, I am Alice, a super cool influencer",
@@ -234,15 +235,17 @@ contract DeployScript is Script {
                     subHandle.ownerOf(uint256(uint160(aliceSubscription1))) == pAliceAccount,
                     "ERC6551 account not the owner"
                 );
+                vm.stopBroadcast();
+                address[3] memory subs = [alice, bob, charlie];
+                subscribeTo(subs, aliceSubscription1, 10 ether);
             }
-            vm.stopBroadcast();
 
             //////////////////////////////////////////////////////////////////////
             // BOB's TEST DATA
             //////////////////////////////////////////////////////////////////////
 
-            vm.startBroadcast(bob);
             {
+                vm.startBroadcast(bob);
                 uint256 pBob = profile.mint(
                     "Bob",
                     "Hi, I am Bob, a super cool influencer",
@@ -253,17 +256,18 @@ contract DeployScript is Script {
                 address pBobAccount =
                     erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pBob);
 
-                createSubscriptionPlanWithErc6551(pBobAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                address plan = createSubscriptionPlanWithErc6551(pBobAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                vm.stopBroadcast();
+                address[3] memory subs = [alice, charlie, dora];
+                subscribeTo(subs, plan, 10 ether);
             }
-
-            vm.stopBroadcast();
 
             //////////////////////////////////////////////////////////////////////
             // CHARLIE's TEST DATA
             //////////////////////////////////////////////////////////////////////
 
-            vm.startBroadcast(charlie);
             {
+                vm.startBroadcast(charlie);
                 uint256 pCharlie = profile.mint(
                     "Charlie",
                     "Hi, I am Charlie, a super cool influencer",
@@ -274,44 +278,28 @@ contract DeployScript is Script {
                 address pCharlieAccount =
                     erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pCharlie);
 
-                createSubscriptionPlanWithErc6551(pCharlieAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                address plan =
+                    createSubscriptionPlanWithErc6551(pCharlieAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                vm.stopBroadcast();
+                address[3] memory subs = [alice, bob, dora];
+                subscribeTo(subs, plan, 10 ether);
             }
-            vm.stopBroadcast();
 
             //////////////////////////////////////////////////////////////////////
             // DORA's TEST DATA
             //////////////////////////////////////////////////////////////////////
 
-            vm.startBroadcast(dora);
+            {
+                vm.startBroadcast(dora);
 
-            subHandle.mint("Dora's Tier 1 Sub", "SUBt1", metadata, settings);
+                address plan = subHandle.mint("Dora's Tier 1 Sub", "SUBt1", metadata, settings);
 
-            vm.stopBroadcast();
+                vm.stopBroadcast();
+
+                address[3] memory subs = [alice, bob, charlie];
+                subscribeTo(subs, plan, 10 ether);
+            }
         }
-
-        // if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
-        //     ERC20DecimalsMock token = new ERC20DecimalsMock(18);
-        //     console.log("Test ERC20 Token Contract", address(token));
-        //     token.mint(msg.sender, 100_000 ether);
-        //     token.mint(address(10), 100_000 ether);
-        //     token.mint(anvilUser1, 100_000 ether);
-        //     token.mint(anvilUser2, 100_000 ether);
-        //
-        //     if (vm.envOr("DEPLOY_TEST_SUBSCRIPTION", false)) {
-        //         settings.token = token;
-        //         for (int256 i = 0; i < 6; i++) {
-        //             address subscription = handle.mint("My Tier 1 Subscription", "SUBt1", metadata, settings);
-        //             console.log("Subscription Contract", subscription);
-        //
-        //             for (uint256 j = 0; j < 11; j++) {
-        //                 token.approve(address(subscription), 1_000);
-        //                 uint256 tokenId = Subscription(subscription).mint(1_000, 100, "Hello world");
-        //
-        //                 console.log("Subscription TokenId", tokenId);
-        //             }
-        //         }
-        //     }
-        // }
     }
 
     function getProxyAdminAddressFromLogs(Vm.Log[] memory logs) private pure returns (address) {
@@ -341,5 +329,18 @@ contract DeployScript is Script {
             0
         );
         return abi.decode(result, (address));
+    }
+
+    function subscribeTo(address[3] memory subscribers, address subPlan, uint256 amount) private {
+        for (uint256 i = 0; i < subscribers.length && subscribers[i] != address(0); i++) {
+            address subscriber = subscribers[i];
+            ISubscription plan = ISubscription(subPlan);
+            vm.startBroadcast(subscriber);
+
+            testUsd.approve(subPlan, amount);
+            plan.mint(amount, 100, "Hello World!");
+
+            vm.stopBroadcast();
+        }
     }
 }
