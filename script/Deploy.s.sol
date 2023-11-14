@@ -5,7 +5,8 @@ import "forge-std/Script.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console.sol";
 
-import {ERC6551Registry} from "erc6551/src/ERC6551Registry.sol";
+import {ERC6551Registry} from "erc6551/ERC6551Registry.sol";
+import {IERC6551Executable} from "erc6551/interfaces/IERC6551Executable.sol";
 
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -36,11 +37,21 @@ contract DeployScript is Script {
     address private alice;
     address private bob;
     address private charlie;
+    address private dora;
 
     ERC20DecimalsMock private testUsd;
 
+    bytes32 private salt = 0;
+
     Profile private profile;
     SubscriptionHandle private subHandle;
+
+    // ERC6551
+    address constant erc6551RegistryAddress = 0x000000006551c19487814612e58FE06813775758;
+    ERC6551Registry private erc6551Registry = ERC6551Registry(erc6551RegistryAddress);
+
+    address private erc6551AccountImplementation;
+    address private erc6551AccountProxy;
 
     function setUp() public {
         metadata = MetadataStruct(
@@ -154,6 +165,7 @@ contract DeployScript is Script {
             alice = vm.rememberKey(vm.deriveKey(anvilSeed, 1));
             bob = vm.rememberKey(vm.deriveKey(anvilSeed, 2));
             charlie = vm.rememberKey(vm.deriveKey(anvilSeed, 3));
+            dora = vm.rememberKey(vm.deriveKey(anvilSeed, 4));
 
             //////////////////////////////////////////////////////////////////////
             // DEPLOY ERC6551 REGISTRY
@@ -162,13 +174,26 @@ contract DeployScript is Script {
 
             address registry = address(new ERC6551Registry());
             bytes memory code = registry.code;
-            address targetAddress = address(0x000000006551c19487814612e58FE06813775758);
+            address targetAddress = address(erc6551RegistryAddress);
             vm.etch(targetAddress, code);
 
-            ERC6551Registry erc6551Registry = ERC6551Registry(targetAddress);
             console.log("nft account", erc6551Registry.account(alice, keccak256("blaa"), 1, address(profile), 2));
 
             vm.stopBroadcast();
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY ERC6551 Account
+            //////////////////////////////////////////////////////////////////////
+
+            // TODO FIXME
+            erc6551AccountImplementation =
+                deployCode("lib/erc6551/out/ERC6551AccountUpgradeable.sol/ERC6551AccountUpgradeable.json");
+            console.log("ERC6551 Account Implementation", erc6551AccountImplementation);
+            erc6551AccountProxy = deployCode(
+                "lib/erc6551/out/ERC6551AccountProxy.sol/ERC6551AccountProxy.json",
+                abi.encode(erc6551AccountImplementation)
+            );
+            console.log("ERC6551 Account Proxy", erc6551AccountProxy);
+
             //////////////////////////////////////////////////////////////////////
             // DEPLOY TEST ERC20 TOKEN
             //////////////////////////////////////////////////////////////////////
@@ -191,6 +216,7 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
 
             vm.startBroadcast(alice);
+            {
             uint256 pAlice = profile.mint(
                 "Alice",
                 "Hi, I am Alice, a super cool influencer",
@@ -198,17 +224,24 @@ contract DeployScript is Script {
                 "https://example.com"
             );
 
-            // TODO use tokenbound account to mint subscription
-            address aliceSubscription1 = subHandle.mint("Tier 1 Sub", "SUBt1", metadata, settings);
+            address pAliceAccount =
+                erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pAlice);
 
+            address aliceSubscription1 = createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+
+            require(
+                subHandle.ownerOf(uint256(uint160(aliceSubscription1))) == pAliceAccount,
+                "ERC6551 account not the owner"
+            );
+            }
             vm.stopBroadcast();
-
 
             //////////////////////////////////////////////////////////////////////
             // BOB's TEST DATA
             //////////////////////////////////////////////////////////////////////
 
             vm.startBroadcast(bob);
+            {
             uint256 pBob = profile.mint(
                 "Bob",
                 "Hi, I am Bob, a super cool influencer",
@@ -216,17 +249,20 @@ contract DeployScript is Script {
                 "https://example.com"
             );
 
-            // TODO use tokenbound account to mint subscription
-            address bobSubscription1 = subHandle.mint("Tier 1 Sub", "SUBt1", metadata, settings);
+            address pBobAccount =
+                erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pBob);
+
+            createSubscriptionPlanWithErc6551(pBobAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+            }
 
             vm.stopBroadcast();
-
 
             //////////////////////////////////////////////////////////////////////
             // CHARLIE's TEST DATA
             //////////////////////////////////////////////////////////////////////
 
             vm.startBroadcast(charlie);
+            {
             uint256 pCharlie = profile.mint(
                 "Charlie",
                 "Hi, I am Charlie, a super cool influencer",
@@ -234,10 +270,22 @@ contract DeployScript is Script {
                 "https://example.com"
             );
 
-            address charlieSubscription1 = subHandle.mint("Tier 1 Sub", "SUBt1", metadata, settings);
+            address pCharlieAccount =
+                erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pCharlie);
 
+            createSubscriptionPlanWithErc6551(pCharlieAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+            }
             vm.stopBroadcast();
 
+            //////////////////////////////////////////////////////////////////////
+            // DORA's TEST DATA
+            //////////////////////////////////////////////////////////////////////
+
+            vm.startBroadcast(dora);
+
+            subHandle.mint("Dora's Tier 1 Sub", "SUBt1", metadata, settings);
+
+            vm.stopBroadcast();
         }
 
         // if (vm.envOr("DEPLOY_TEST_TOKEN", false)) {
@@ -274,5 +322,23 @@ contract DeployScript is Script {
             }
         }
         revert("ProxyAdmin address not found");
+    }
+
+    function createSubscriptionPlanWithErc6551(
+        address acc,
+        string memory _name,
+        string memory _symbol,
+        MetadataStruct memory _metadata,
+        SubSettings memory _settings
+    ) private returns (address) {
+        IERC6551Executable executableAccount = IERC6551Executable(acc);
+
+        bytes memory result = executableAccount.execute(
+            address(subHandle),
+            0,
+            abi.encodeWithSelector(SubscriptionHandle.mint.selector, _name, _symbol, _metadata, _settings),
+            0
+        );
+        return abi.decode(result, (address));
     }
 }

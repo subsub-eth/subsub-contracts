@@ -6,4 +6,7 @@ libs = ['lib']
 # TODO mind PUSH0 when deploying
 solc= '0.8.20'
 
+# allow disk reads to read pre-compiled contracts
+fs_permissions = [{ access = "read", path = "./"}]
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
