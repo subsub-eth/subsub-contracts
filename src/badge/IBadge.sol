@@ -4,8 +4,7 @@ pragma solidity ^0.8.20;
 import {IMintAllowedUpgradeable} from "../IMintAllowedUpgradeable.sol";
 
 import {IERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/IERC1155.sol";
-import {IERC1155MetadataURI} from
-    "openzeppelin-contracts/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
+import {IERC1155MetadataURI} from "openzeppelin-contracts/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol";
 
 struct TokenData {
     string name;
@@ -24,6 +23,10 @@ interface IBadgeOperations {
     function burn(address account, uint256 id, uint256 value) external;
 
     function burnBatch(address account, uint256[] memory ids, uint256[] memory values) external;
+}
+
+interface IBadgeProperties {
+    function latestId() external returns (uint256);
 }
 
 interface IBadgeCreation {

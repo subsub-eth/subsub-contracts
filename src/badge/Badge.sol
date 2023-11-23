@@ -98,8 +98,11 @@ contract Badge is
     }
 
     function exists(uint256 id) public view override returns (bool) {
-        // TODO find better implementation
-        return _tokenData[id].maxSupply > 0;
+        return id < _nextId && id > 0;
+    }
+
+    function latestId() external returns (uint256) {
+        return _nextId - 1;
     }
 
     function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
