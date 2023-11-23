@@ -12,6 +12,8 @@ interface IMintAllowedUpgradeable is IMintAllowedEvents {
 
     function isMintAllowed(address minter, uint256 id) external view returns (bool);
 
+    function getMinters(uint256 id) external view returns (address[] memory);
+
     function freezeMintAllowed(uint256 id) external;
 
     function isMintAllowedFrozen(uint256 id) external view returns (bool);

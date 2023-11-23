@@ -44,6 +44,10 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
         return $._mintAllowed[id][minter];
     }
 
+    function getMinters(uint256 id) external view returns (address[] memory) {
+      revert("Not Implemented");
+    }
+
     function freezeMintAllowed(uint256 id) external {
         require(_idExists(id), "MintAllowed: token does not exist");
         MintAllowedStorage storage $ = _getMintAllowedStorage();
