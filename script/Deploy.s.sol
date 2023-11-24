@@ -29,7 +29,11 @@ import "../src/subscription/handle/SubscriptionHandle.sol";
 import {BadgeHandle, UpgradeableBadgeHandle} from "../src/badge/handle/BadgeHandle.sol";
 import {Badge} from "../src/badge/Badge.sol";
 
+contract DeployDummy {}
+
 contract DeployScript is Script {
+    address private deployDummy;
+
     MetadataStruct private metadata;
     SubSettings private settings;
 
@@ -86,14 +90,18 @@ contract DeployScript is Script {
             // simple Test Deployment
 
             //////////////////////////////////////////////////////////////////////
+            // DEPLOY DEPLOY_DUMMY for chicken & egg proxy setups
+            //////////////////////////////////////////////////////////////////////
+
+            deployDummy = address(new DeployDummy());
+
+            //////////////////////////////////////////////////////////////////////
             // DEPLOY PROFILE
             //////////////////////////////////////////////////////////////////////
 
             Profile profileImplementation = new Profile();
             TransparentUpgradeableProxy profileProxy = new TransparentUpgradeableProxy(
-                address(profileImplementation),
-                deployer,
-                abi.encodeWithSignature("initialize()")
+                address(profileImplementation), deployer, abi.encodeWithSignature("initialize()")
             );
 
             address proxyAdminAddress;
@@ -115,17 +123,9 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
 
             {
-                address dummySubscriptionBeacon = address(new BadBeaconNotContract());
-
                 // Handling chicken & egg problem: handle + subscription reference each other
                 // create handle implementation with a dummy subscription beacon
-                UpgradeableSubscriptionHandle subHandleImpl =
-                    new UpgradeableSubscriptionHandle(address(dummySubscriptionBeacon));
-                TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(
-                address(subHandleImpl),
-                deployer,
-                abi.encodeWithSignature("initialize()")
-            );
+                TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(deployDummy, deployer, "");
 
                 address subHandleAdminAddress;
                 {
@@ -139,15 +139,16 @@ contract DeployScript is Script {
 
                 // create Subscription Implementation with a reference to the CORRECT handle proxy
                 Subscription subscriptionImplementation = new BlockSubscription(address(subHandle));
-                UpgradeableBeacon subscriptionBeacon = new UpgradeableBeacon(
-                  address(subscriptionImplementation),
-                  deployer
-                );
+                UpgradeableBeacon subscriptionBeacon =
+                    new UpgradeableBeacon(address(subscriptionImplementation), deployer);
 
                 // fix the handle => sub reference by upgrading the handle implementation with the correct beacon ref
-                subHandleImpl = new UpgradeableSubscriptionHandle(address(subscriptionBeacon));
+                UpgradeableSubscriptionHandle subHandleImpl =
+                    new UpgradeableSubscriptionHandle(address(subscriptionBeacon));
                 ProxyAdmin(subHandleAdminAddress).upgradeAndCall(
-                    ITransparentUpgradeableProxy(address(subHandleProxy)), address(subHandleImpl), ""
+                    ITransparentUpgradeableProxy(address(subHandleProxy)),
+                    address(subHandleImpl),
+                    abi.encodeWithSignature("initialize()")
                 );
 
                 console.log("SubHandle Implementation", address(subHandleImpl));
@@ -163,17 +164,10 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
 
             {
-                address dummyBadgeBeacon = address(new BadBeaconNotContract());
-
                 // Handling chicken & egg problem: handle + badge reference each other
                 // create handle implementation with a dummy badge beacon
-                UpgradeableBadgeHandle badgeHandleImpl =
-                    new UpgradeableBadgeHandle(address(dummyBadgeBeacon));
-                TransparentUpgradeableProxy badgeHandleProxy = new TransparentUpgradeableProxy(
-                    address(badgeHandleImpl),
-                    deployer,
-                    abi.encodeWithSignature("initialize()")
-                );
+                TransparentUpgradeableProxy badgeHandleProxy =
+                    new TransparentUpgradeableProxy(deployDummy, deployer, "");
 
                 address badgeHandleAdminAddress;
                 {
@@ -187,15 +181,14 @@ contract DeployScript is Script {
 
                 // create Badge Implementation with a reference to the CORRECT handle proxy
                 Badge badgeImplementation = new Badge(address(badgeHandle));
-                UpgradeableBeacon badgescriptionBeacon = new UpgradeableBeacon(
-                    address(badgeImplementation),
-                    deployer
-                );
+                UpgradeableBeacon badgescriptionBeacon = new UpgradeableBeacon(address(badgeImplementation), deployer);
 
                 // fix the handle => badge reference by upgrading the handle implementation with the correct beacon ref
-                badgeHandleImpl = new UpgradeableBadgeHandle(address(badgescriptionBeacon));
+                UpgradeableBadgeHandle badgeHandleImpl = new UpgradeableBadgeHandle(address(badgescriptionBeacon));
                 ProxyAdmin(badgeHandleAdminAddress).upgradeAndCall(
-                    ITransparentUpgradeableProxy(address(badgeHandleProxy)), address(badgeHandleImpl), ""
+                    ITransparentUpgradeableProxy(address(badgeHandleProxy)),
+                    address(badgeHandleImpl),
+                    abi.encodeWithSignature("initialize()")
                 );
 
                 console.log("BadgeHandle Implementation", address(badgeHandleImpl));
