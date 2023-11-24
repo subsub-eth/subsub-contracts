@@ -36,11 +36,16 @@ interface IBadgeCreation {
     // TODO edit token data?
 }
 
+interface IBadgeInitialize {
+  function initialize() external;
+}
+
 interface IBadge is
     IERC1155,
     IERC1155MetadataURI,
     IMintAllowedUpgradeable,
     IBadgeEvents,
     IBadgeOperations,
-    IBadgeCreation
+    IBadgeCreation,
+    IBadgeInitialize
 {}

@@ -5,6 +5,7 @@ import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol
 import {IERC721Enumerable} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 import {MetadataStruct, SubSettings} from "../ISubscription.sol";
+import {HasManagingHandle} from "../../handle/ManagingHandle.sol";
 
 // tokenID == address(subscriptionContract)
 // TODO add comments
@@ -20,11 +21,6 @@ interface SubscriptionFactory is SubscriptionHandleEvents {
         MetadataStruct calldata _metadata,
         SubSettings calldata _settings
     ) external returns (address);
-
-    // register an existing implementation
-    function register(address _contract) external;
-
-    function isManaged(uint256 tokenId) external view returns (bool);
 }
 
-interface ISubscriptionHandle is SubscriptionFactory, IERC721Enumerable {}
+interface ISubscriptionHandle is SubscriptionFactory, HasManagingHandle, IERC721Enumerable {}

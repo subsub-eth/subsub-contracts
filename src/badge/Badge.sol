@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "./IBadge.sol";
 
-import {OwnableByERC721Upgradeable} from "../OwnableByERC721Upgradeable.sol";
 import {MintAllowedUpgradeable} from "../MintAllowedUpgradeable.sol";
+import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
 
 import {ERC1155Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/ERC1155Upgradeable.sol";
 import {ERC1155BurnableUpgradeable} from
@@ -16,7 +16,7 @@ contract Badge is
     IBadge,
     ERC1155SupplyUpgradeable,
     ERC1155BurnableUpgradeable,
-    OwnableByERC721Upgradeable,
+    HandleOwned,
     MintAllowedUpgradeable
 {
     // TODO add royalties?
@@ -25,17 +25,16 @@ contract Badge is
 
     uint256 private _nextId;
 
-    constructor() {
+    constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
     }
 
-    function initialize(address profileContract, uint256 profileTokenId) external initializer {
+    function initialize() external initializer {
         __Context_init_unchained();
         __ERC165_init_unchained();
         __ERC1155_init_unchained("");
         __ERC1155Supply_init_unchained();
         __ERC1155Burnable_init_unchained();
-        __OwnableByERC721_init_unchained(profileContract, profileTokenId);
         __MintAllowedUpgradeable_init_unchained();
 
         _nextId = 1;
@@ -75,7 +74,7 @@ contract Badge is
         super.burnBatch(account, ids, values);
     }
 
-    function createToken(TokenData memory tokenData) external onlyOwnerOrApproved returns (uint256 id) {
+    function createToken(TokenData memory tokenData) external onlyOwner returns (uint256 id) {
         require(tokenData.maxSupply > 0, "Badge: new token maxSupply == 0");
 
         id = _nextId++;
@@ -88,7 +87,7 @@ contract Badge is
     function setMintAllowed(address minter, uint256 id, bool allow)
         public
         override(IMintAllowedUpgradeable, MintAllowedUpgradeable)
-        onlyOwnerOrApproved
+        onlyOwner
     {
         super.setMintAllowed(minter, id, allow);
     }

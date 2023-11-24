@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscriptionHandle} from "./ISubscriptionHandle.sol";
+import {IBadgeHandle} from "./IBadgeHandle.sol";
 import {HasFactory, Factory} from "./Factory.sol";
 import {HasContractRegistry, ContractRegistry} from "../../handle/ContractRegistry.sol";
 import {ManagingHandle} from "../../handle/ManagingHandle.sol";
-
-import {MetadataStruct, SubSettings} from "../ISubscription.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
@@ -17,32 +15,24 @@ import {ERC721BurnableUpgradeable} from
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
-abstract contract SubscriptionHandle is
+abstract contract BadgeHandle is
     Initializable,
     ContextUpgradeable,
-    ISubscriptionHandle,
+    IBadgeHandle,
     HasFactory,
     HasContractRegistry,
     ERC721BurnableUpgradeable,
     ERC721EnumerableUpgradeable
 {
-    // TODO deploy block and time based subs?
-    // TODO? store subscription contract in manager for validity check -> isManaged()?
-
-    function mint(
-        string calldata _name,
-        string calldata _symbol,
-        MetadataStruct calldata _metadata,
-        SubSettings calldata _settings
-    ) external returns (address) {
-        address addr = _deploySubscription(_name, _symbol, _metadata, _settings);
+    function mint() external returns (address) {
+        address addr = _deployBadge();
 
         require(_addToRegistry(addr, true), "Handle: Contract already added");
 
         uint256 tokenId = uint256(uint160(addr));
         _safeMint(_msgSender(), tokenId);
 
-        emit SubscriptionContractCreated(tokenId, addr);
+        emit BadgeContractCreated(tokenId, addr);
         return addr;
     }
 
@@ -74,7 +64,7 @@ abstract contract SubscriptionHandle is
     }
 }
 
-contract UpgradeableSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry, ManagingHandle {
+contract UpgradeableBadgeHandle is BadgeHandle, Factory, ContractRegistry, ManagingHandle {
     constructor(address beacon) Factory(beacon) {
         _disableInitializers();
     }
@@ -94,7 +84,7 @@ contract UpgradeableSubscriptionHandle is SubscriptionHandle, Factory, ContractR
 }
 
 // is not upgradeable
-contract SimpleSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry, ManagingHandle {
+contract SimpleBadgeHandle is BadgeHandle, Factory, ContractRegistry, ManagingHandle {
     constructor(address beacon) Factory(beacon) initializer {
         __Factory_init_unchained();
         __Context_init_unchained();

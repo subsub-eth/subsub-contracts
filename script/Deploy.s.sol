@@ -26,6 +26,8 @@ import "../src/subscription/ISubscription.sol";
 import "../src/subscription/Subscription.sol";
 import "../src/subscription/BlockSubscription.sol";
 import "../src/subscription/handle/SubscriptionHandle.sol";
+import {BadgeHandle, UpgradeableBadgeHandle} from "../src/badge/handle/BadgeHandle.sol";
+import {Badge} from "../src/badge/Badge.sol";
 
 contract DeployScript is Script {
     MetadataStruct private metadata;
@@ -45,6 +47,7 @@ contract DeployScript is Script {
 
     Profile private profile;
     SubscriptionHandle private subHandle;
+    BadgeHandle private badgeHandle;
 
     // ERC6551
     address constant erc6551RegistryAddress = 0x000000006551c19487814612e58FE06813775758;
@@ -111,47 +114,97 @@ contract DeployScript is Script {
             // DEPLOY SUBSCRIPTION + SUBSCRIPTION_HANDLE
             //////////////////////////////////////////////////////////////////////
 
-            address dummySubscriptionBeacon = address(new BadBeaconNotContract());
+            {
+                address dummySubscriptionBeacon = address(new BadBeaconNotContract());
 
-            // Handling chicken & egg problem: handle + subscription reference each other
-            // create handle implementation with a dummy subscription beacon
-            UpgradeableSubscriptionHandle subHandleImpl =
-                new UpgradeableSubscriptionHandle(address(dummySubscriptionBeacon));
-            TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(
+                // Handling chicken & egg problem: handle + subscription reference each other
+                // create handle implementation with a dummy subscription beacon
+                UpgradeableSubscriptionHandle subHandleImpl =
+                    new UpgradeableSubscriptionHandle(address(dummySubscriptionBeacon));
+                TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(
                 address(subHandleImpl),
                 deployer,
                 abi.encodeWithSignature("initialize()")
             );
 
-            address subHandleAdminAddress;
-            {
-                Vm.Log[] memory logs = vm.getRecordedLogs();
+                address subHandleAdminAddress;
+                {
+                    Vm.Log[] memory logs = vm.getRecordedLogs();
 
-                // get the ProxyAdmin address
-                subHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
+                    // get the ProxyAdmin address
+                    subHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
+                }
+
+                subHandle = SubscriptionHandle(address(subHandleProxy));
+
+                // create Subscription Implementation with a reference to the CORRECT handle proxy
+                Subscription subscriptionImplementation = new BlockSubscription(address(subHandle));
+                UpgradeableBeacon subscriptionBeacon = new UpgradeableBeacon(
+                  address(subscriptionImplementation),
+                  deployer
+                );
+
+                // fix the handle => sub reference by upgrading the handle implementation with the correct beacon ref
+                subHandleImpl = new UpgradeableSubscriptionHandle(address(subscriptionBeacon));
+                ProxyAdmin(subHandleAdminAddress).upgradeAndCall(
+                    ITransparentUpgradeableProxy(address(subHandleProxy)), address(subHandleImpl), ""
+                );
+
+                console.log("SubHandle Implementation", address(subHandleImpl));
+                console.log("SubHandle Proxy Admin", subHandleAdminAddress);
+                console.log("SubHandle Proxy Contract", address(subHandle));
+
+                console.log("Subscription Implementation", address(subscriptionImplementation));
+                console.log("Subscription Beacon", address(subscriptionBeacon));
             }
 
-            subHandle = SubscriptionHandle(address(subHandleProxy));
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY BADGE + BADGE HANDLE
+            //////////////////////////////////////////////////////////////////////
 
-            // create Subscription Implementation with a reference to the CORRECT handle proxy
-            Subscription subscriptionImplementation = new BlockSubscription(address(subHandle));
-            UpgradeableBeacon subscriptionBeacon = new UpgradeableBeacon(
-            address(subscriptionImplementation),
-            deployer
-        );
+            {
+                address dummyBadgeBeacon = address(new BadBeaconNotContract());
 
-            // fix the handle => sub reference by upgrading the handle implementation with the corrent beacon ref
-            subHandleImpl = new UpgradeableSubscriptionHandle(address(subscriptionBeacon));
-            ProxyAdmin(subHandleAdminAddress).upgradeAndCall(
-                ITransparentUpgradeableProxy(address(subHandleProxy)), address(subHandleImpl), ""
-            );
+                // Handling chicken & egg problem: handle + badge reference each other
+                // create handle implementation with a dummy badge beacon
+                UpgradeableBadgeHandle badgeHandleImpl =
+                    new UpgradeableBadgeHandle(address(dummyBadgeBeacon));
+                TransparentUpgradeableProxy badgeHandleProxy = new TransparentUpgradeableProxy(
+                    address(badgeHandleImpl),
+                    deployer,
+                    abi.encodeWithSignature("initialize()")
+                );
 
-            console.log("SubHandle Implementation", address(subHandleImpl));
-            console.log("SubHandle Proxy Admin", subHandleAdminAddress);
-            console.log("SubHandle Proxy Contract", address(subHandle));
+                address badgeHandleAdminAddress;
+                {
+                    Vm.Log[] memory logs = vm.getRecordedLogs();
 
-            console.log("Subscription Implementation", address(subscriptionImplementation));
-            console.log("Subscription Beacon", address(subscriptionBeacon));
+                    // get the ProxyAdmin address
+                    badgeHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
+                }
+
+                badgeHandle = BadgeHandle(address(badgeHandleProxy));
+
+                // create Badge Implementation with a reference to the CORRECT handle proxy
+                Badge badgeImplementation = new Badge(address(badgeHandle));
+                UpgradeableBeacon badgescriptionBeacon = new UpgradeableBeacon(
+                    address(badgeImplementation),
+                    deployer
+                );
+
+                // fix the handle => badge reference by upgrading the handle implementation with the correct beacon ref
+                badgeHandleImpl = new UpgradeableBadgeHandle(address(badgescriptionBeacon));
+                ProxyAdmin(badgeHandleAdminAddress).upgradeAndCall(
+                    ITransparentUpgradeableProxy(address(badgeHandleProxy)), address(badgeHandleImpl), ""
+                );
+
+                console.log("BadgeHandle Implementation", address(badgeHandleImpl));
+                console.log("BadgeHandle Proxy Admin", badgeHandleAdminAddress);
+                console.log("BadgeHandle Proxy Contract", address(badgeHandle));
+
+                console.log("Badge Implementation", address(badgeImplementation));
+                console.log("Badge Beacon", address(badgescriptionBeacon));
+            }
 
             // end test deployment
             vm.stopBroadcast();

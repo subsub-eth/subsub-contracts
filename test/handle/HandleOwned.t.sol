@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/subscription/HandleOwned.sol";
+import "../../src/handle/HandleOwned.sol";
 
 import {ERC721Mock} from "../mocks/ERC721Mock.sol";
 

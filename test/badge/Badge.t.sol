@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/badge/Badge.sol";
 import "../../src/badge/IBadge.sol";
+import "../../src/badge/handle/BadgeHandle.sol";
 
 import {ERC721Mock} from "../mocks/ERC721Mock.sol";
 
@@ -13,6 +14,8 @@ contract BadgeTest is Test, IBadgeEvents {
     ERC1967Proxy public proxy;
     Badge public implementation;
     Badge public badge;
+
+    SimpleBadgeHandle public handle;
 
     ERC721Mock public erc721Token;
 
@@ -32,17 +35,22 @@ contract BadgeTest is Test, IBadgeEvents {
         alice = address(298732);
         bob = address(248999423);
 
-        erc721Token = new ERC721Mock("test", "test");
+        // erc721Token = new ERC721Mock("test", "test");
+        //
+        // erc721Token.mint(owner, ownerTokenId);
 
-        erc721Token.mint(owner, ownerTokenId);
+        handle = new SimpleBadgeHandle(address(0));
 
-        implementation = new Badge();
+        implementation = new Badge(address(handle));
 
         proxy = new ERC1967Proxy(address(implementation), "");
 
         badge = Badge(address(proxy));
 
-        badge.initialize(address(erc721Token), ownerTokenId);
+        badge.initialize();
+
+        vm.prank(owner);
+        handle.register(address(badge));
     }
 
     function createToken(uint256 maxSupply) private returns (uint256) {

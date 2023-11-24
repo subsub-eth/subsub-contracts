@@ -12,7 +12,7 @@ import {UserData, HasUserData} from "./UserData.sol";
 import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
 import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";
 import {Metadata, HasMetadata} from "./Metadata.sol";
-import {HandleOwned, HasHandleOwned} from "./HandleOwned.sol";
+import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
 
 import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 

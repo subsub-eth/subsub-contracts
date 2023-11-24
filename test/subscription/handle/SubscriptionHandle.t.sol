@@ -41,6 +41,14 @@ contract TestSubscriptionHandle is SubscriptionHandle {
         registry[addr].managed = managed;
     }
 
+    function register(address) external pure {
+        revert("Not implemented for test");
+    }
+
+    function isManaged(uint256) external pure returns (bool) {
+        revert("Not implemented for test");
+    }
+
     function _deploySubscription(string calldata _name, string calldata, MetadataStruct calldata, SubSettings calldata)
         internal
         view
