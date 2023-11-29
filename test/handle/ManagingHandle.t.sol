@@ -12,10 +12,7 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 interface MintingEvent {
-
-  event Minted(
-    address indexed to, uint256 indexed tokenId
-  );
+    event Minted(address indexed to, uint256 indexed tokenId);
 }
 
 contract TestManagingHandle is ManagingHandle, MintingEvent {
@@ -28,7 +25,6 @@ contract TestManagingHandle is ManagingHandle, MintingEvent {
 
     using Strings for string;
 
-
     function _addToRegistry(address addr, bool isManaged) internal override returns (bool set) {
         set = !registry[addr].set;
         registry[addr].set = true;
@@ -39,13 +35,17 @@ contract TestManagingHandle is ManagingHandle, MintingEvent {
         return registry[addr].managed;
     }
 
+    function _isRegistered(address addr) internal view override returns (bool) {
+        return registry[addr].set;
+    }
+
     function _safeMint(address to, uint256 tokenId, bytes memory) internal override {
-      emit Minted(to, tokenId);
+        emit Minted(to, tokenId);
     }
 
     function setManaged(address addr, bool isManaged) public {
-      registry[addr].set = true;
-      registry[addr].managed = isManaged;
+        registry[addr].set = true;
+        registry[addr].managed = isManaged;
     }
 }
 
@@ -59,7 +59,6 @@ contract ManagingHandleTest is Test, MintingEvent {
         user = address(10001);
     }
 
-
     function testRegister(address addr) public {
         vm.startPrank(user); // not a contract!
 
@@ -68,8 +67,9 @@ contract ManagingHandleTest is Test, MintingEvent {
         vm.expectEmit();
         emit Minted(user, tokenId);
 
-        handle.register(addr);
+        uint256 result = handle.register(addr);
         assertFalse(handle.isManaged(tokenId), "registered contract marked as unmanaged");
+        assertEq(tokenId, result, "returned tokenId is not the address");
     }
 
     function testRegister_twice(address addr) public {
@@ -93,6 +93,26 @@ contract ManagingHandleTest is Test, MintingEvent {
     function testManaged_largeValue(uint256 tokenId) public {
         tokenId = bound(tokenId, uint256(type(uint160).max) + 1, type(uint256).max);
 
-        assertFalse(handle.isManaged(tokenId), "out of bounds tokenId is always false");
+        vm.expectRevert();
+        handle.isManaged(tokenId);
+    }
+
+    function testContractOf(uint160 tokenId) public {
+        uint256 tId = uint256(tokenId);
+        handle.register(address(tokenId));
+
+        assertEq(handle.contractOf(tId), address(tokenId), "id is not the contract address");
+    }
+
+    function testContractOf_notRegistered(uint256 tokenId) public {
+        vm.expectRevert();
+        handle.contractOf(tokenId);
+    }
+
+    function testContractOf_largeValue(uint256 tokenId) public {
+        tokenId = bound(tokenId, uint256(type(uint160).max) + 1, type(uint256).max);
+
+        vm.expectRevert();
+        handle.contractOf(tokenId);
     }
 }

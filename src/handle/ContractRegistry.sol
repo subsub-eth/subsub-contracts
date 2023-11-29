@@ -7,6 +7,8 @@ abstract contract HasContractRegistry {
     function _addToRegistry(address addr, bool isManaged) internal virtual returns (bool);
 
     function _isManaged(address addr) internal view virtual returns (bool);
+
+    function _isRegistered(address addr) internal view virtual returns (bool);
 }
 
 abstract contract ContractRegistry is Initializable, HasContractRegistry {
@@ -44,6 +46,12 @@ abstract contract ContractRegistry is Initializable, HasContractRegistry {
 
     function _isManaged(address addr) internal view override returns (bool) {
         ContractRegistryStorage storage $ = _getContractRegistryStorage();
+        require(($._registry[addr] & 1) == 1, "not registered");
         return $._registry[addr] == 3;
+    }
+
+    function _isRegistered(address addr) internal view override returns (bool) {
+        ContractRegistryStorage storage $ = _getContractRegistryStorage();
+        return ($._registry[addr] & 1) == 1;
     }
 }

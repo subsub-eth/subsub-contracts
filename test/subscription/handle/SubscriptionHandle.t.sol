@@ -37,16 +37,24 @@ contract TestSubscriptionHandle is SubscriptionHandle {
         return registry[addr].managed;
     }
 
+    function _isRegistered(address addr) internal view override returns (bool) {
+        return registry[addr].set;
+    }
+
     function setManaged(address addr, bool managed) external {
         registry[addr].managed = managed;
     }
 
-    function register(address) external pure {
+    function register(address) external pure returns (uint256) {
         revert("Not implemented for test");
     }
 
     function isManaged(uint256 tokenId) external view returns (bool) {
         return _isManaged(address(uint160(tokenId)));
+    }
+
+    function contractOf(uint256 tokenId) external view returns (address) {
+        revert("not implemented");
     }
 
     function _deploySubscription(string calldata _name, string calldata, MetadataStruct calldata, SubSettings calldata)
