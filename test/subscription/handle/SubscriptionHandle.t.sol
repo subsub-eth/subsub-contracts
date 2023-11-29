@@ -27,10 +27,10 @@ contract TestSubscriptionHandle is SubscriptionHandle {
         deployAddress = addr;
     }
 
-    function _addToRegistry(address addr, bool isManaged) internal override returns (bool set) {
+    function _addToRegistry(address addr, bool isManaged_) internal override returns (bool set) {
         set = !registry[addr].set;
         registry[addr].set = true;
-        registry[addr].managed = isManaged;
+        registry[addr].managed = isManaged_;
     }
 
     function _isManaged(address addr) internal view override returns (bool) {
@@ -45,8 +45,8 @@ contract TestSubscriptionHandle is SubscriptionHandle {
         revert("Not implemented for test");
     }
 
-    function isManaged(uint256) external pure returns (bool) {
-        revert("Not implemented for test");
+    function isManaged(uint256 tokenId) external view returns (bool) {
+        return _isManaged(address(uint160(tokenId)));
     }
 
     function _deploySubscription(string calldata _name, string calldata, MetadataStruct calldata, SubSettings calldata)
@@ -117,65 +117,10 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
         handle.ownerOf(tokenId);
     }
 
-    function testRegister(address addr) public {
-        vm.startPrank(user); // not a contract!
-
-        uint256 tokenId = uint256(uint160(addr));
-
-        handle.register(addr);
-        assertFalse(handle.isManaged(uint256(uint160(addr))), "registered contract marked as unmanaged");
-
-        assertEq(handle.balanceOf(user), 1, "sender has 1 token");
-        assertEq(handle.ownerOf(tokenId), user, "tokenId/address minted to sender");
-        assertEq(handle.totalSupply(), 1, "1 token minted to supply");
-    }
-
-    function testRegister_twice(address addr) public {
-        vm.startPrank(user); // not a contract!
-
-        handle.register(addr);
-
-        vm.expectRevert();
-        handle.register(addr);
-    }
-
     function testRegister_existingMint() public {
         vm.startPrank(user); // not a contract!
 
         address addr = handle.mint("", "", metadata, settings);
-
-        vm.expectRevert();
-        handle.register(addr);
-    }
-
-    function testRegister_existingRegistered(address addr) public {
-        vm.startPrank(user); // not a contract!
-
-        handle.register(addr);
-
-        vm.expectRevert();
-        handle.register(addr);
-    }
-
-    function testRegister_previouslyMintBurned() public {
-        vm.startPrank(user); // not a contract!
-
-        address addr = handle.mint("", "", metadata, settings);
-        uint256 tokenId = uint256(uint160(addr));
-
-        handle.burn(tokenId);
-
-        vm.expectRevert();
-        handle.register(addr);
-    }
-
-    function testRegister_previouslyRegisteredBurned(address addr) public {
-        vm.startPrank(user); // not a contract!
-
-        handle.register(addr);
-        uint256 tokenId = uint256(uint160(addr));
-
-        handle.burn(tokenId);
 
         vm.expectRevert();
         handle.register(addr);

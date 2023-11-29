@@ -6,11 +6,13 @@ import "../../src/badge/Badge.sol";
 import "../../src/badge/IBadge.sol";
 import "../../src/badge/handle/BadgeHandle.sol";
 
+import {HandleOwnedErrors} from "../../src/handle/HandleOwned.sol";
+
 import {ERC721Mock} from "../mocks/ERC721Mock.sol";
 
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract BadgeTest is Test, IBadgeEvents {
+contract BadgeTest is Test, IBadgeEvents, HandleOwnedErrors {
     ERC1967Proxy public proxy;
     Badge public implementation;
     Badge public badge;
@@ -84,7 +86,7 @@ contract BadgeTest is Test, IBadgeEvents {
     function testCreateToken_onlyOwner() public {
         TokenData memory td = TokenData("something", 1);
 
-        vm.expectRevert("Ownable: caller is not owner or approved");
+        vm.expectRevert(abi.encodeWithSelector(UnauthorizedAccount.selector, address(this)));
         badge.createToken(td);
     }
 
