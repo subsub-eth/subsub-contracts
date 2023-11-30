@@ -2,7 +2,6 @@
 
 ## Open TODOs
 
-- support ERC6551 isValidSigner in HandleOwnable
 - Badge: move members into a Storage
 - merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
 - use a combined storage for subscription instead of each mixin having its own, gas optimiziation?
