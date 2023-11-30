@@ -12,21 +12,32 @@ import {ERC1155BurnableUpgradeable} from
 import {ERC1155SupplyUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
-contract Badge is
-    IBadge,
-    ERC1155SupplyUpgradeable,
-    ERC1155BurnableUpgradeable,
-    HandleOwned,
-    MintAllowedUpgradeable
-{
-    // TODO add royalties?
+contract Badge is IBadge, ERC1155SupplyUpgradeable, ERC1155BurnableUpgradeable, HandleOwned, MintAllowedUpgradeable {
+    struct BadgeStorage {
+        mapping(uint256 => TokenData) _tokenData;
+        uint256 _nextId;
+    }
 
-    mapping(uint256 => TokenData) private _tokenData;
-
-    uint256 private _nextId;
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.Badge")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant BadgeStorageLocation = 0xaa7e2376624de49c82267d57e639d722ae9a855a54d0ae5f82e68b4011546300;
 
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
+    }
+
+    function _getBadgeStorage() private pure returns (BadgeStorage storage $) {
+        assembly {
+            $.slot := BadgeStorageLocation
+        }
+    }
+
+    function __BadgeUpgradeable_init() internal onlyInitializing {
+        __BadgeUpgradeable_init_unchained();
+    }
+
+    function __BadgeUpgradeable_init_unchained() internal onlyInitializing {
+        BadgeStorage storage $ = _getBadgeStorage();
+        $._nextId = 1;
     }
 
     function initialize() external initializer {
@@ -36,23 +47,25 @@ contract Badge is
         __ERC1155Supply_init_unchained();
         __ERC1155Burnable_init_unchained();
         __MintAllowedUpgradeable_init_unchained();
-
-        _nextId = 1;
+        __BadgeUpgradeable_init_unchained();
     }
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) external {
         _requireMintAllowed(id);
-        require(_tokenData[id].maxSupply - totalSupply(id) >= amount, "Badge: exceeds token's max supply");
+
+        BadgeStorage storage $ = _getBadgeStorage();
+        require($._tokenData[id].maxSupply - totalSupply(id) >= amount, "Badge: exceeds token's max supply");
         require(type(uint256).max - totalSupply() >= amount, "Badge: exceeds contract's max supply");
 
         _mint(to, id, amount, data);
     }
 
     function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external {
+        BadgeStorage storage $ = _getBadgeStorage();
         for (uint256 i = 0; i < ids.length; i++) {
             _requireMintAllowed(ids[i]);
             require(
-                _tokenData[ids[i]].maxSupply - totalSupply(ids[i]) >= amounts[i], "Badge: exceeds token's max supply"
+                $._tokenData[ids[i]].maxSupply - totalSupply(ids[i]) >= amounts[i], "Badge: exceeds token's max supply"
             );
             require(type(uint256).max - totalSupply() >= amounts[i], "Badge: exceeds contract's max supply");
         }
@@ -77,9 +90,11 @@ contract Badge is
     function createToken(TokenData memory tokenData) external onlyOwner returns (uint256 id) {
         require(tokenData.maxSupply > 0, "Badge: new token maxSupply == 0");
 
-        id = _nextId++;
+        BadgeStorage storage $ = _getBadgeStorage();
 
-        _tokenData[id] = tokenData;
+        id = $._nextId++;
+
+        $._tokenData[id] = tokenData;
 
         emit TokenCreated(_msgSender(), id);
     }
@@ -97,11 +112,13 @@ contract Badge is
     }
 
     function exists(uint256 id) public view override returns (bool) {
-        return id < _nextId && id > 0;
+        BadgeStorage storage $ = _getBadgeStorage();
+        return id < $._nextId && id > 0;
     }
 
-    function latestId() external returns (uint256) {
-        return _nextId - 1;
+    function latestId() external view returns (uint256) {
+        BadgeStorage storage $ = _getBadgeStorage();
+        return $._nextId - 1;
     }
 
     function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
