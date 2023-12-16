@@ -4,8 +4,8 @@
 
 - merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
 - use a combined storage for subscription instead of each mixin having its own, gas optimiziation?
+- Subscription: move state variables to storage structs
 - write individual mixin tests
-- change ERC721Ownable to ERC6551?!
 - "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
 - upgrade function / flow, migrating one token into another
 - refactor event deposited to spent amount?
