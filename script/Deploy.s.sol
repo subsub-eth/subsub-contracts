@@ -218,17 +218,15 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
             vm.startBroadcast(deployer);
 
-            address registry = address(new ERC6551Registry());
-            bytes memory code = registry.code;
-            address targetAddress = address(erc6551RegistryAddress);
-            vm.etch(targetAddress, code);
+            erc6551Registry = new ERC6551Registry();
 
-            console.log("nft account", erc6551Registry.account(alice, keccak256("blaa"), 1, address(profile), 2));
+            console.log("ERC6551 Registry", address(erc6551Registry));
 
             vm.stopBroadcast();
             //////////////////////////////////////////////////////////////////////
             // DEPLOY ERC6551 Account
             //////////////////////////////////////////////////////////////////////
+            vm.startBroadcast(deployer);
 
             // TODO FIXME
             erc6551AccountImplementation =
@@ -240,6 +238,7 @@ contract DeployScript is Script {
             );
             console.log("ERC6551 Account Proxy", erc6551AccountProxy);
 
+            vm.stopBroadcast();
             //////////////////////////////////////////////////////////////////////
             // DEPLOY TEST ERC20 TOKEN
             //////////////////////////////////////////////////////////////////////
@@ -267,7 +266,7 @@ contract DeployScript is Script {
                 uint256 pAlice = profile.mint(
                     "Alice",
                     "Hi, I am Alice, a super cool influencer",
-                    "https://example.com/profiles/alice.png",
+                    "https://picsum.photos/id/64/600.jpg",
                     "https://example.com"
                 );
 
@@ -295,7 +294,7 @@ contract DeployScript is Script {
                 uint256 pBob = profile.mint(
                     "Bob",
                     "Hi, I am Bob, a super cool influencer",
-                    "https://example.com/profiles/bob.png",
+                    "https://picsum.photos/id/91/600.jpg",
                     "https://example.com"
                 );
 
@@ -317,7 +316,7 @@ contract DeployScript is Script {
                 uint256 pCharlie = profile.mint(
                     "Charlie",
                     "Hi, I am Charlie, a super cool influencer",
-                    "https://example.com/profiles/charlie.png",
+                    "https://picsum.photos/id/399/600.jpg",
                     "https://example.com"
                 );
 
