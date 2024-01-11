@@ -276,6 +276,11 @@ contract DeployScript is Script {
                 address aliceSubscription1 =
                     createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
 
+                Subscription sub2 = Subscription(
+                    createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 2 Sub", "SUBt2", metadata, settings)
+                );
+                sub2.setFlags(3);
+
                 require(
                     subHandle.ownerOf(uint256(uint160(aliceSubscription1))) == pAliceAccount,
                     "ERC6551 account not the owner"
