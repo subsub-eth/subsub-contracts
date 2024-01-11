@@ -51,11 +51,11 @@ library ViewLib {
                     output,
                     ',{"trait_type":"claimable","value":"',
                     s.claimable().toString(),
-                    '"},{"trait_type":"depoists_claimed","value":"',
+                    '"},{"trait_type":"deposits_claimed","value":"',
                     s.claimedDeposits().toString(),
                     '"},{"trait_type":"tips_claimed","value":"',
                     s.claimedTips().toString(),
-                    '"},{"trait_type":"paused","value":"',
+                    '"},{"trait_type":"flags","value":"',
                     s.getFlags().toString(),
                     '"}'
                 )
