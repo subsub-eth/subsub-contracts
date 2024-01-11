@@ -62,7 +62,7 @@ contract DeployScript is Script {
 
     function setUp() public {
         metadata = MetadataStruct(
-            "You gain access to my heart", "https://example.com/profiles/peter-t1.png", "https://example.com"
+            "You gain access to my heart", "https://picsum.photos/800/600", "https://example.com"
         );
 
         settings.token = IERC20Metadata(address(1));
