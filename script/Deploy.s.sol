@@ -24,7 +24,7 @@ import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/Pro
 import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
 import "../src/subscription/Subscription.sol";
-import "../src/subscription/BlockSubscription.sol";
+import "../src/subscription/TimestampSubscription.sol";
 import "../src/subscription/handle/SubscriptionHandle.sol";
 import {BadgeHandle, UpgradeableBadgeHandle} from "../src/badge/handle/BadgeHandle.sol";
 import {Badge} from "../src/badge/Badge.sol";
@@ -66,9 +66,11 @@ contract DeployScript is Script {
         );
 
         settings.token = IERC20Metadata(address(1));
-        settings.rate = 1;
-        settings.lock = 0;
-        settings.epochSize = 100;
+
+        uint256 rate = 5 ether;
+        settings.rate = rate / 2592000; // $5 per month
+        settings.lock = 100;
+        settings.epochSize = 60 * 60;
         settings.maxSupply = 10_000;
     }
 
@@ -138,7 +140,7 @@ contract DeployScript is Script {
                 subHandle = SubscriptionHandle(address(subHandleProxy));
 
                 // create Subscription Implementation with a reference to the CORRECT handle proxy
-                Subscription subscriptionImplementation = new BlockSubscription(address(subHandle));
+                Subscription subscriptionImplementation = new TimestampSubscription(address(subHandle));
                 UpgradeableBeacon subscriptionBeacon =
                     new UpgradeableBeacon(address(subscriptionImplementation), deployer);
 
