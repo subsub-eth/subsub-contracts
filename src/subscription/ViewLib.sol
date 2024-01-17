@@ -22,15 +22,15 @@ library ViewLib {
                 abi.encodePacked(
                     '{"trait_type":"token","value":"',
                     address(token).toHexString(),
-                    '"},{"trait_type":"rate","value":',
+                    '"},{"trait_type":"rate","value":"',
                     rate.toString(),
-                    '},{"trait_type":"lock","value":',
+                    '"},{"trait_type":"lock","value":',
                     lock.toString(),
                     '},{"trait_type":"epoch_size","value":',
                     epochSize.toString(),
-                    '},{"trait_type":"max_supply","value":',
+                    '},{"trait_type":"max_supply","value":"',
                     maxSupply.toString(),
-                    "}"
+                    '"}'
                 )
             );
         }
