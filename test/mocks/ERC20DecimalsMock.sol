@@ -8,7 +8,7 @@ import {ERC20DecimalsMock as ERC20DecMock} from "openzeppelin-contracts/contract
 contract ERC20DecimalsMock is ERC20DecMock {
     constructor(uint8 decimals_)
         ERC20DecMock(decimals_)
-        ERC20("testUSD", "Test Dollars")
+        ERC20("Test Dollars", "testUSD")
     {}
 
     function mint(address account, uint256 amount) external {
