@@ -5,6 +5,8 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 import {IERC721Metadata} from
     "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import {IERC721Enumerable} from
+    "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IERC4906} from "openzeppelin-contracts/contracts/interfaces/IERC4906.sol";
 
 interface SubscriptionEvents {
@@ -124,6 +126,7 @@ interface SubscriptionInitialize {
 interface ISubscription is
     IERC721,
     IERC721Metadata,
+    IERC721Enumerable,
     IERC4906,
     Subscribable,
     Claimable,

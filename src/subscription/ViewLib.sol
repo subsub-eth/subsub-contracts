@@ -55,6 +55,10 @@ library ViewLib {
                     s.claimedDeposits().toString(),
                     '"},{"trait_type":"tips_claimed","value":"',
                     s.claimedTips().toString(),
+                    '"},{"trait_type":"total_supply","value":"',
+                    s.totalSupply().toString(),
+                    '"},{"trait_type":"active_shares","value":"',
+                    s.activeSubShares().toString(),
                     '"},{"trait_type":"flags","value":"',
                     s.getFlags().toString(),
                     '"}'

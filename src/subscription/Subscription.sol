@@ -127,7 +127,7 @@ abstract contract Subscription is
     }
 
     function activeSubShares() external view returns (uint256) {
-        return _getActiveSubShares();
+        return _activeSubShares();
     }
 
     function tokenURI(uint256 tokenId)

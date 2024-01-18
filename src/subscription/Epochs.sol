@@ -20,7 +20,7 @@ abstract contract HasEpochs {
 
     function _currentEpoch() internal view virtual returns (uint256);
 
-    function _getActiveSubShares() internal view virtual returns (uint256);
+    function _activeSubShares() internal view virtual returns (uint256);
 
     function _claimed() internal view virtual returns (uint256);
 
@@ -90,14 +90,25 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return _now() / $._epochSize;
     }
 
-    function _getActiveSubShares() internal view override returns (uint256) {
-        EpochsStorage storage $ = _getEpochsStorage();
-        return $._activeSubShares;
-    }
-
     function _claimed() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
         return $._claimed;
+    }
+
+    function _activeSubShares() internal view override returns (uint256) {
+        EpochsStorage storage $ = _getEpochsStorage();
+        uint256 currentEpoch = _currentEpoch();
+        uint256 _activeSubs = $._activeSubShares;
+
+        for (uint256 i = _lastProcessedEpoch(); i < currentEpoch; i++) {
+            // remove subs expiring in this epoch
+            _activeSubs -= $._epochs[i].expiring;
+            _activeSubs += $._epochs[i].starting;
+        }
+
+        // add most recent starting subs, being optimistic
+        _activeSubs += $._epochs[currentEpoch].starting;
+        return _activeSubs;
     }
 
     function _lastProcessedEpoch() private view returns (uint256 i) {

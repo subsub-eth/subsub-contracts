@@ -61,4 +61,6 @@ contract EpochsTest is Test {
     function testClaimed_atInit() public {
         assertEq(0, e.claimed(), "initialized at 0");
     }
+
+    // TODO activeSubs test
 }
