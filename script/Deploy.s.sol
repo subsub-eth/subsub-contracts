@@ -11,6 +11,8 @@ import {IERC6551Executable} from "erc6551/interfaces/IERC6551Executable.sol";
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {DummyPriceFeed} from "../test/mocks/DummyPriceFeed.sol";
+
 import {BadBeaconNotContract} from "openzeppelin-contracts/contracts/mocks/proxy/BadBeacon.sol";
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -61,9 +63,7 @@ contract DeployScript is Script {
     address private erc6551AccountProxy;
 
     function setUp() public {
-        metadata = MetadataStruct(
-            "You gain access to my heart", "https://picsum.photos/800/600", "https://example.com"
-        );
+        metadata = MetadataStruct("You gain access to my heart", "https://picsum.photos/800/600", "https://example.com");
 
         settings.token = IERC20Metadata(address(1));
 
@@ -257,6 +257,21 @@ contract DeployScript is Script {
             testUsd.mint(charlie, 100_000 ether);
             testUsd.mint(dora, 100_000 ether);
 
+            vm.stopBroadcast();
+
+            //////////////////////////////////////////////////////////////////////
+            // DEPLOY TEST CHAINLINK FEED REGISTRY
+            //////////////////////////////////////////////////////////////////////
+
+            vm.startBroadcast(deployer);
+
+            {
+                uint8 decimals = 8;
+                DummyPriceFeed priceFeed = new DummyPriceFeed(decimals);
+                console.log("TestUSD Price Feed", address(priceFeed));
+
+                priceFeed.setAnswer(99860888);
+            }
             vm.stopBroadcast();
 
             //////////////////////////////////////////////////////////////////////

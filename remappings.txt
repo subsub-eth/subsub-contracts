@@ -5,3 +5,4 @@ erc6551/=lib/erc6551/src/
 forge-std/=lib/forge-std/src/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
+chainlink/=lib/chainlink/contracts/src/v0.8/
