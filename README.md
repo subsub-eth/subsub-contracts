@@ -27,13 +27,46 @@ interface as an example for your own community.
 
 We do not charge any fees.
 
+## Development
+
+The project uses foundry for compiling, testing, and deployment of contracts.
+PNPM and typechain are used to generate typescript types that are published to
+the NPM registry. These are used in the frontend.
+
+Building:
+
+```
+forge clean
+forge build --sizes
+```
+
+Testing:
+
+```
+forge test -vv
+```
+
+Local test deployment:
+
+```
+anvil &
+pnpm run deploy-local
+```
+
+The local test deployment uses anvil's default test mnemonic to deploy the
+system contracts, test tokens, public infrastructure, and some test data.
+Relevant contracts are printed as logs
+
 ## Open TODOs
 
-- merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
-- use a combined storage for subscription instead of each mixin having its own, gas optimiziation?
+- merge: separate funds that are accumulated in the current sub and funds merged
+  in, enable via flag
+- use a combined storage for subscription instead of each mixin having its own,
+  gas optimiziation?
 - Subscription: move state variables to storage structs
 - write individual mixin tests
-- "upgrade"/migrate to other subscription: separate migrated funds from accumulated ones, enable via flag
+- "upgrade"/migrate to other subscription: separate migrated funds from
+  accumulated ones, enable via flag
 - upgrade function / flow, migrating one token into another
 - refactor event deposited to spent amount?
 - define metadata
