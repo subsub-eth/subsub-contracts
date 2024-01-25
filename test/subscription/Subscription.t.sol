@@ -929,7 +929,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testClaim() public {
         uint256 tokenId = mintToken(alice, 1_000);
 
-        assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
+        assertEq(subscription.activeSubShares(), 100, "active subs become visible in current epoch");
         setCurrentTime(currentTime + (epochSize * 2));
 
         // partial epoch + complete epoch
@@ -953,7 +953,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testClaim_otherAccount() public {
         mintToken(alice, 1_000);
 
-        assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
+        assertEq(subscription.activeSubShares(), 100, "active subs become visible in current epoch");
         setCurrentTime(currentTime + (epochSize * 2));
 
         // partial epoch + complete epoch
@@ -986,7 +986,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.claim(owner);
 
         assertEq(testToken.balanceOf(owner), claimable, "claimable funds transferred to owner");
-        assertEq(subscription.activeSubShares(), 0, "active subscriptions not updated");
+        assertEq(subscription.activeSubShares(), 100, "active subscriptions stay visible until epoch ends");
 
         assertEq(subscription.deposited(tokenId), 1_000, "1000 tokens deposited");
     }
@@ -999,7 +999,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testClaim_nextEpoch() public {
         uint256 tokenId = mintToken(alice, 1_000);
 
-        assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
+        assertEq(subscription.activeSubShares(), 100, "active subs become visible in current epoch");
         setCurrentTime(currentTime + (epochSize * 2));
 
         // partial epoch + complete epoch
@@ -1039,7 +1039,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 funds = 100;
         uint256 tokenId = mintToken(alice, funds);
 
-        assertEq(subscription.activeSubShares(), 0, "active subs not updated in current epoch");
+        assertEq(subscription.activeSubShares(), 100, "active subs become visible in current epoch");
         setCurrentTime(currentTime + (epochSize * 3));
 
         assertFalse(subscription.isActive(tokenId), "Subscription inactive");
