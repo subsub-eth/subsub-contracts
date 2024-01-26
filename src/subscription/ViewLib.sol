@@ -36,14 +36,7 @@ library ViewLib {
         }
 
         {
-            output = string(
-                abi.encodePacked(
-                    output,
-                    ',{"trait_type":"owner","value":"',
-                    s.owner().toHexString(),
-                    '"}'
-                )
-            );
+            output = string(abi.encodePacked(output, ',{"trait_type":"owner","value":"', s.owner().toHexString(), '"}'));
         }
         {
             output = string(
@@ -94,7 +87,40 @@ library ViewLib {
 
     function tokenData(Subscription s, uint256 tokenId) public view returns (string memory) {
         // TODO mind changes to contract-wide metadata need to fire ERC4906 events
-        string memory output = Base64.encode(
+        string memory output;
+
+        {
+            output = string(
+                abi.encodePacked(
+                    '{"trait_type":"deposited","value":"',
+                    s.deposited(tokenId).toString(),
+                    '"},{"trait_type":"spent","value":"',
+                    s.spent(tokenId).toString(),
+                    '"},{"trait_type":"unspent","value":"',
+                    s.unspent(tokenId).toString(),
+                    '"},{"trait_type":"withdrawable","value":"',
+                    s.withdrawable(tokenId).toString(),
+                    '"},{"trait_type":"tips","value":"',
+                    s.tips(tokenId).toString(),
+                    '"}'
+                )
+            );
+        }
+
+        {
+            output = string(
+                abi.encodePacked(
+                    output,
+                    ',{"trait_type":"is_active","value":',
+                    s.isActive(tokenId) ? "true" : "false",
+                    '},{"trait_type":"expires_at","value":"',
+                    s.expiresAt(tokenId).toString(),
+                    '"}'
+                )
+            );
+        }
+
+        output = Base64.encode(
             bytes(
                 string(
                     abi.encodePacked(
@@ -108,11 +134,9 @@ library ViewLib {
                         '","image":"',
                         "",
                         '","external_url":"',
-                        '","attributes":[{"trait_type":"deposited","value":',
-                        s.deposited(tokenId).toString(),
-                        '},{"trait_type":"withdrawable","value":',
-                        s.withdrawable(tokenId).toString(),
-                        "}]}"
+                        '","attributes":[',
+                        output,
+                        "]}"
                     )
                 )
             )
