@@ -46,6 +46,7 @@ contract DeployScript is Script {
     address private bob;
     address private charlie;
     address private dora;
+    address private eve;
 
     ERC20DecimalsMock private testUsd;
 
@@ -214,6 +215,7 @@ contract DeployScript is Script {
             bob = vm.rememberKey(vm.deriveKey(anvilSeed, 2));
             charlie = vm.rememberKey(vm.deriveKey(anvilSeed, 3));
             dora = vm.rememberKey(vm.deriveKey(anvilSeed, 4));
+            eve = vm.rememberKey(vm.deriveKey(anvilSeed, 5));
 
             //////////////////////////////////////////////////////////////////////
             // DEPLOY ERC6551 REGISTRY
@@ -365,6 +367,22 @@ contract DeployScript is Script {
 
                 address[3] memory subs = [alice, bob, charlie];
                 subscribeTo(subs, plan, 10 ether);
+            }
+
+            //////////////////////////////////////////////////////////////////////
+            // EVE's TEST DATA
+            //////////////////////////////////////////////////////////////////////
+
+            {
+                vm.startBroadcast(eve);
+                profile.mint(
+                    "Eve",
+                    "Hi, I am Eve, a super cool influencer",
+                    "https://picsum.photos/id/1062/600.jpg",
+                    "https://example.com"
+                );
+
+                vm.stopBroadcast();
             }
         }
     }
