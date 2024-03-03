@@ -119,11 +119,11 @@ abstract contract Subscription is
     }
 
     function claimedDeposits() external view returns (uint256) {
-        return _claimed();
+        return _claimed().toExternal(_decimals());
     }
 
     function claimedTips() external view returns (uint256) {
-        return _claimedTips();
+        return _claimedTips().toExternal(_decimals());
     }
 
     function activeSubShares() external view returns (uint256) {
@@ -255,6 +255,10 @@ abstract contract Subscription is
 
     function isActive(uint256 tokenId) external view requireExists(tokenId) returns (bool) {
         return _isActive(tokenId);
+    }
+
+    function multiplier(uint256 tokenId) external view returns (uint24) {
+        return _multiplier(tokenId);
     }
 
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {

@@ -50,7 +50,7 @@ abstract contract HasUserData {
 
     function _totalDeposited(uint256 tokenId) internal view virtual returns (uint256);
 
-    function _multiplier(uint256 tokenId) internal view virtual returns (uint256);
+    function _multiplier(uint256 tokenId) internal view virtual returns (uint24);
 
     function _lastDepositedAt(uint256 tokenId) internal view virtual returns (uint256);
 
@@ -113,7 +113,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     function _expiresAt(uint256 tokenId) internal view override returns (uint256) {
         // a subscription is active form the starting time slot (including)
         // to the calculated ending time slot (excluding)
-        // active = [start, + deposit / rate)
+        // active = [start, + deposit / (rate * multiplier))
         UserDataStorage storage $ = _getUserDataStorage();
         uint256 lastDeposit = $._subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
@@ -216,7 +216,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         return $._subData[tokenId].totalDeposited;
     }
 
-    function _multiplier(uint256 tokenId) internal view override returns (uint256) {
+    function _multiplier(uint256 tokenId) internal view override returns (uint24) {
         UserDataStorage storage $ = _getUserDataStorage();
         return $._subData[tokenId].multiplier;
     }

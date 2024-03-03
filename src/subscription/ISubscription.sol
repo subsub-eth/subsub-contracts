@@ -51,13 +51,17 @@ interface SubscriptionMetadata {
 
 interface Subscribable is SubscriptionEvents {
     /// @notice adds deposits to an existing subscription token
+    // amount is based on the payment token decimals
     function renew(uint256 tokenId, uint256 amount, string calldata message) external;
 
+    // amount is based on the payment token decimals
     function withdraw(uint256 tokenId, uint256 amount) external;
 
     function cancel(uint256 tokenId) external;
 
     function isActive(uint256 tokenId) external view returns (bool);
+
+    function multiplier(uint256 tokenId) external view returns (uint24);
 
     function expiresAt(uint256 tokenId) external view returns (uint256);
 
@@ -75,6 +79,7 @@ interface Subscribable is SubscriptionEvents {
     function activeSubShares() external view returns (uint256);
 
     // adds funds to the subscription, but does not extend an active sub
+    // amount is based on the payment token decimals
     function tip(uint256 tokenId, uint256 amount, string calldata message) external;
 
     // returns the amount of tips ever sent to a subscription

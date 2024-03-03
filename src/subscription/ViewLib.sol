@@ -113,6 +113,8 @@ library ViewLib {
                     output,
                     ',{"trait_type":"is_active","value":',
                     s.isActive(tokenId) ? "true" : "false",
+                    '},{"trait_type":"multiplier","value":',
+                    uint256(s.multiplier(tokenId)).toString(),
                     '},{"trait_type":"expires_at","value":"',
                     s.expiresAt(tokenId).toString(),
                     '"}'
