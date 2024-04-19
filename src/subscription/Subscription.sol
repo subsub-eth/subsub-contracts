@@ -70,7 +70,6 @@ abstract contract Subscription is
     }
 
     modifier requireValidFlags(uint256 flags) {
-        require(flags > 0, "SUB: invalid settings");
         require(flags <= ALL_FLAGS, "SUB: invalid settings");
         _;
     }
@@ -96,10 +95,6 @@ abstract contract Subscription is
 
     function setFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
         _setFlags(flags);
-    }
-
-    function unsetFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
-        _unsetFlags(flags);
     }
 
     function setDescription(string calldata _description) external onlyOwner {

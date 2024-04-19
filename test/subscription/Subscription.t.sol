@@ -251,7 +251,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.mint(1, 100, "");
 
         vm.prank(owner);
-        subscription.unsetFlags(MINTING_PAUSED);
+        subscription.setFlags(0);
 
         mintToken(alice, 100);
     }
@@ -1089,7 +1089,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertTrue(subscription.flagsEnabled(flags), "flags set");
 
         vm.prank(owner);
-        subscription.unsetFlags(flags);
+        subscription.setFlags(0);
         assertFalse(subscription.flagsEnabled(flags), "flags not set");
     }
 
@@ -1099,32 +1099,9 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         subscription.setFlags(ALL_FLAGS + 1);
     }
 
-    function testSetFlags_invalid0() public {
-        vm.startPrank(owner);
-        vm.expectRevert("SUB: invalid settings");
-        subscription.setFlags(0);
-    }
-
     function testSetFlags_notOwner() public {
         vm.expectRevert();
         subscription.setFlags(0x1);
-    }
-
-    function testUnsetFlags_notOwner() public {
-        vm.expectRevert();
-        subscription.unsetFlags(0x1);
-    }
-
-    function testUnsetFlags_invalid() public {
-        vm.startPrank(owner);
-        vm.expectRevert("SUB: invalid settings");
-        subscription.unsetFlags(ALL_FLAGS + 1);
-    }
-
-    function testUnsetFlags_invalid0() public {
-        vm.startPrank(owner);
-        vm.expectRevert("SUB: invalid settings");
-        subscription.unsetFlags(0);
     }
 
     function testTip() public {

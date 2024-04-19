@@ -17,10 +17,6 @@ contract TestFlagSettings is FlagSettings {
         _setFlags(flags);
     }
 
-    function unsetFlags(uint256 flags) public {
-        _unsetFlags(flags);
-    }
-
     function withFlag() public whenEnabled(requiredFlags) {}
 
     function withoutFlag() public whenDisabled(requiredFlags) {}
@@ -43,17 +39,6 @@ contract FlagSettingsTest is Test {
         assertEq(fs.getFlags(), flags, "flags set");
     }
 
-    function testFuzz_UnsetGet(uint256 flags) public {
-        uint256 max = type(uint256).max;
-        fs.setFlags(max);
-
-        assertEq(fs.getFlags(), max, "all flags set");
-
-        fs.unsetFlags(flags);
-
-        assertEq(fs.getFlags(), ~flags, "flags unset");
-    }
-
     function testFuzz_FlagsEnabled(uint256 flags) public {
         flags = bound(flags, 1, type(uint256).max);
         assertFalse(fs.flagsEnabled(flags), "no flags set");
@@ -61,8 +46,11 @@ contract FlagSettingsTest is Test {
         fs.setFlags(flags);
         assertTrue(fs.flagsEnabled(flags), "flags enabled");
 
-        fs.setFlags(0xff);
-        assertTrue(fs.flagsEnabled(flags), "flags still enabled");
+        fs.setFlags(0xff | fs.getFlags());
+        assertTrue(fs.flagsEnabled(flags), "some flags added, flags still enabled");
+
+        fs.setFlags(type(uint256).max);
+        assertTrue(fs.flagsEnabled(flags), "all flags, flags still enabled");
     }
 
     function testFuzz_ModifiedSet(uint256 flags) public {

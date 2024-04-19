@@ -6,13 +6,10 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 interface FlagEvents {
     event FlagSet(address account, uint256 flag, uint256 newFlags);
-    event FlagUnset(address account, uint256 flag, uint256 newFlags);
 }
 
 abstract contract HasFlagSettings {
     function _setFlags(uint256 flags) internal virtual;
-
-    function _unsetFlags(uint256 flags) internal virtual;
 
     function flagsEnabled(uint256 flags) public view virtual returns (bool);
 
@@ -62,14 +59,9 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable, FlagEvents,
 
     function _setFlags(uint256 flags) internal override {
         FlagStorage storage $ = _getFlagStorage();
-        $._flags = $._flags | flags;
-        emit FlagSet(_msgSender(), flags, $._flags);
-    }
-
-    function _unsetFlags(uint256 flags) internal override {
-        FlagStorage storage $ = _getFlagStorage();
-        $._flags = $._flags ^ flags;
-        emit FlagUnset(_msgSender(), flags, $._flags);
+        uint256 oldFlags = $._flags;
+        $._flags = flags;
+        emit FlagSet(_msgSender(), flags, oldFlags);
     }
 
     function flagsEnabled(uint256 flags) public view override returns (bool) {
