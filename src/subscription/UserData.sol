@@ -78,7 +78,9 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         // 0 - 10000
         uint256 _lock;
         mapping(uint256 => SubData) _subData;
+        // amount of tips EVER sent to the contract, the value only increments
         uint256 _allTips;
+        // amount of tips EVER claimed from the contract, the value only increments
         uint256 _claimedTips;
     }
 

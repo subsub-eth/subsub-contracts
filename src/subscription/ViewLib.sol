@@ -36,7 +36,19 @@ library ViewLib {
         }
 
         {
-            output = string(abi.encodePacked(output, ',{"trait_type":"owner","value":"', s.owner().toHexString(), '"}'));
+            (uint256 currentEpoch, uint256 lastProcessedEpoch) = s.epochState();
+            output = string(
+                abi.encodePacked(
+                    output,
+                    ',{"trait_type":"owner","value":"',
+                    s.owner().toHexString(),
+                    '"},{"trait_type":"current_epoch","value":"',
+                    currentEpoch.toString(),
+                    '"},{"trait_type":"current_epoch","value":"',
+                    lastProcessedEpoch.toString(),
+                    '"}'
+                )
+            );
         }
         {
             output = string(

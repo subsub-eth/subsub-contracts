@@ -93,6 +93,11 @@ abstract contract Subscription is
         maxSupply_ = _maxSupply();
     }
 
+    function epochState() external view returns (uint256 currentEpoch, uint256 lastProcessedEpoch) {
+      currentEpoch = _currentEpoch();
+      lastProcessedEpoch = _lastProcessedEpoch();
+    }
+
     function setFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
         _setFlags(flags);
     }

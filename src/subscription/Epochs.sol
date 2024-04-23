@@ -20,6 +20,8 @@ abstract contract HasEpochs {
 
     function _currentEpoch() internal view virtual returns (uint256);
 
+    function _lastProcessedEpoch() internal view virtual returns (uint256);
+
     function _activeSubShares() internal view virtual returns (uint256);
 
     function _claimed() internal view virtual returns (uint256);
@@ -111,7 +113,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return _activeSubs;
     }
 
-    function _lastProcessedEpoch() private view returns (uint256 i) {
+    function _lastProcessedEpoch() internal view override returns (uint256 i) {
         // handle the lastProcessedEpoch init value of 0
         // if claimable is called before epoch 2, it will return 0
         EpochsStorage storage $ = _getEpochsStorage();
