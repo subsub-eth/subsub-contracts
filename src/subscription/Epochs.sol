@@ -26,7 +26,7 @@ abstract contract HasEpochs {
 
     function _claimed() internal view virtual returns (uint256);
 
-    function _processEpochs(uint256 rate, uint256 currentEpoch)
+    function _processEpochs(uint256 rate, uint256 upToEpoch)
         internal
         view
         virtual
@@ -59,6 +59,11 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // 1 Sub * 1x == 100 shares
         // 1 Sub * 2.5x == 250 shares
         uint256 _activeSubShares;
+        // we cannot express whether epoch 0 was processed or not
+        // we define the following:
+        // lastProcessedEpoch is initially = 0 -> nothing was processed yet
+        // if currentEpoch >= 2 -> we can advance lastProcessedEpoch to something > 0
+        // thus claiming is only possible starting from epoch 2
         uint256 _lastProcessedEpoch;
         uint256 _claimed;
     }
@@ -97,6 +102,11 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return $._claimed;
     }
 
+    function _lastProcessedEpoch() internal view override returns (uint256) {
+        EpochsStorage storage $ = _getEpochsStorage();
+        return $._lastProcessedEpoch;
+    }
+
     function _activeSubShares() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
         uint256 currentEpoch = _currentEpoch();
@@ -113,18 +123,22 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return _activeSubs;
     }
 
-    function _lastProcessedEpoch() internal view override returns (uint256 i) {
+    function _startProcessingEpoch() internal view returns (uint256 i) {
+        // we cannot express that epoch 0 was not processed, as we do not have a null or -1
+
         // handle the lastProcessedEpoch init value of 0
         // if claimable is called before epoch 2, it will return 0
-        EpochsStorage storage $ = _getEpochsStorage();
-        if (0 == $._lastProcessedEpoch && _currentEpoch() > 1) {
+        uint256 lastProcessedEpoch = _lastProcessedEpoch();
+        if (0 == lastProcessedEpoch && _currentEpoch() > 1) {
+            // we assume/defined that nothing was processed yet, so we start from 0
             i = 0;
         } else {
-            i = $._lastProcessedEpoch + 1;
+            // we did some processing before, so we start from the next epoch
+            i = lastProcessedEpoch + 1;
         }
     }
 
-    function _processEpochs(uint256 rate, uint256 currentEpoch)
+    function _processEpochs(uint256 rate, uint256 upToEpoch)
         internal
         view
         override
@@ -133,7 +147,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         EpochsStorage storage $ = _getEpochsStorage();
         uint256 _activeSubs = $._activeSubShares;
 
-        for (uint256 i = _lastProcessedEpoch(); i < currentEpoch; i++) {
+        for (uint256 i = _startProcessingEpoch(); i < upToEpoch; i++) {
             // remove subs expiring in this epoch
             _activeSubs -= $._epochs[i].expiring;
 
@@ -155,7 +169,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
         // delete epochs
         EpochsStorage storage $ = _getEpochsStorage();
-        for (uint256 i = _lastProcessedEpoch(); i < currentEpoch; i++) {
+        for (uint256 i = _startProcessingEpoch(); i < currentEpoch; i++) {
             delete $._epochs[i];
         }
 

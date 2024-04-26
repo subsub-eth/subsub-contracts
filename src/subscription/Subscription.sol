@@ -315,7 +315,7 @@ abstract contract Subscription is
         emit FundsClaimed(amount, _claimed() + _claimedTips());
     }
 
-    function claimable() public view returns (uint256) {
+    function claimable() external view returns (uint256) {
         (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
 
         amount += _claimableTips();

@@ -44,7 +44,7 @@ library ViewLib {
                     s.owner().toHexString(),
                     '"},{"trait_type":"current_epoch","value":"',
                     currentEpoch.toString(),
-                    '"},{"trait_type":"current_epoch","value":"',
+                    '"},{"trait_type":"last_processed_epoch","value":"',
                     lastProcessedEpoch.toString(),
                     '"}'
                 )
