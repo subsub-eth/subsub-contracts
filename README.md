@@ -1,6 +1,6 @@
 # CreateZ Contracts
 
-CreateZ is permissionless, flexible crypto subscription system that is a
+CreateZ is a permissionless, flexible crypto subscription system that is a
 building block for larger applications and communities.
 
 It allows creators, companies, and whoever wants to collect crypto funds over a
@@ -10,14 +10,15 @@ tailored to their needs.
 Subscribers can join these contracts by depositing ERC20 tokens. These are
 distributed to the contract owner exactly to the second. Depending on the plan's
 settings this gives the subscriber control over their subscription allowing them
-to cancel and refund unspent funds without hassle.
+to cancel and refund unspent funds without hassle or the plan owner's
+permission.
 
 Subscriptions are represented as ERC721 tokens that accumulate stats on spent
 funds. These properties can be used to unlock achievements or gain access to
 parts of a creator's community.
 
 As we strive to incorporate standards like ERC20 and ERC721 the system and its
-participants and take part in the larger DeFi ecosystem by for example using
+participants can take part in the larger DeFi ecosystem by for example using
 yield bearing tokens for payments or selling community memberships on secondary
 markets. The possibilities are endless.
 
