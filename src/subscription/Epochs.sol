@@ -8,22 +8,63 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-// epochs always start from genesis
+/**
+ * @title Subscription Epochs
+ * @notice Epochs account for starting and expiring subscriptions
+ * @dev Epochs always start from genesis
+ */
 struct Epoch {
-    uint256 expiring; // number of expiring subscription shares
+    /**
+     * @notice Number of expiring subscription shares
+     */
+    uint256 expiring;
+    /**
+     * @notice Number of starting subscription shares
+     */
     uint256 starting; // number of starting subscription shares
-    uint256 partialFunds; // the amount of funds belonging to starting and ending subs in the epoch
+    /**
+     * @notice The amount of funds belonging to starting and ending subs in the epoch
+     * @dev The amount is represented in internal decimals
+     */
+    uint256 partialFunds;
 }
 
+/**
+ * @title Has Epochs Mixin interface
+ * @notice Provides internal 'interface' functions of the mixin
+ */
 abstract contract HasEpochs {
+    /**
+     * @notice Provides the size of an epoch as defined in the subscription plan settings
+     * @return Size of an epoch in time units
+     */
     function _epochSize() internal view virtual returns (uint256);
 
+    /**
+     * @notice Provides the sequential number of the current epoch
+     * @return the sequential number of the current epoch
+     */
     function _currentEpoch() internal view virtual returns (uint256);
 
+    /**
+     * @notice Provides the last epoch that was processed by a claim
+     * @return the sequential number of the last claimed epoch
+     */
     function _lastProcessedEpoch() internal view virtual returns (uint256);
 
+    /**
+     * @notice Provides the number of active shares
+     * @dev The active shares hint towards the number of active subscriptions.
+     *      100 shares equal 1 non-multiplied subscription
+     * @return the sequential number of the current epoch
+     */
     function _activeSubShares() internal view virtual returns (uint256);
 
+    /**
+     * @notice Amount of (ever) claimed funds
+     * @dev The amount is represented in internal decimals
+     * @return Amount of (ever) claimed funds
+     */
     function _claimed() internal view virtual returns (uint256);
 
     function _processEpochs(uint256 rate, uint256 upToEpoch)

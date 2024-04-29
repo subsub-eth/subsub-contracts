@@ -3,13 +3,18 @@ pragma solidity ^0.8.20;
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
-import {IERC721Metadata} from
-    "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-import {IERC721Enumerable} from
-    "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import {IERC721Enumerable} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IERC4906} from "openzeppelin-contracts/contracts/interfaces/IERC4906.sol";
 
+/**
+ * @title Subscription Events
+ * @notice Marker interface containing Subscription related events
+ */
 interface SubscriptionEvents {
+    /**
+     * @notice Renew event is emitted when a subscription is prolonged
+     */
     event SubscriptionRenewed(
         uint256 indexed tokenId,
         uint256 indexed addedAmount,
@@ -18,91 +23,234 @@ interface SubscriptionEvents {
         string message
     );
 
+    /**
+     * @notice Withdrawn event is emitted when an active subscription is reduced by withdrawing funds
+     */
     event SubscriptionWithdrawn(uint256 indexed tokenId, uint256 indexed removedAmount, uint256 indexed deposited);
 
+    /**
+     * @notice Tipped event is emitted when a tip was deposited into a subscription
+     */
     event Tipped(
         uint256 indexed tokenId, uint256 indexed amount, uint256 indexed deposited, address depositor, string message
     );
 }
 
+/**
+ * @title Subscription contract metadata
+ * @notice contains general properties of subscription
+ */
 struct MetadataStruct {
+    /**
+     * @notice Description of the subscription plan
+     */
     string description;
+    /**
+     * @notice An image related to the subscription
+     */
     string image;
+    /**
+     * @notice An external URL pointing to further resources and documentation
+     */
     string externalUrl;
 }
 
+/**
+ * @title Subscription settings
+ * @notice Contains immutable settings that are applied to new subscription and are the base for any internal computations
+ */
 struct SubSettings {
+    /**
+     * @notice The payment ERC20 token to be used in a subscription
+     */
     IERC20Metadata token;
-    /// @notice rate per block
-    /// @dev the amount of tokens paid per block based on 18 decimals
+    /**
+     * @notice The rate describes the amount of tokens to be paid per time unit
+     * @dev The rate is based on 18 decimals and is to be paid per time unit
+     */
     uint256 rate;
-    // locked % of deposited amount
-    // 0 - 10000
+    /**
+     * @notice The percentage amount of tokens to be locked in the subscription on a new deposit
+     * @dev The percentage amount is denominated in values from 0 (0%) to 10_000 (100%)
+     */
     uint256 lock;
-    // time of contract's inception
+    /**
+     * @notice The size of an epoch measured in the underlying time unit
+     * @dev Epochs are generally counted from the 'beginning' of time, depending on the underlying time unit
+     */
     uint256 epochSize;
-    // max supply of subscriptions that can be minted
+    /**
+     * @notice The maximum supply of subscription that can be minted
+     */
     uint256 maxSupply;
 }
 
+/**
+ * @title Subscription Contract metadata
+ * @notice enforces access subscription contract related information
+ */
 interface SubscriptionMetadata {
+    /**
+     * @notice Provides general information related to the contract
+     */
     function contractURI() external view returns (string memory);
 }
 
+/**
+ * @title Subscription subscribable view
+ * @notice provides methods for subscribers to manage their subscriptions
+ */
 interface Subscribable is SubscriptionEvents {
-    /// @notice adds deposits to an existing subscription token
-    // amount is based on the payment token decimals
+    /**
+     * @notice Adds funds to an existing subscription and extends it
+     * @param tokenId id of the subscription token
+     * @param amount amount of payment tokens to add
+     * @param message message that is emitted on a successful renewal
+     */
     function renew(uint256 tokenId, uint256 amount, string calldata message) external;
 
-    // amount is based on the payment token decimals
+    /**
+     * @notice Removes withdrawable funds from an active subscription and reduces the subscription time
+     * @dev amount is based on the payment token decimals
+     * @param tokenId id of the subscription token
+     * @param amount amount of payment tokens to remove
+     */
     function withdraw(uint256 tokenId, uint256 amount) external;
 
+    /**
+     * @notice Removes all withdrawable funds from an active subscription and reduces the subscription time to a minimum
+     * @notice this method should be used to remove all possible funds as the withdrawable amount shrinks with each time unit and can cause reverts
+     * @param tokenId id of the subscription token
+     */
     function cancel(uint256 tokenId) external;
 
+    /**
+     * @notice Checks if a subscription is still valid
+     * @param tokenId id of the subscription token
+     * @return whether or not the given subscription is still valid
+     */
     function isActive(uint256 tokenId) external view returns (bool);
 
+    /**
+     * @notice Retrieves the multiplier of a given token
+     * @dev valid values are between 100 (100% or 1x) and 10_000
+     * @param tokenId id of the subscription token
+     * @return multiplier value
+     */
     function multiplier(uint256 tokenId) external view returns (uint24);
 
+    /**
+     * @notice Queries the expiration time of a given subscription
+     * @param tokenId id of the subscription token
+     * @return the time unit on which the subscription expires
+     */
     function expiresAt(uint256 tokenId) external view returns (uint256);
 
-    // the amount of tokens ever deposited reduced by the withdrawn amount.
+    /**
+     * @notice Queries the amount of funds ever deposited into the subscription
+     * @dev This includes all used funds and still active funds that can be withdrawn
+     * @param tokenId id of the subscription token
+     * @return the amount of funds ever deposited into the subscription
+     */
     function deposited(uint256 tokenId) external view returns (uint256);
 
-    // the amount of tokens spent in the subscription
+    /**
+     * @notice Queries the amount of funds spent in the subscription
+     * @dev All the funds that were actually 'used'
+     * @param tokenId id of the subscription token
+     * @return the amount of funds spent in the subscription
+     */
     function spent(uint256 tokenId) external view returns (uint256);
 
-    // the amount of deposited tokens that have not been spent yet
+    /**
+     * @notice Queries the amount of deposited funds that were not yet spent on the subscription
+     * @dev This is based on the active deposit and might include locked and withdrawable funds
+     * @param tokenId id of the subscription token
+     * @return the amount of funds not yet spent in the subscription
+     */
     function unspent(uint256 tokenId) external view returns (uint256);
 
+    /**
+     * @notice Queries the amount of deposited funds that can be withdrawn from an active subscription
+     * @dev The amount of unspent fund that are not locked
+     * @param tokenId id of the subscription token
+     * @return the amount of funds that can be withdrawn
+     */
     function withdrawable(uint256 tokenId) external view returns (uint256);
 
+    /**
+     * @notice Queries the amount of deposited funds that can be withdrawn from an active subscription
+     * @dev The amount of unspent funds that are not locked
+     *  @return the amount of funds that can be withdrawn
+     */
     function activeSubShares() external view returns (uint256);
 
-    // adds funds to the subscription, but does not extend an active sub
-    // amount is based on the payment token decimals
+    /**
+     * @notice Adds a tip to the given subscription, the sent amount does not extend the subscription, but increases the tip counter
+     * @dev amount is based on the payment token decimals
+     * @param tokenId id of the subscription token
+     * @param amount amount of payment tokens to add as a tip
+     * @param message message that is emitted on a successful renewal
+     */
     function tip(uint256 tokenId, uint256 amount, string calldata message) external;
 
-    // returns the amount of tips ever sent to a subscription
+    /**
+     * @notice Queries the amount of tipped funds
+     * @param tokenId id of the subscription token
+     *  @return the amount of tipped funds
+     */
     function tips(uint256 tokenId) external view returns (uint256);
 }
 
+/**
+ * @title Claim events interface
+ * @notice contains interfaces related to owner claiming
+ */
 interface ClaimEvents {
+    /**
+     * @notice Claimed event is emitted when the owner claims funds from the subscription plan
+     */
     event FundsClaimed(uint256 amount, uint256 totalClaimed);
 }
 
+/**
+ * @title Owner Claiming
+ * @notice contains methods related to claiming funds by the owner
+ */
 interface Claimable is ClaimEvents {
-    /// @notice The owner claims their rewards
+    /**
+     * @notice Claim spent funds from completed epochs
+     * @param to address to send funds to
+     */
     function claim(address to) external;
 
+    /**
+     * @notice Queries the amount of funds that can be claimed by the owner
+     * @dev claimable funds originate from completed epochs that were not claimed before
+     * @return amount of claimable funds
+     */
     function claimable() external view returns (uint256);
 
+    /**
+     * @notice Queries the amount of subscription funds that were claimed up until now
+     * @dev only returns subscription funds, tips are excluded
+     * @return amount of claimed funds originating from subscriptions
+     */
     function claimedDeposits() external view returns (uint256);
 
+    /**
+     * @notice Queries the amount of tipping funds that were claimed up until now
+     * @dev only returns tipping funds, subscription related funds are excluded
+     * @return amount of claimed funds originating from tipping
+     */
     function claimedTips() external view returns (uint256);
 }
 
+/**
+ * @title Flag settings
+ * @notice constants relating to flags
+ */
 abstract contract SubscriptionFlags {
-
     uint256 public constant MINTING_PAUSED = 0x1;
     uint256 public constant RENEWAL_PAUSED = 0x2;
     uint256 public constant TIPPING_PAUSED = 0x4;
@@ -110,15 +258,32 @@ abstract contract SubscriptionFlags {
     uint256 public constant ALL_FLAGS = 0x7;
 }
 
+/**
+ * @title Subscription Creation
+ * @notice contains methods related to minting and burning
+ */
 interface SubscriptionCreation {
-    /// @notice "Mints" a new subscription token
+    /**
+     * @notice Mints a new subscription and adds funds to it. The multiplier cannot be changed after this point
+     * @dev the multiplier is set on creation and cannot be changed
+     * @param amount amount of payment tokens to add
+     * @param multiplier multiplier to set for this subscription. The multiplier is applied to the rate. Value can range from 100 (1x) to 10_000 (10x)
+     * @param message message that is emitted on a successful renewal
+     * @return the token id of the new subscription
+     */
     function mint(uint256 amount, uint24 multiplier, string calldata message) external returns (uint256);
 
-    /// @notice "Burns" a subscription token, deletes all achieved subscription
-    ///         data and does not withdraw any withdrawable funds
+    /**
+     * @notice "Burns" a subscription token, deletes all achieved subscription data and does not withdraw any withdrawable funds
+     * @param tokenId token to burn
+     */
     function burn(uint256 tokenId) external;
 }
 
+/**
+ * @title Subscription Initializer
+ * @notice initializer interface for upgradeable subscription contracts
+ */
 interface SubscriptionInitialize {
     function initialize(
         string calldata tokenName,
@@ -128,6 +293,9 @@ interface SubscriptionInitialize {
     ) external;
 }
 
+/**
+ * @title Subscription God interface
+ */
 interface ISubscription is
     IERC721,
     IERC721Metadata,
