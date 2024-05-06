@@ -23,7 +23,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     SubscriptionHandle public handle;
     uint256 public rate;
     uint256 public lock;
-    uint256 public epochSize;
+    uint64 public epochSize;
     uint256 public maxSupply;
 
     address public owner;
@@ -37,9 +37,9 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
     MetadataStruct public metadata;
     SubSettings public settings;
 
-    uint256 public currentTime;
+    uint64 public currentTime;
 
-    function setCurrentTime(uint256 newTime) internal {
+    function setCurrentTime(uint64 newTime) internal {
         currentTime = newTime;
         subscription.setNow(newTime);
     }

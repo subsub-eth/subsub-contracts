@@ -9,8 +9,8 @@ contract TestUserData is UserData {
         __UserData_init(lock);
     }
 
-    function _now() internal view override returns (uint256) {
-        return block.number;
+    function _now() internal view override returns (uint64) {
+        return uint64(block.number);
     }
 
     function _multipliedRate(uint256 multiplier) internal view override returns (uint256) {}

@@ -118,7 +118,7 @@ abstract contract Subscription is
         return this.contractData();
     }
 
-    function claimedDeposits() external view returns (uint256) {
+    function claimed() external view returns (uint256) {
         return _claimed().toExternal(_decimals());
     }
 
@@ -312,15 +312,32 @@ abstract contract Subscription is
 
         _paymentToken().safeTransfer(to, amount);
 
-        emit FundsClaimed(amount, _claimed() + _claimedTips());
+        emit FundsClaimed(amount, _claimed().toExternal(_decimals()));
+    }
+
+    function claimable(uint256 startEpoch, uint256 endEpoch) public view returns (uint256) {
+        (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
+
+        return amount.toExternal(_decimals());
     }
 
     function claimable() external view returns (uint256) {
-        (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
+      return claimable(_lastProcessedEpoch(), _currentEpoch());
+    }
 
-        amount += _claimableTips();
+    function claimTips(address to) external onlyOwner {
+        uint256 amount = _claimTips();
 
-        return amount.toExternal(_decimals());
+        // convert to external amount
+        amount = amount.toExternal(_decimals());
+
+        _paymentToken().safeTransfer(to, amount);
+
+        emit TipsClaimed(amount, _claimedTips().toExternal(_decimals()));
+    }
+
+    function claimableTips() external view returns (uint256) {
+        return _claimableTips().toExternal(_decimals());
     }
 }
 
@@ -349,9 +366,10 @@ abstract contract DefaultSubscription is
         require(address(_settings.token) != address(0), "SUB: token cannot be 0 address");
         require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
         require(_settings.rate > 0, "SUB: rate cannot be 0");
+        // TODO FIXME
+        // require(_settings.epochSize >= 1 days, "SUB: epoch size has to be at least 1 day");
 
         // call initializers of inherited contracts
-        // TODO set metadata
         __ERC721_init_unchained(tokenName, tokenSymbol);
         __FlagSettings_init_unchained();
         __Rate_init_unchained(_settings.rate);
@@ -362,7 +380,5 @@ abstract contract DefaultSubscription is
         __Metadata_init_unchained(_metadata.description, _metadata.image, _metadata.externalUrl);
 
         nextTokenId = 1;
-
-        // TODO check validity of token
     }
 }

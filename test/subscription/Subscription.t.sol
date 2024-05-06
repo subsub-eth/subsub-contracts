@@ -27,7 +27,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     SubscriptionHandle public handle;
     uint256 public rate;
     uint256 public lock;
-    uint256 public epochSize;
+    uint64 public epochSize;
     uint256 public maxSupply;
 
     address public owner;
@@ -41,11 +41,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     MetadataStruct public metadata;
     SubSettings public settings;
 
-    uint256 public currentTime;
+    uint64 public currentTime;
 
     event MetadataUpdate(uint256 _tokenId);
 
-    function setCurrentTime(uint256 newTime) internal {
+    function setCurrentTime(uint64 newTime) internal {
         currentTime = newTime;
         subscription.setNow(newTime);
     }
@@ -487,7 +487,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
 
         // fast forward
-        uint256 ff = 50;
+        uint64 ff = 50;
         setCurrentTime(currentTime + ff);
         assertFalse(subscription.isActive(tokenId), "subscription is inactive");
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
@@ -542,7 +542,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
             "withdrawable deposit 9900"
         );
 
-        uint256 passed = 50;
+        uint64 passed = 50;
 
         setCurrentTime(currentTime + passed);
 
@@ -561,7 +561,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
             subscription.withdrawable(tokenId), initialDeposit, "withdrawable deposit 100 as the deposit is too low"
         );
 
-        uint256 passed = 5;
+        uint64 passed = 5;
 
         setCurrentTime(currentTime + passed);
 
@@ -591,7 +591,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
 
-        uint256 passed = 50;
+        uint64 passed = 50;
 
         setCurrentTime(currentTime + passed);
 
@@ -605,7 +605,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 tokenId = mintToken(alice, initialDeposit);
         assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
 
-        uint256 passed = 5;
+        uint64 passed = 5;
         setCurrentTime(currentTime + passed);
 
         // try withdraw 0 without effect
@@ -646,7 +646,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.prank(alice);
         subscription.setApprovalForAll(bob, true);
 
-        uint256 passed = 5;
+        uint64 passed = 5;
         setCurrentTime(currentTime + passed);
 
         uint256 bobBalance = testToken.balanceOf(bob);
@@ -667,7 +667,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.prank(alice);
         subscription.approve(bob, tokenId);
 
-        uint256 passed = 5;
+        uint64 passed = 5;
         setCurrentTime(currentTime + passed);
 
         uint256 bobBalance = testToken.balanceOf(bob);
@@ -684,7 +684,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
 
-        uint256 passed = 5;
+        uint64 passed = 5;
         setCurrentTime(currentTime + passed);
 
         uint256 aliceBalance = testToken.balanceOf(alice);
@@ -773,7 +773,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         uint256 initialDeposit = 100;
         uint256 tokenId = mintToken(alice, initialDeposit);
 
-        uint256 passed = 5;
+        uint64 passed = 5;
         setCurrentTime(currentTime + passed);
 
         uint256 aliceBalance = testToken.balanceOf(alice);
@@ -897,10 +897,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testClaimable_epoch0() public {
         mintToken(alice, 1_000);
 
+        uint256 diff = epochSize - currentTime;
         setCurrentTime(currentTime + (epochSize * 1));
 
-        // epoch 0 is not processed on its own
-        assertEq(subscription.claimable(), 0, "no funds claimable");
+        // claim only epoch 0
+        assertEq(subscription.claimable(), rate * diff, "partial funds of epoch 0 claimable");
     }
 
     function testClaimable_expiring() public {
@@ -919,11 +920,12 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         subscription.tip(tokenId, tipAmount, "");
 
-        assertEq(subscription.claimable(), tipAmount, "tipped funds claimable");
+        assertEq(subscription.claimableTips(), tipAmount, "tipped funds claimable");
 
         setCurrentTime(currentTime + (epochSize * 300));
 
-        assertEq(subscription.claimable(), tipAmount + initAmount, "all funds claimable");
+        assertEq(subscription.claimable() + subscription.claimableTips(),
+                 tipAmount + initAmount, "all funds claimable");
     }
 
     function testClaim() public {

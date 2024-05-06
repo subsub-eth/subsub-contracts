@@ -5,12 +5,12 @@ import "forge-std/Test.sol";
 import "../../src/subscription/Epochs.sol";
 
 contract TestEpochs is Epochs {
-    constructor(uint256 epochSize) initializer {
+    constructor(uint64 epochSize) initializer {
         __Epochs_init(epochSize);
     }
 
-    function _now() internal view override returns (uint256) {
-        return block.number;
+    function _now() internal view override returns (uint64) {
+        return uint64(block.number);
     }
 
     function currentEpoch() external view virtual returns (uint256) {
@@ -33,7 +33,7 @@ contract TestEpochs is Epochs {
 contract EpochsTest is Test {
     TestEpochs private e;
 
-    uint256 private epochSize;
+    uint64 private epochSize;
 
     function setUp() public {
         epochSize = 100;

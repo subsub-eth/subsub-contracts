@@ -78,7 +78,7 @@ struct SubSettings {
      * @notice The size of an epoch measured in the underlying time unit
      * @dev Epochs are generally counted from the 'beginning' of time, depending on the underlying time unit
      */
-    uint256 epochSize;
+    uint64 epochSize;
     /**
      * @notice The maximum supply of subscription that can be minted
      */
@@ -211,6 +211,11 @@ interface ClaimEvents {
      * @notice Claimed event is emitted when the owner claims funds from the subscription plan
      */
     event FundsClaimed(uint256 amount, uint256 totalClaimed);
+
+    /**
+     * @notice Claimed event is emitted when the owner claims tips
+     */
+    event TipsClaimed(uint256 amount, uint256 totalClaimed);
 }
 
 /**
@@ -219,7 +224,18 @@ interface ClaimEvents {
  */
 interface Claimable is ClaimEvents {
     /**
-     * @notice Claim spent funds from completed epochs
+     * @notice Claim spent subscription funds from completed epochs. Claims are
+     * calculated from the last processed epoch to the given epoch
+     * @dev The given epoch should usually be the current epoch. Smaller values
+     * between the last processed epoch and the current epoch should be used to
+     * claim smaller batches of epochs.
+     * @param to address to send funds to
+     * @param endEpoch epoch up until to claim to (exclusive)
+     */
+    // function claim(address to, uint256 endEpoch) external;
+
+    /**
+     * @notice Claim spent subscription funds from completed epochs.
      * @param to address to send funds to
      */
     function claim(address to) external;
@@ -227,7 +243,16 @@ interface Claimable is ClaimEvents {
     /**
      * @notice Queries the amount of funds that can be claimed by the owner
      * @dev claimable funds originate from completed epochs that were not claimed before
-     * @return amount of claimable funds
+     * @return amount of claimable subscription funds for the given time span
+     * @param startEpoch epoch the claim should start from (inclusive)
+     * @param endEpoch epoch the claim should end at (exclusive)
+     */
+    // function claimable(uint256 startEpoch, uint256 endEpoch) external view returns (uint256);
+
+    /**
+     * @notice Queries the amount of funds that can be claimed by the owner
+     * @dev claimable funds originate from completed epochs that were not claimed before
+     * @return amount of currently claimable subscription funds
      */
     function claimable() external view returns (uint256);
 
@@ -236,7 +261,19 @@ interface Claimable is ClaimEvents {
      * @dev only returns subscription funds, tips are excluded
      * @return amount of claimed funds originating from subscriptions
      */
-    function claimedDeposits() external view returns (uint256);
+    function claimed() external view returns (uint256);
+
+    /**
+     * @notice Claim tips
+     * @param to address to send funds to
+     */
+    // function claimTips(address to) external;
+
+    /**
+     * @notice Queries the amount of tipping funds that can be claimed by the owner
+     * @return amount of currently claimable tips
+     */
+    // function claimableTips() external view returns (uint256);
 
     /**
      * @notice Queries the amount of tipping funds that were claimed up until now

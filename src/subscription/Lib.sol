@@ -3,6 +3,11 @@ pragma solidity ^0.8.20;
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+/**
+ * @title Subscription Function library
+ * @notice Subscription Function library
+ * @dev Various functions to help conversions etc. associated with subscriptions
+ */
 library Lib {
     uint256 public constant MULTIPLIER_BASE = 100;
 

@@ -10,7 +10,7 @@ import {DefaultSubscription} from "./Subscription.sol";
 contract BlockSubscription is DefaultSubscription {
     constructor(address handleContract) DefaultSubscription(handleContract) {}
 
-    function _now() internal view override returns (uint256) {
-        return block.number;
+    function _now() internal view override returns (uint64) {
+        return uint64(block.number);
     }
 }

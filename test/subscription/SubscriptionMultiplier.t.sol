@@ -23,7 +23,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
     SubscriptionHandle public handle;
     uint256 public rate;
     uint256 public lock;
-    uint256 public epochSize;
+    uint64 public epochSize;
     uint256 public maxSupply;
 
     uint8 public decimals;
@@ -39,7 +39,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
     uint256 public currentTime;
 
-    function setCurrentTime(uint256 newTime) internal {
+    function setCurrentTime(uint64 newTime) internal {
       currentTime = newTime;
       subscription.setNow(newTime);
     }
