@@ -93,7 +93,7 @@ abstract contract HasEpochs {
 
     /**
      * @notice Adds a new subscription based on amount of funds and number of shares to the epochs
-     * @dev the given rate and amount are used to calculate the duration of the subscription
+     * @dev the given rate and amount are used to calculate the duration of the subscription, the number of shares does not affect the rate or amount.
      * @param amount The amount of funds for this new subscription
      * @param shares The number of shares this new subscription contains
      * @param rate The rate that is applied to the amount
@@ -189,8 +189,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
         for (uint64 i = $._lastProcessedEpoch; i < currentEpoch; i++) {
             // remove subs expiring in this epoch
-            _activeSubs -= $._epochs[i].expiring;
             _activeSubs += $._epochs[i].starting;
+            _activeSubs -= $._epochs[i].expiring;
         }
 
         // add most recent starting subs, being optimistic
@@ -205,15 +205,15 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
      * @return the epoch start from processing (inclusive)
      */
     function _startProcessingEpoch(uint64 suggestedLastEpoch, bool initialClaim) internal pure returns (uint64) {
-      if (suggestedLastEpoch > 0) {
-        return suggestedLastEpoch + 1;
-      }
-      // the given epoch is 0
-      if (initialClaim) {
-        // 0 + 1
-        return 1;
-      }
-      return 0;
+        if (suggestedLastEpoch > 0) {
+            return suggestedLastEpoch + 1;
+        }
+        // the given epoch is 0
+        if (initialClaim) {
+            // 0 + 1
+            return 1;
+        }
+        return 0;
     }
 
     function _processEpochs(uint256 rate, uint64 upToEpoch)
@@ -300,6 +300,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         {
             // when does the sub currently end?
             uint256 oldExpiringAt = oldDeposit.expiresAt(oldDepositedAt, rate);
+            require(oldExpiringAt >= now_, "Epoch: subscription is already expired");
             // update old epoch
             uint64 oldEpoch = uint64(oldExpiringAt / $._epochSize);
             $._epochs[oldEpoch].expiring -= shares;

@@ -174,7 +174,7 @@ abstract contract Subscription is
 
         _addNewSubscriptionToEpochs(internalAmount, multiplier, mRate);
 
-        // we transfer the ORIGINAL amount into the contract, claiming any overflows
+       // we transfer the ORIGINAL amount into the contract, claiming any overflows
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
@@ -235,15 +235,15 @@ abstract contract Subscription is
         uint256 _lastDepositAt = _lastDepositedAt(tokenId);
         (uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
-        uint256 multiplier = _multiplier(tokenId);
+        uint256 multiplier_ = _multiplier(tokenId);
         _moveSubscriptionInEpochs(
             _lastDepositAt,
             oldDeposit,
             _lastDepositAt,
             newDeposit,
-            multiplier,
+            multiplier_,
             // TODO weird?
-            _multipliedRate(multiplier)
+            _multipliedRate(multiplier_)
         );
 
         uint256 externalAmount = amount.toExternal(_decimals());
