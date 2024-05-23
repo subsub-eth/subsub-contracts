@@ -24,7 +24,7 @@ struct Epoch {
     uint256 starting; // number of starting subscription shares
     /**
      * @notice The amount of funds belonging to starting and ending subs in the epoch
-     * @dev The amount is represented in internal decimals
+     * @dev The amount is represented in internal decimals and multiplied by the amount of shares, thus based to MULTIPLIER_BASE when returned externally
      */
     uint256 partialFunds;
 }
@@ -71,7 +71,7 @@ abstract contract HasEpochs {
      * @notice process the internal state up until the given epoch (excluded) and return the state change diff
      * @dev the internal state change between the epochs lastProcessedEpoch + 1 (included) and the currentEpoch - 1 is aggregated and returned without actually changing the state
      * The internal state has to be updated separately
-     * @param rate the rate that is applied to calculate the returned amount of processed funds
+     * @param rate the rate that is applied to calculate the returned amount of processed funds, the contracts rate
      * @param upToEpoch the epoch up until to process to (excluded)
      * @return amount the amount of funds processed in the processed epochs
      * @return starting the number of subscription shares that started in the epochs processed
@@ -86,7 +86,7 @@ abstract contract HasEpochs {
     /**
      * @notice updates the internal state of the subscription contract by processing completed epochs and returning the amount of newly claimable funds
      * @dev this function uses _processEpochs to get an aggregated state change and subsequently apply it to storage
-     * @param rate the rate that is applied to calculate the returned amount of processed funds
+     * @param rate the rate that is applied to calculate the returned amount of processed funds, the contracts rate
      * @return The amount of claimable funds
      */
     function _handleEpochsClaim(uint256 rate) internal virtual returns (uint256);
@@ -96,7 +96,7 @@ abstract contract HasEpochs {
      * @dev the given rate and amount are used to calculate the duration of the subscription, the number of shares does not affect the rate or amount.
      * @param amount The amount of funds for this new subscription
      * @param shares The number of shares this new subscription contains
-     * @param rate The rate that is applied to the amount
+     * @param rate The rate that is applied to the amount, the contracts original rate
      */
     function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual;
 
@@ -108,7 +108,7 @@ abstract contract HasEpochs {
      * @param newDepositedAt The time the subscription is now extended from (probably now)
      * @param newDeposit The amount of funds the subscription now contains
      * @param shares The number of shares this subscription contains
-     * @param rate The rate that is applied to the amount
+     * @param rate The rate that is applied to the amount, the contracts rate
      */
     function _moveSubscriptionInEpochs(
         uint256 oldDepositedAt,
@@ -140,6 +140,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // 1 Sub * 2.5x == 250 shares
         uint256 _activeSubShares;
         // internal counter for claimed subscription funds
+        // based on internal representation
         uint256 _claimed;
     }
 
@@ -231,12 +232,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
             // we do not apply the individual multiplier to `rate` as it is
             // included in _activeSubs, expiring, and starting subs
-            amount += $._epochs[i].partialFunds + (_activeSubs * $._epochSize * rate) / Lib.MULTIPLIER_BASE;
+            amount += $._epochs[i].partialFunds + (_activeSubs * $._epochSize * rate);
             starting += $._epochs[i].starting;
             expiring += $._epochs[i].expiring;
             // add new subs starting in this epoch
             _activeSubs += $._epochs[i].starting;
         }
+        // the amount is mutliplied by the shares and has to be returned to its base
+        amount = amount / Lib.MULTIPLIER_BASE;
     }
 
     function _handleEpochsClaim(uint256 rate) internal override returns (uint256) {
@@ -266,7 +269,11 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
     function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
         uint256 now_ = _now();
-        uint256 expiresAt_ = amount.expiresAt(now_, rate);
+
+        // adjust internal rate to number of shares
+        rate = rate * shares;
+        // inflate by multiplier base to reduce rounding errors
+        uint256 expiresAt_ = (amount * Lib.MULTIPLIER_BASE).expiresAt(now_, rate);
 
         // starting
         uint64 currentEpoch = _currentEpoch();
@@ -296,10 +303,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         uint256 rate
     ) internal override {
         uint256 now_ = _now();
+
+        // adjust internal rate to number of shares
+        rate = rate * shares;
+
         EpochsStorage storage $ = _getEpochsStorage();
         {
             // when does the sub currently end?
-            uint256 oldExpiringAt = oldDeposit.expiresAt(oldDepositedAt, rate);
+            uint256 oldExpiringAt = (oldDeposit * Lib.MULTIPLIER_BASE).expiresAt(oldDepositedAt, rate);
             require(oldExpiringAt >= now_, "Epoch: subscription is already expired");
             // update old epoch
             uint64 oldEpoch = uint64(oldExpiringAt / $._epochSize);
@@ -309,7 +320,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         }
 
         // update new epoch
-        uint256 newEndingBlock = newDeposit.expiresAt(newDepositedAt, rate);
+        uint256 newEndingBlock = (newDeposit * Lib.MULTIPLIER_BASE).expiresAt(newDepositedAt, rate);
         uint64 newEpoch = uint64(newEndingBlock / $._epochSize);
         $._epochs[newEpoch].expiring += shares;
         $._epochs[newEpoch].partialFunds += (newEndingBlock - uint256(((newEpoch * $._epochSize))).max(now_)) * rate;
