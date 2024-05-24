@@ -68,7 +68,7 @@ abstract contract HasEpochs {
     function _claimed() internal view virtual returns (uint256);
 
     /**
-     * @notice process the internal state up until the given epoch (excluded) and return the state change diff
+     * @notice scans the internal state up until the given epoch (excluded) and return the state change diff
      * @dev the internal state change between the epochs lastProcessedEpoch + 1 (included) and the currentEpoch - 1 is aggregated and returned without actually changing the state
      * The internal state has to be updated separately
      * @param rate the rate that is applied to calculate the returned amount of processed funds, the contracts rate
@@ -77,7 +77,7 @@ abstract contract HasEpochs {
      * @return starting the number of subscription shares that started in the epochs processed
      * @return expiring the number of subscription shares that expired in the epochs processed
      */
-    function _processEpochs(uint256 rate, uint64 upToEpoch)
+    function _scanEpochs(uint256 rate, uint64 upToEpoch)
         internal
         view
         virtual
@@ -89,7 +89,7 @@ abstract contract HasEpochs {
      * @param rate the rate that is applied to calculate the returned amount of processed funds, the contracts rate
      * @return The amount of claimable funds
      */
-    function _handleEpochsClaim(uint256 rate) internal virtual returns (uint256);
+    function _claimEpochs(uint256 rate) internal virtual returns (uint256);
 
     /**
      * @notice Adds a new subscription based on amount of funds and number of shares to the epochs
@@ -98,7 +98,7 @@ abstract contract HasEpochs {
      * @param shares The number of shares this new subscription contains
      * @param rate The rate that is applied to the amount, the contracts original rate
      */
-    function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual;
+    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual;
 
     /**
      * @notice moves an existing, non-expired subscription in the epochs data
@@ -110,7 +110,7 @@ abstract contract HasEpochs {
      * @param shares The number of shares this subscription contains
      * @param rate The rate that is applied to the amount, the contracts rate
      */
-    function _moveSubscriptionInEpochs(
+    function _moveInEpochs(
         uint256 oldDepositedAt,
         uint256 oldDeposit,
         uint256 newDepositedAt,
@@ -217,7 +217,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return 0;
     }
 
-    function _processEpochs(uint256 rate, uint64 upToEpoch)
+    function _scanEpochs(uint256 rate, uint64 upToEpoch)
         internal
         view
         override
@@ -242,11 +242,11 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         amount = amount / Lib.MULTIPLIER_BASE;
     }
 
-    function _handleEpochsClaim(uint256 rate) internal override returns (uint256) {
+    function _claimEpochs(uint256 rate) internal override returns (uint256) {
         uint64 currentEpoch = _currentEpoch();
         require(currentEpoch > 0, "SUB: cannot handle epoch 0");
 
-        (uint256 amount, uint256 starting, uint256 expiring) = _processEpochs(rate, currentEpoch);
+        (uint256 amount, uint256 starting, uint256 expiring) = _scanEpochs(rate, currentEpoch);
 
         // delete epochs
         EpochsStorage storage $ = _getEpochsStorage();
@@ -267,7 +267,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return amount;
     }
 
-    function _addNewSubscriptionToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
+    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
         uint256 now_ = _now();
 
         // adjust internal rate to number of shares
@@ -294,7 +294,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     }
 
     /// @notice moves the subscription based on the
-    function _moveSubscriptionInEpochs(
+    function _moveInEpochs(
         uint256 oldDepositedAt,
         uint256 oldDeposit,
         uint256 newDepositedAt,

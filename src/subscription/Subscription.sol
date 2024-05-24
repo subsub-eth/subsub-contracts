@@ -172,7 +172,7 @@ abstract contract Subscription is
 
         _createSubscription(tokenId, internalAmount, multiplier);
 
-        _addNewSubscriptionToEpochs(internalAmount, multiplier, mRate);
+        _addToEpochs(internalAmount, multiplier, mRate);
 
        // we transfer the ORIGINAL amount into the contract, claiming any overflows
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
@@ -201,9 +201,9 @@ abstract contract Subscription is
 
             if (reactived) {
                 // subscription was inactive
-                _addNewSubscriptionToEpochs(newDeposit, multiplier, mRate);
+                _addToEpochs(newDeposit, multiplier, mRate);
             } else {
-                _moveSubscriptionInEpochs(lastDepositedAt, oldDeposit, _now(), newDeposit, multiplier, mRate);
+                _moveInEpochs(lastDepositedAt, oldDeposit, _now(), newDeposit, multiplier, mRate);
             }
         }
 
@@ -236,7 +236,7 @@ abstract contract Subscription is
         (uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
         uint256 multiplier_ = _multiplier(tokenId);
-        _moveSubscriptionInEpochs(
+        _moveInEpochs(
             _lastDepositAt,
             oldDeposit,
             _lastDepositAt,
@@ -304,7 +304,7 @@ abstract contract Subscription is
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwner {
-        uint256 amount = _handleEpochsClaim(_rate());
+        uint256 amount = _claimEpochs(_rate());
         amount += _claimTips();
 
         // convert to external amount
@@ -316,7 +316,7 @@ abstract contract Subscription is
     }
 
     function claimable(uint256 startEpoch, uint256 endEpoch) public view returns (uint256) {
-        (uint256 amount,,) = _processEpochs(_rate(), _currentEpoch());
+        (uint256 amount,,) = _scanEpochs(_rate(), _currentEpoch());
 
         return amount.toExternal(_decimals());
     }

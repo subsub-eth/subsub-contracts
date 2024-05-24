@@ -35,17 +35,17 @@ contract TestEpochs is Epochs {
         return _claimed();
     }
 
-    function processEpochs(uint256 rate, uint64 upToEpoch)
+    function scanEpochs(uint256 rate, uint64 upToEpoch)
         external
         view
         virtual
         returns (uint256 amount, uint256 starting, uint256 expiring)
     {
-        return _processEpochs(rate, upToEpoch);
+        return _scanEpochs(rate, upToEpoch);
     }
 
     function addNewSub(uint256 amount, uint256 shares, uint256 rate) external {
-        _addNewSubscriptionToEpochs(amount, shares, rate);
+        _addToEpochs(amount, shares, rate);
     }
 
     function moveSubscriptionInEpochs(
@@ -56,11 +56,11 @@ contract TestEpochs is Epochs {
         uint256 shares,
         uint256 rate
     ) external {
-        _moveSubscriptionInEpochs(oldDepositedAt, oldDeposit, newDepositedAt, newDeposit, shares, rate);
+        _moveInEpochs(oldDepositedAt, oldDeposit, newDepositedAt, newDeposit, shares, rate);
     }
 
     function claim(uint256 rate) external returns (uint256) {
-        return _handleEpochsClaim(rate);
+        return _claimEpochs(rate);
     }
 }
 
@@ -85,14 +85,14 @@ contract EpochsTest is Test {
 
         vm.roll(block.number + 2 * epochSize);
 
-        (uint256 claimable,,) = e.processEpochs(rate, e.currentEpoch());
+        (uint256 claimable,,) = e.scanEpochs(rate, e.currentEpoch());
         uint256 claimed = e.claim(rate);
         assertEq(claimable, claimed, "1st claim: claimed amount equal to claimable");
         assertEq(claimed, e.claimed(), "1st claim: claimed amount stored in contract");
 
         vm.roll(block.number + jump);
 
-        (claimable,,) = e.processEpochs(rate, e.currentEpoch());
+        (claimable,,) = e.scanEpochs(rate, e.currentEpoch());
         uint256 claimed2 = e.claim(rate);
         assertEq(claimable, claimed2, "2nd claim: claimed amount equal to claimable");
         assertEq(claimed + claimed2, e.claimed(), "2nd claim: claimed amount is updated");
@@ -295,7 +295,7 @@ contract EpochsTest is Test {
     function testProcessEpochs_noSubs() public view {
         uint256 rate = 10;
 
-        (uint256 amount, uint256 starting, uint256 expiring) = e.processEpochs(rate, 25);
+        (uint256 amount, uint256 starting, uint256 expiring) = e.scanEpochs(rate, 25);
         assertEq(amount, 0, "no funds claimable");
         assertEq(starting, 0, "sub is starting");
         assertEq(expiring, 0, "sub not expiring");
@@ -316,14 +316,14 @@ contract EpochsTest is Test {
         vm.roll(initDepositAt);
         // initialize sub
         e.addNewSub(initDeposit, shares, rate);
-        (uint256 amount, uint256 starting, uint256 expiring) = e.processEpochs(rate, 0);
+        (uint256 amount, uint256 starting, uint256 expiring) = e.scanEpochs(rate, 0);
         assertEq(amount, 0, "init: no funds claimable");
         assertEq(starting, 0, "init: sub is starting");
         assertEq(expiring, 0, "init: sub not expiring");
 
         // check each subsequent epoch
         for (uint64 i = 1; i <= (uint64(initExpiresAt) / epochSize); i++) {
-            (amount, starting, expiring) = e.processEpochs(rate, i);
+            (amount, starting, expiring) = e.scanEpochs(rate, i);
             assertEq(
                 amount, ((rate * shares) * ((epochSize * i) - initDepositAt)) / 100, "epoch i: partial funds claimable"
             );
@@ -331,7 +331,7 @@ contract EpochsTest is Test {
             assertEq(expiring, 0, "epoch i: sub not expiring");
         }
 
-        (amount, starting, expiring) = e.processEpochs(rate, (uint64(initExpiresAt) / epochSize) + 1);
+        (amount, starting, expiring) = e.scanEpochs(rate, (uint64(initExpiresAt) / epochSize) + 1);
         assertEq(amount, totalClaimableFunds, "last epoch: all funds claimable");
         assertEq(starting, shares, "last epoch: sub is starting");
         assertEq(expiring, shares, "last epoch: sub is expiring");
@@ -365,13 +365,13 @@ contract EpochsTest is Test {
         // add 2nd sub
         e.addNewSub(deposit2, shares2, rate);
 
-        (uint256 amount, uint256 starting, uint256 expiring) = e.processEpochs(rate, 0);
+        (uint256 amount, uint256 starting, uint256 expiring) = e.scanEpochs(rate, 0);
         assertEq(amount, 0, "init: no funds claimable");
         assertEq(starting, 0, "init: sub is starting");
         assertEq(expiring, 0, "init: sub not expiring");
 
         (amount, starting, expiring) =
-            e.processEpochs(rate, (uint64(deposit1ExpiresAt.max(deposit2ExpiresAt)) / epochSize) + 1);
+            e.scanEpochs(rate, (uint64(deposit1ExpiresAt.max(deposit2ExpiresAt)) / epochSize) + 1);
         assertEq(amount, totalClaimableFunds, "last epoch: all funds claimable");
         assertEq(starting, shares1 + shares2, "last epoch: sub is starting");
         assertEq(expiring, shares1 + shares2, "last epoch: sub is expiring");
