@@ -309,9 +309,6 @@ contract EpochsTest is Test {
         shares = uint16(bound(shares, 100, 10_000));
 
         uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
-        uint256 totalClaimableFunds = ((initExpiresAt - initDepositAt) * (rate * shares)) / 100;
-
-        assertLe(totalClaimableFunds, initDeposit, "Claimable funds is larger than the deposit amount");
 
         vm.roll(initDepositAt);
         // initialize sub
@@ -332,7 +329,7 @@ contract EpochsTest is Test {
         }
 
         (amount, starting, expiring) = e.scanEpochs(rate, (uint64(initExpiresAt) / epochSize) + 1);
-        assertEq(amount, totalClaimableFunds, "last epoch: all funds claimable");
+        assertEq(amount, initDeposit, "last epoch: all funds claimable");
         assertEq(starting, shares, "last epoch: sub is starting");
         assertEq(expiring, shares, "last epoch: sub is expiring");
     }
@@ -351,12 +348,6 @@ contract EpochsTest is Test {
         uint256 deposit1ExpiresAt = deposit1At + ((deposit1 * 100) / (rate * shares1));
         uint256 deposit2ExpiresAt = deposit2At + ((deposit2 * 100) / (rate * shares2));
 
-        uint256 totalClaimableFunds = ((deposit1ExpiresAt - deposit1At) * (rate * shares1));
-        totalClaimableFunds += ((deposit2ExpiresAt - deposit2At) * (rate * shares2));
-        totalClaimableFunds = totalClaimableFunds / 100; // scale back at the last moment
-
-        assertLe(totalClaimableFunds, deposit1 + deposit2, "Claimable funds is larger than the deposit amount");
-
         vm.roll(deposit1At);
         // initialize sub
         e.addNewSub(deposit1, shares1, rate);
@@ -372,7 +363,7 @@ contract EpochsTest is Test {
 
         (amount, starting, expiring) =
             e.scanEpochs(rate, (uint64(deposit1ExpiresAt.max(deposit2ExpiresAt)) / epochSize) + 1);
-        assertEq(amount, totalClaimableFunds, "last epoch: all funds claimable");
+        assertEq(amount, deposit1 + deposit2, "last epoch: all funds claimable");
         assertEq(starting, shares1 + shares2, "last epoch: sub is starting");
         assertEq(expiring, shares1 + shares2, "last epoch: sub is expiring");
     }
@@ -385,9 +376,6 @@ contract EpochsTest is Test {
         shares = uint16(bound(shares, 100, 10_000));
 
         uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
-        uint256 totalClaimableFunds = ((initExpiresAt - initDepositAt) * (rate * shares)) / 100;
-
-        assertLe(totalClaimableFunds, initDeposit, "Claimable funds is larger than the deposit amount");
 
         uint256 totalClaimed = 0;
 
@@ -426,7 +414,7 @@ contract EpochsTest is Test {
             totalClaimed += amount;
 
             assertEq(totalClaimed, e.claimed(), "last epoch: total claimed");
-            assertEq(totalClaimed, totalClaimableFunds, "last epoch: total claimable funds");
+            assertEq(totalClaimed, initDeposit, "last epoch: total claimable funds");
             assertEq(initExpiresAt / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
         }
     }
@@ -439,9 +427,6 @@ contract EpochsTest is Test {
         shares = uint16(bound(shares, 100, 10_000));
 
         uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
-        uint256 totalClaimableFunds = ((initExpiresAt - initDepositAt) * (rate * shares)) / 100;
-
-        assertLe(totalClaimableFunds, initDeposit, "Claimable funds is larger than the deposit amount");
 
         vm.roll(initDepositAt);
         // initialize sub
@@ -452,7 +437,7 @@ contract EpochsTest is Test {
 
             e.claim(rate);
 
-            assertEq(totalClaimableFunds, e.claimed(), "last epoch: total funds claimed");
+            assertEq(initDeposit, e.claimed(), "last epoch: total funds claimed");
             assertEq(initExpiresAt / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
         }
     }
@@ -471,12 +456,6 @@ contract EpochsTest is Test {
         uint256 deposit1ExpiresAt = deposit1At + ((deposit1 * 100) / (rate * shares1));
         uint256 deposit2ExpiresAt = deposit2At + ((deposit2 * 100) / (rate * shares2));
 
-        uint256 totalClaimableFunds = ((deposit1ExpiresAt - deposit1At) * (rate * shares1));
-        totalClaimableFunds += ((deposit2ExpiresAt - deposit2At) * (rate * shares2));
-        totalClaimableFunds = totalClaimableFunds / 100; // scale back at the last moment
-
-        assertLe(totalClaimableFunds, deposit1 + deposit2, "Claimable funds is larger than the deposit amount");
-
         vm.roll(deposit1At);
         // initialize sub
         e.addNewSub(deposit1, shares1, rate);
@@ -489,7 +468,7 @@ contract EpochsTest is Test {
 
         e.claim(rate);
 
-        assertEq(totalClaimableFunds, e.claimed(), "last epoch: total funds claimed");
+        assertEq(deposit1 + deposit2, e.claimed(), "last epoch: total funds claimed");
         assertEq(deposit1ExpiresAt.max(deposit2ExpiresAt) / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
     }
 

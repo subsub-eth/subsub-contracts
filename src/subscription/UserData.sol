@@ -33,6 +33,7 @@ abstract contract HasUserData {
 
     function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal virtual;
 
+    // TODO amount to add to given subscription
     function _addToSubscription(uint256 tokenId, uint256 amount)
         internal
         virtual
@@ -141,6 +142,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         $._subData[tokenId].lockedAmount = ((amount * $._lock) / LOCK_BASE).adjustToRate(_multipliedRate(multiplier));
     }
 
+    // TODO change to _extendSubscription
     function _addToSubscription(uint256 tokenId, uint256 amount)
         internal
         override

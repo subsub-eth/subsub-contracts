@@ -174,7 +174,7 @@ abstract contract Subscription is
 
         _addToEpochs(internalAmount, multiplier, mRate);
 
-       // we transfer the ORIGINAL amount into the contract, claiming any overflows
+       // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);

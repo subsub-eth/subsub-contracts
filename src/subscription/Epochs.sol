@@ -273,24 +273,32 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // adjust internal rate to number of shares
         rate = rate * shares;
         // inflate by multiplier base to reduce rounding errors
-        uint256 expiresAt_ = (amount * Lib.MULTIPLIER_BASE).expiresAt(now_, rate);
+        amount = amount * Lib.MULTIPLIER_BASE;
+        uint256 expiresAt_ = amount.expiresAt(now_, rate);
 
         // starting
         uint64 currentEpoch = _currentEpoch();
 
         EpochsStorage storage $ = _getEpochsStorage();
         $._epochs[currentEpoch].starting += shares;
-        uint256 remaining = ($._epochSize - (now_ % $._epochSize)).min(
-            expiresAt_ - now_ // subscription ends within the current time slot
-        );
-        $._epochs[currentEpoch].partialFunds += (remaining * rate);
 
-        // ending
+        {
+            uint256 remaining = ($._epochSize - (now_ % $._epochSize)).min(
+                expiresAt_ - now_ // subscription ends within the current time slot
+            );
+            uint256 partialFunds = remaining * rate;
+            $._epochs[currentEpoch].partialFunds += partialFunds;
+
+            // reduce amount by partial funds
+            amount -= partialFunds;
+        }
+
+        // expiring
         uint64 expiringEpoch = uint64(expiresAt_ / $._epochSize);
         $._epochs[expiringEpoch].expiring += shares;
-        $._epochs[expiringEpoch].partialFunds += (expiresAt_ - (expiringEpoch * $._epochSize)).min(
-            expiresAt_ - now_ // subscription ends within the current time slot
-        ) * rate;
+
+        // add the rest as partial Funds
+        $._epochs[expiringEpoch].partialFunds += amount % ($._epochSize * rate);
     }
 
     /// @notice moves the subscription based on the
@@ -323,6 +331,6 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         uint256 newEndingBlock = (newDeposit * Lib.MULTIPLIER_BASE).expiresAt(newDepositedAt, rate);
         uint64 newEpoch = uint64(newEndingBlock / $._epochSize);
         $._epochs[newEpoch].expiring += shares;
-        $._epochs[newEpoch].partialFunds += (newEndingBlock - uint256(((newEpoch * $._epochSize))).max(now_)) * rate;
+        $._epochs[newEpoch].partialFunds += (newEndingBlock - uint256(((newEpoch * $._epochSize))).max(now_)) * rate; // add access funds here
     }
 }
