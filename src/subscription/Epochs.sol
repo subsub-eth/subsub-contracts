@@ -374,6 +374,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         uint64 startEpoch = depositedAt / $._epochSize;
 
         uint64 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
+        // TODO one off error?
         require(oldExpiresAt >= _now()); // cannot be claimed or expired yet
 
         uint64 oldExpireEpoch = oldExpiresAt / $._epochSize;
@@ -455,7 +456,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         uint64 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
 
         // the new sub cannot expire in the past
-        require(newExpiresAt >= _now(), "Deposit too small"); // sanity check
+        // TODO one off error?
+        require(newExpiresAt > _now(), "Deposit too small"); // sanity check
 
         if (startEpoch == oldExpireEpoch) {
             // old sub starts and expires in same epoch => just change deposit in partialFunds

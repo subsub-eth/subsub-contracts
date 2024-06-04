@@ -80,6 +80,10 @@ contract EpochsTest is Test {
         e = new TestEpochs(epochSize);
     }
 
+    function oneTimeUnit(uint256 _rate, uint256 _shares) private pure returns (uint256) {
+        return ((_rate * _shares) / 100) + 1;
+    }
+
     function test_claimSingleSub(uint16 jump) public {
         uint256 shares = 100;
         uint256 deposit = 100_000_000;
@@ -534,7 +538,8 @@ contract EpochsTest is Test {
         assertEq(expiring, shares, "sub ext exp: sub expired");
     }
 
-    // // TODO hardcoded extend, hardcoded reduce, hardcoded cancel, generic reduce
+    // // TODO hardcoded extend, hardcoded reduce, hardcoded cancel, reduce to less than 1 time unit -> fail
+    // TODO one off error for expiration
 
     // function testProcessEpochs_extendSub(uint16 shares, uint256 nextDepositAt) public {
     //     shares = uint16(bound(shares, 100, 10_000));
@@ -578,11 +583,49 @@ contract EpochsTest is Test {
     //     assertEq(expiring, shares, "sub ext exp: sub expired");
     // }
 
-    function testClaim(uint16 shares) public {
-        uint256 initDeposit = 100_000;
-        uint256 initDepositAt = 10;
-
+    function testProcessEpochs_reduceEpoch(uint16 shares, uint256 initDeposit, uint256 newDeposit) public {
         shares = uint16(bound(shares, 100, 10_000));
+
+        initDeposit = bound(initDeposit, oneTimeUnit(rate, shares), 5_000_000); // at least 2 time unit
+        newDeposit = bound(newDeposit, oneTimeUnit(rate, shares), initDeposit); // at least 1 time unit
+        uint64 initDepositAt = epochSize / 10;
+
+        uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
+        uint256 newExpiresAt = initDepositAt + ((newDeposit * 100) / (rate * shares));
+        uint256 newDepositAt = bound(newDeposit, initDepositAt, newExpiresAt - 1);
+
+        vm.roll(initDepositAt);
+        // initialize sub
+        e.addNewSub(initDeposit, shares, rate);
+        assertEq(e.activeSubShares(), shares, "at initial deposit, sub is active");
+
+        (uint256 amount, uint256 starting, uint256 expiring) = e.scanEpochs(rate, uint64(initExpiresAt / epochSize) + 1);
+        assertEq(amount, initDeposit, "sub reduce: all funds claimable");
+        assertEq(starting, shares, "sub reduce: sub started");
+        assertEq(expiring, shares, "sub reduce: sub expired");
+
+        vm.roll(newDepositAt);
+        e.reduceInEpochs(initDepositAt, initDeposit, newDeposit, shares, rate);
+
+        // sub expiration was moved to a new epoch, sub needs to still be expired in old epoch
+        (amount, starting, expiring) = e.scanEpochs(rate, uint64(initExpiresAt / epochSize) + 1);
+        assertEq(amount, newDeposit, "sub reduce: new deposit is expired");
+        assertEq(starting, shares, "sub reduce: sub started");
+        assertEq(expiring, shares, "sub reduce: sub expired");
+
+        // extended sub expired
+        (amount, starting, expiring) = e.scanEpochs(rate, uint64(newExpiresAt / epochSize) + 1);
+        assertEq(amount, newDeposit, "sub reduce exp: all funds claimable");
+        assertEq(starting, shares, "sub reduce exp: sub started");
+        assertEq(expiring, shares, "sub reduce exp: sub expired");
+    }
+
+    function testClaim(uint16 shares, uint256 initDeposit) public {
+        shares = uint16(bound(shares, 100, 10_000));
+
+        initDeposit =
+            bound(initDeposit, oneTimeUnit(rate, shares) * epochSize, oneTimeUnit(rate, shares) * epochSize * 25);
+        uint256 initDepositAt = epochSize / 10;
 
         uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
 
@@ -604,16 +647,20 @@ contract EpochsTest is Test {
             assertEq(totalClaimed, e.claimed(), "epoch 0: total claimed");
             assertEq(0, e.lastProcessedEpoch(), "epoch 0: last processed epoch");
         }
-        // check each subsequent epoch
-        for (uint64 i = 2; i <= (uint64(initExpiresAt) / epochSize); i++) {
-            vm.roll(initDepositAt + (i * epochSize));
 
-            uint256 amount = e.claim(rate);
-            totalClaimed += amount;
-            assertEq(amount, (rate * shares * epochSize) / 100, "epoch i: partial funds claimable");
+        // if sub is too small to contain full epochs, we skip this check
+        if (initExpiresAt / epochSize != 1) {
+            // check each subsequent epoch
+            for (uint64 i = 2; i <= (uint64(initExpiresAt) / epochSize); i++) {
+                vm.roll(initDepositAt + (i * epochSize));
 
-            assertEq(totalClaimed, e.claimed(), "epoch i: total claimed");
-            assertEq(i - 1, e.lastProcessedEpoch(), "epoch i: last processed epoch");
+                uint256 amount = e.claim(rate);
+                totalClaimed += amount;
+                assertEq(amount, (rate * shares * epochSize) / 100, "epoch i: partial funds claimable");
+
+                assertEq(totalClaimed, e.claimed(), "epoch i: total claimed");
+                assertEq(i - 1, e.lastProcessedEpoch(), "epoch i: last processed epoch");
+            }
         }
 
         {
@@ -626,6 +673,27 @@ contract EpochsTest is Test {
             assertEq(totalClaimed, initDeposit, "last epoch: total claimable funds");
             assertEq(initExpiresAt / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
         }
+    }
+
+    function testClaim_singleEpoch(uint16 shares, uint256 initDeposit) public {
+        shares = uint16(bound(shares, 100, 10_000));
+
+        initDeposit = bound(initDeposit, oneTimeUnit(rate, shares), oneTimeUnit(rate, shares) * (epochSize / 2));
+        uint256 initDepositAt = epochSize / 10;
+
+        vm.roll(initDepositAt);
+        // initialize sub
+        e.addNewSub(initDeposit, shares, rate);
+
+        // claim epoch 0
+        vm.roll(initDepositAt + epochSize);
+
+        uint256 amount = e.claim(rate);
+
+        assertEq(amount, initDeposit, "epoch 0: partial funds claimable");
+
+        assertEq(e.claimed(), initDeposit, "epoch 0: total amount claimed");
+        assertEq(0, e.lastProcessedEpoch(), "epoch 0: last processed epoch");
     }
 
     function testClaim_single_total(uint16 shares) public {
@@ -697,8 +765,8 @@ contract EpochsTest is Test {
         e.claim(rate);
     }
 
-    function testClaim_noSubs() public {
-        uint64 epoch = 25;
+    function testClaim_noSubs(uint64 epoch) public {
+        epoch = uint64(bound(epoch, 1, 50));
 
         vm.roll(epochSize * epoch);
 
