@@ -63,8 +63,8 @@ library Lib {
     }
 
 
-    function expiresAt(uint256 amount, uint256 depositedAt, uint256 mRate) internal pure returns (uint256) {
-        return depositedAt + (amount / mRate);
+    function expiresAt(uint256 amount, uint64 depositedAt, uint256 mRate) internal pure returns (uint64) {
+        return depositedAt + uint64(amount / mRate);
     }
 
     function multipliedRate(uint256 rate, uint256 multiplier) internal pure returns (uint256) {

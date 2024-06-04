@@ -37,7 +37,7 @@ abstract contract HasUserData {
     function _addToSubscription(uint256 tokenId, uint256 amount)
         internal
         virtual
-        returns (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 oldLastDepositedAt);
+        returns (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 subStartAt);
 
     function _withdrawableFromSubscription(uint256 tokenId) internal view virtual returns (uint256);
 
@@ -120,7 +120,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         UserDataStorage storage $ = _getUserDataStorage();
         uint256 lastDeposit = $._subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
-        return currentDeposit_.expiresAt(lastDeposit, _multipliedRate($._subData[tokenId].multiplier));
+        return currentDeposit_.expiresAt(uint64(lastDeposit), _multipliedRate($._subData[tokenId].multiplier));
     }
 
     function _deleteSubscription(uint256 tokenId) internal override {
@@ -176,7 +176,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
 
         UserDataStorage storage $ = _getUserDataStorage();
         uint256 lastDeposit = $._subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
+        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit; // TODO normalize by rate
         uint256 lockedAmount = $._subData[tokenId].lockedAmount;
         uint256 mRate = _multipliedRate($._subData[tokenId].multiplier);
         uint256 usedBlocks = _now() - lastDeposit;

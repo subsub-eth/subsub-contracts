@@ -228,15 +228,28 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
         for (uint64 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i < upToEpoch; i++) {
             // remove subs expiring in this epoch
-            _activeSubs -= $._epochs[i].expiring;
+            uint256 epochExpiring = $._epochs[i].expiring;
+            uint256 epochStarting = $._epochs[i].starting;
+
+            if (epochExpiring > _activeSubs) {
+                // more subs expire than there are active ones
+                // thus subs start and expire within this epoch (sub is shorter than an epoch)
+                _activeSubs = 0;
+                epochStarting -= epochExpiring;
+            } else {
+                _activeSubs -= epochExpiring;
+            }
 
             // we do not apply the individual multiplier to `rate` as it is
             // included in _activeSubs, expiring, and starting subs
             amount += $._epochs[i].partialFunds + (_activeSubs * $._epochSize * rate);
+
+            // use original values here to account for all subs
             starting += $._epochs[i].starting;
             expiring += $._epochs[i].expiring;
-            // add new subs starting in this epoch
-            _activeSubs += $._epochs[i].starting;
+
+            // add new subs starting in this epoch, sanitized
+            _activeSubs += epochStarting;
         }
         // the amount is mutliplied by the shares and has to be returned to its base
         amount = amount / Lib.MULTIPLIER_BASE;
@@ -268,7 +281,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     }
 
     function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
-        uint256 now_ = _now();
+        uint64 now_ = _now();
 
         // adjust internal rate to number of shares
         rate = rate * shares;
@@ -276,17 +289,17 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         amount = amount * Lib.MULTIPLIER_BASE;
         uint256 expiresAt_ = amount.expiresAt(now_, rate);
 
-        // starting
-        uint64 currentEpoch = _currentEpoch();
-
         EpochsStorage storage $ = _getEpochsStorage();
-        $._epochs[currentEpoch].starting += shares;
 
         {
-            uint256 remaining = ($._epochSize - (now_ % $._epochSize)).min(
+            // starting
+            uint64 currentEpoch = _currentEpoch();
+            $._epochs[currentEpoch].starting += shares;
+
+            uint256 remainingTimeUnits = uint256($._epochSize - (now_ % $._epochSize)).min(
                 expiresAt_ - now_ // subscription ends within the current time slot
             );
-            uint256 partialFunds = remaining * rate;
+            uint256 partialFunds = remainingTimeUnits * rate;
             $._epochs[currentEpoch].partialFunds += partialFunds;
 
             // reduce amount by partial funds
@@ -297,7 +310,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         uint64 expiringEpoch = uint64(expiresAt_ / $._epochSize);
         $._epochs[expiringEpoch].expiring += shares;
 
-        // add the rest as partial Funds
+        // add the rest as partial Funds, might just be some dust
         $._epochs[expiringEpoch].partialFunds += amount % ($._epochSize * rate);
     }
 
@@ -310,27 +323,200 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         uint256 shares,
         uint256 rate
     ) internal override {
-        uint256 now_ = _now();
+        // uint256 now_ = _now();
+        //
+        // // newDepositedAt >= now >= oldDepositedAt
+        // // basically add new sub
+        // // remove old expiration
+        // // unwind head only if oldStartEpoch == newExpEpoch
+        // // skip starting
+        //
+        // // adjust internal rate to number of shares
+        // rate = rate * shares;
+        //
+        // EpochsStorage storage $ = _getEpochsStorage();
+        // {
+        //     // when does the sub currently expire?
+        //     uint256 oldExpiringAt = (oldDeposit * Lib.MULTIPLIER_BASE).expiresAt(uint64(oldDepositedAt), rate);
+        //     require(oldExpiringAt >= now_, "Epoch: subscription is already expired");
+        //     // update old epoch
+        //     uint64 oldEpoch = uint64(oldExpiringAt / $._epochSize);
+        //     $._epochs[oldEpoch].expiring -= shares;
+        //     uint256 removable = (oldExpiringAt - uint256(((oldEpoch * $._epochSize))).max(now_)) * rate;
+        //     $._epochs[oldEpoch].partialFunds -= removable;
+        // }
+        //
+        // // update new epoch
+        // uint256 newEndingBlock = (newDeposit * Lib.MULTIPLIER_BASE).expiresAt(uint64(newDepositedAt), rate);
+        // uint64 newEpoch = uint64(newEndingBlock / $._epochSize);
+        // $._epochs[newEpoch].expiring += shares;
+        // $._epochs[newEpoch].partialFunds += (newEndingBlock - uint256(((newEpoch * $._epochSize))).max(now_)) * rate; // add access funds here
+        //
+        // // reduce newDeposit by partialFunds of beginning epoch
+        // // newDeposit = //newDeposit - ((newDepositedAt % $._epochSize))
+        //
+        // // attach the remainder of the funds that do not fill an epoch + dust
+        // // $._epochs[newEpoch].partialFunds +=
+        // //   (newDeposit * Lib.MULTIPLIER_BASE) % (rate * $._epochSize);
+    }
 
-        // adjust internal rate to number of shares
+    function _extendInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+        internal
+    {
+        require(oldDeposit <= newDeposit, "new deposit too small");
         rate = rate * shares;
 
-        EpochsStorage storage $ = _getEpochsStorage();
-        {
-            // when does the sub currently end?
-            uint256 oldExpiringAt = (oldDeposit * Lib.MULTIPLIER_BASE).expiresAt(oldDepositedAt, rate);
-            require(oldExpiringAt >= now_, "Epoch: subscription is already expired");
-            // update old epoch
-            uint64 oldEpoch = uint64(oldExpiringAt / $._epochSize);
-            $._epochs[oldEpoch].expiring -= shares;
-            uint256 removable = (oldExpiringAt - uint256(((oldEpoch * $._epochSize))).max(now_)) * rate;
-            $._epochs[oldEpoch].partialFunds -= removable;
-        }
+        //inflate
+        oldDeposit = oldDeposit * Lib.MULTIPLIER_BASE;
+        newDeposit = newDeposit * Lib.MULTIPLIER_BASE;
 
-        // update new epoch
-        uint256 newEndingBlock = (newDeposit * Lib.MULTIPLIER_BASE).expiresAt(newDepositedAt, rate);
-        uint64 newEpoch = uint64(newEndingBlock / $._epochSize);
-        $._epochs[newEpoch].expiring += shares;
-        $._epochs[newEpoch].partialFunds += (newEndingBlock - uint256(((newEpoch * $._epochSize))).max(now_)) * rate; // add access funds here
+        EpochsStorage storage $ = _getEpochsStorage();
+        uint64 startEpoch = depositedAt / $._epochSize;
+
+        uint64 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
+        require(oldExpiresAt >= _now()); // cannot be claimed or expired yet
+
+        uint64 oldExpireEpoch = oldExpiresAt / $._epochSize;
+        uint64 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
+
+        if (startEpoch == oldExpireEpoch) {
+            // old sub starts and expires in same epoch => unwind all
+
+            // remove the entire sub funds from partialfunds
+            $._epochs[oldExpireEpoch].partialFunds -= oldDeposit;
+            $._epochs[oldExpireEpoch].expiring -= shares;
+
+            // add "new" sub (add method) without touching starting shares
+
+            // TODO refactor with "add" method
+            {
+                // handle head
+
+                uint256 partialTimeUnits = uint256($._epochSize - (depositedAt % $._epochSize)).min(
+                    newExpiresAt - depositedAt // subscription ends within the current time slot
+                );
+                uint256 partialFunds = partialTimeUnits * rate;
+                $._epochs[startEpoch].partialFunds += partialFunds;
+
+                // reduce amount by partial funds
+                newDeposit -= partialFunds;
+            }
+
+            // handle tail
+            uint64 expiringEpoch = newExpiresAt / $._epochSize;
+            $._epochs[expiringEpoch].expiring += shares;
+
+            // add the rest as partial Funds, might just be some dust
+            $._epochs[expiringEpoch].partialFunds += newDeposit % ($._epochSize * rate);
+            // TODO end refactor
+        } else {
+            // sub spans across epochs
+            // the head state is not being touched, only the tail is moved
+
+            // deduct head from deposit
+            {
+                uint256 headFunds = ($._epochSize - (depositedAt % $._epochSize)) * rate;
+                newDeposit -= headFunds;
+                oldDeposit -= headFunds;
+            }
+
+            uint256 epochRate = $._epochSize * rate;
+            // unwind tail
+            $._epochs[oldExpireEpoch].partialFunds -= oldDeposit % epochRate;
+            $._epochs[oldExpireEpoch].expiring -= shares;
+
+            // set new tail
+            uint64 newExpiringEpoch = newExpiresAt / $._epochSize;
+            $._epochs[newExpiringEpoch].partialFunds += newDeposit % epochRate;
+            $._epochs[newExpiringEpoch].expiring += shares;
+        }
+    }
+
+    function _reduceInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+        internal
+    {
+        require(oldDeposit >= newDeposit, "Not reduce"); // sanity check
+        rate = rate * shares;
+        //inflate
+        oldDeposit = oldDeposit * Lib.MULTIPLIER_BASE;
+        newDeposit = newDeposit * Lib.MULTIPLIER_BASE;
+
+        // require(newExpiresAt >= now, "Deposit too small");
+        // sub cannot be expired
+
+        EpochsStorage storage $ = _getEpochsStorage();
+        uint64 startEpoch = depositedAt / $._epochSize;
+
+        uint64 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
+        // require(oldExpiresAt >= _now()); // cannot be claimed or expired yet
+
+        uint64 oldExpireEpoch = oldExpiresAt / $._epochSize;
+
+        uint64 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
+
+        // the new sub cannot expire in the past
+        require(newExpiresAt >= _now(), "Deposit too small"); // sanity check
+
+        if (startEpoch == oldExpireEpoch) {
+            // old sub starts and expires in same epoch => just change deposit in partialFunds
+
+            // remove the entire sub funds from partialFunds
+            $._epochs[oldExpireEpoch].partialFunds -= oldDeposit;
+            // keep shares as is, as new tail is also in this epoch
+
+            // just add the entire new deposit, as the sub expires in this epoch
+            $._epochs[oldExpireEpoch].partialFunds += newDeposit;
+        } else {
+            // the original sub spans across multiple epochs, we might only have to change the tail
+            uint64 newExpiringEpoch = newExpiresAt / $._epochSize;
+
+            if (startEpoch == newExpiringEpoch) {
+                // the new sub starts and expires in the same epoch
+                // unwind all from multiple epochs
+                // remove tail and head funds from partialfunds
+                {
+                    // handle head
+                    uint64 partialTimeUnits = $._epochSize - (depositedAt % $._epochSize); // sub spanned multiple epochs
+                    uint256 partialFunds = partialTimeUnits * rate;
+                    $._epochs[startEpoch].partialFunds -= partialFunds;
+                    // keep start shares as is
+                    oldDeposit -= partialFunds;
+                }
+
+                // handle tail
+                $._epochs[oldExpireEpoch].expiring -= shares;
+
+                // remove the rest as partial Funds, might just be some dust
+                $._epochs[oldExpireEpoch].partialFunds -= oldDeposit % ($._epochSize * rate);
+
+                ///////////////////////////////////////////////////////////////
+                // add new head/tail
+
+                // as the new sub starts and ends within a single epoch, we just dump it in partialFunds
+                $._epochs[newExpiringEpoch].partialFunds += newDeposit;
+                $._epochs[newExpiringEpoch].expiring += shares;
+            } else {
+                // the new sub still spans across multiple epochs, thus we only change the tail
+                // deduct head from deposit
+                {
+                    uint64 partialTimeUnits = $._epochSize - (depositedAt % $._epochSize); // sub spanned multiple epochs
+                    uint256 partialFunds = partialTimeUnits * rate;
+                    // keep start shares as is
+                    oldDeposit -= partialFunds;
+                    newDeposit -= partialFunds;
+                }
+                // unwind tail
+                $._epochs[oldExpireEpoch].expiring -= shares;
+
+                // remove the rest as partial Funds, might just be some dust
+                $._epochs[oldExpireEpoch].partialFunds -= oldDeposit % ($._epochSize * rate);
+
+                // set new tail
+                $._epochs[newExpiringEpoch].expiring += shares;
+
+                // add the rest as partial Funds, might just be some dust
+                $._epochs[newExpiringEpoch].partialFunds += newDeposit % ($._epochSize * rate);
+            }
+        }
     }
 }

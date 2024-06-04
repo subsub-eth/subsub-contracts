@@ -228,6 +228,7 @@ abstract contract Subscription is
             _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
         );
 
+        // TODO do not allow funds from the current time slot
         // TODO move to withdraw
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
