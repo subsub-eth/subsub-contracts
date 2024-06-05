@@ -375,7 +375,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
         uint64 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
         // TODO one off error?
-        require(oldExpiresAt >= _now()); // cannot be claimed or expired yet
+        require(oldExpiresAt > _now(), "Subscription already expired"); // cannot be claimed or expired yet
 
         uint64 oldExpireEpoch = oldExpiresAt / $._epochSize;
         uint64 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);

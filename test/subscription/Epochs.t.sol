@@ -216,8 +216,8 @@ contract EpochsTest is Test {
     ) public {
         shares = uint16(bound(shares, 100, 10_000));
 
-        initDeposit = bound(initDeposit, (epochSize * rate * shares) / 100, 1_000_000);
-        newDeposit = bound(newDeposit, initDeposit + (rate * shares), initDeposit * 10);
+        initDeposit = bound(initDeposit, epochSize * oneTimeUnit(rate, shares), 1_000_000);
+        newDeposit = bound(newDeposit, initDeposit + oneTimeUnit(rate, shares), initDeposit * 10);
 
         uint64 initDepositAt = epochSize / 10;
         uint64 initExpiresAt = initDepositAt + uint64((initDeposit * 100) / (rate * shares));
@@ -231,7 +231,7 @@ contract EpochsTest is Test {
         vm.roll(initDepositAt + epochSize + 1);
         assertEq(e.activeSubShares(), shares, "first epoch: sub is active");
 
-        vm.roll(initExpiresAt);
+        vm.roll(initExpiresAt - 1);
         assertEq(e.activeSubShares(), shares, "last epoch: sub is active");
 
         //////////
@@ -242,8 +242,10 @@ contract EpochsTest is Test {
 
         e.extendInEpochs(initDepositAt, initDeposit, newDeposit, shares, rate);
 
-        vm.roll(initExpiresAt + epochSize);
-        assertEq(e.activeSubShares(), shares, "init sub extended");
+        if (initExpiresAt / epochSize != newExpiresAt / epochSize) {
+            vm.roll(initExpiresAt + epochSize);
+            assertEq(e.activeSubShares(), shares, "init sub extended");
+        }
 
         vm.roll(newExpiresAt);
         assertEq(e.activeSubShares(), shares, "end of extended sub");
@@ -256,7 +258,7 @@ contract EpochsTest is Test {
     function testActiveSubShares_extendSubscription_initOneEpoch(uint16 shares, uint256 newDeposit) public {
         shares = uint16(bound(shares, 100, 10_000));
 
-        uint256 initDeposit = ((epochSize / 6) * uint256(shares * rate)) / 100;
+        uint256 initDeposit = (epochSize / 6) * oneTimeUnit(rate, shares);
         newDeposit = bound(newDeposit, initDeposit + (rate * shares), initDeposit * 10);
 
         uint64 initDepositAt = epochSize / 10;
@@ -271,7 +273,7 @@ contract EpochsTest is Test {
         vm.roll(initDepositAt);
         assertEq(e.activeSubShares(), shares, "first epoch: sub is active");
 
-        vm.roll(initExpiresAt);
+        vm.roll(initExpiresAt - 1);
         assertEq(e.activeSubShares(), shares, "last epoch: sub is active");
 
         //////////
@@ -460,16 +462,16 @@ contract EpochsTest is Test {
     {
         shares = uint16(bound(shares, 100, 10_000));
 
-        initDeposit = bound(initDeposit, (epochSize * rate * shares) / 100, 1_000_000); // at least 1 epoch
+        initDeposit = bound(initDeposit, epochSize * oneTimeUnit(rate, shares), 1_000_000); // at least 1 epoch
         newDeposit = bound(
             newDeposit,
-            initDeposit + ((epochSize * rate * shares) / 100),
-            initDeposit + ((epochSize * rate * shares * 10) / 100)
+            initDeposit + (epochSize * oneTimeUnit(rate, shares)),
+            initDeposit + (epochSize * oneTimeUnit(rate, shares) * 10)
         ); // add at least another epoch
         uint64 initDepositAt = epochSize / 10;
 
         uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
-        uint256 newDepositAt = bound(newDeposit, initDepositAt, initExpiresAt);
+        uint256 newDepositAt = bound(newDeposit, initDepositAt, initExpiresAt - 1);
 
         vm.roll(initDepositAt);
         // initialize sub
@@ -502,13 +504,13 @@ contract EpochsTest is Test {
     function testProcessEpochs_extendEpoch(uint16 shares, uint256 initDeposit, uint256 newDeposit) public {
         shares = uint16(bound(shares, 100, 10_000));
 
-        initDeposit = bound(initDeposit, (rate * shares) / 100, 1_000_000); // at least 1 time unit
+        initDeposit = bound(initDeposit, oneTimeUnit(rate, shares), 1_000_000); // at least 1 time unit
         newDeposit = bound(newDeposit, initDeposit + 1, initDeposit + (((epochSize * rate * shares) * 10) / 100)); // at least 1 gwei
         uint64 initDepositAt = epochSize / 10;
 
         uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
         uint256 newExpiresAt = initDepositAt + ((newDeposit * 100) / (rate * shares));
-        uint256 newDepositAt = bound(newDeposit, initDepositAt, initExpiresAt);
+        uint256 newDepositAt = bound(newDeposit, initDepositAt, initExpiresAt - 1);
 
         vm.roll(initDepositAt);
         // initialize sub
@@ -646,6 +648,7 @@ contract EpochsTest is Test {
 
             assertEq(totalClaimed, e.claimed(), "epoch 0: total claimed");
             assertEq(0, e.lastProcessedEpoch(), "epoch 0: last processed epoch");
+            assertEq(shares, e.activeSubShares(), "epoch 0: shares active");
         }
 
         // if sub is too small to contain full epochs, we skip this check
@@ -660,6 +663,7 @@ contract EpochsTest is Test {
 
                 assertEq(totalClaimed, e.claimed(), "epoch i: total claimed");
                 assertEq(i - 1, e.lastProcessedEpoch(), "epoch i: last processed epoch");
+                assertEq(shares, e.activeSubShares(), "epoch i: shares active");
             }
         }
 
@@ -672,6 +676,7 @@ contract EpochsTest is Test {
             assertEq(totalClaimed, e.claimed(), "last epoch: total claimed");
             assertEq(totalClaimed, initDeposit, "last epoch: total claimable funds");
             assertEq(initExpiresAt / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
+            assertEq(0, e.activeSubShares(), "last epoch: shares not active");
         }
     }
 
@@ -694,6 +699,7 @@ contract EpochsTest is Test {
 
         assertEq(e.claimed(), initDeposit, "epoch 0: total amount claimed");
         assertEq(0, e.lastProcessedEpoch(), "epoch 0: last processed epoch");
+        assertEq(0, e.activeSubShares(), "epoch 0: shares not active after expire");
     }
 
     function testClaim_single_total(uint16 shares) public {
@@ -715,6 +721,7 @@ contract EpochsTest is Test {
 
             assertEq(initDeposit, e.claimed(), "last epoch: total funds claimed");
             assertEq(initExpiresAt / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
+            assertEq(0, e.activeSubShares(), "last epoch: shares not active after expire");
         }
     }
 
@@ -739,6 +746,11 @@ contract EpochsTest is Test {
         // add 2nd sub
         e.addNewSub(deposit2, shares2, rate);
 
+        if (deposit1ExpiresAt > deposit2At) {
+          // subs intersect
+          assertEq(shares1 + shares2, e.activeSubShares(), "shares from both subs active");
+        }
+
         vm.roll(deposit1ExpiresAt.max(deposit2ExpiresAt) + epochSize);
 
         e.claim(rate);
@@ -749,6 +761,7 @@ contract EpochsTest is Test {
             e.lastProcessedEpoch(),
             "last epoch: last processed epoch"
         );
+        assertEq(0, e.activeSubShares(), "last epoch: all shares not active after expire");
     }
 
     function testClaim_epoch0(uint16 shares) public {
@@ -775,5 +788,6 @@ contract EpochsTest is Test {
 
         assertEq(0, e.claimed(), "total funds 0");
         assertEq(epoch - 1, e.lastProcessedEpoch(), "last processed epoch advanced to previous epoch");
+        assertEq(0, e.activeSubShares(), "no subs exist");
     }
 }
