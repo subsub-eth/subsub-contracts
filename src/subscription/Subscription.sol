@@ -84,7 +84,7 @@ abstract contract Subscription is
     function settings()
         external
         view
-        returns (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply_)
+        returns (IERC20Metadata token, uint256 rate, uint24 lock, uint256 epochSize, uint256 maxSupply_)
     {
         token = _paymentToken();
         rate = _rate();
@@ -94,8 +94,8 @@ abstract contract Subscription is
     }
 
     function epochState() external view returns (uint256 currentEpoch, uint256 lastProcessedEpoch) {
-      currentEpoch = _currentEpoch();
-      lastProcessedEpoch = _lastProcessedEpoch();
+        currentEpoch = _currentEpoch();
+        lastProcessedEpoch = _lastProcessedEpoch();
     }
 
     function setFlags(uint256 flags) external onlyOwner requireValidFlags(flags) {
@@ -170,11 +170,12 @@ abstract contract Subscription is
 
         uint256 internalAmount = amount.toInternal(_decimals()).adjustToRate(mRate);
 
+        // TODO do we need return values?
         _createSubscription(tokenId, internalAmount, multiplier);
 
         _addToEpochs(internalAmount, multiplier, mRate);
 
-       // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
+        // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
 
         _safeMint(msg.sender, tokenId);
@@ -196,8 +197,8 @@ abstract contract Subscription is
         require(internalAmount >= mRate, "SUB: amount too small");
 
         {
-            (uint256 oldDeposit, uint256 newDeposit, bool reactived, uint256 lastDepositedAt) =
-                _addToSubscription(tokenId, internalAmount);
+            (uint64 oldDeposit, uint256 newDeposit, uint256 lastDepositedAt, bool reactived) =
+                _extendSubscription(tokenId, internalAmount);
 
             if (reactived) {
                 // subscription was inactive
@@ -231,10 +232,12 @@ abstract contract Subscription is
         // TODO do not allow funds from the current time slot
         // TODO move to withdraw
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
+
+        // TODO remove, check in UserData
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
         uint256 _lastDepositAt = _lastDepositedAt(tokenId);
-        (uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
+        (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
         uint256 multiplier_ = _multiplier(tokenId);
         _moveInEpochs(
@@ -323,7 +326,7 @@ abstract contract Subscription is
     }
 
     function claimable() external view returns (uint256) {
-      return claimable(_lastProcessedEpoch(), _currentEpoch());
+        return claimable(_lastProcessedEpoch(), _currentEpoch());
     }
 
     function claimTips(address to) external onlyOwner {

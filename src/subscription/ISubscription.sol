@@ -73,7 +73,7 @@ struct SubSettings {
      * @notice The percentage amount of tokens to be locked in the subscription on a new deposit
      * @dev The percentage amount is denominated in values from 0 (0%) to 10_000 (100%)
      */
-    uint256 lock;
+    uint24 lock;
     /**
      * @notice The size of an epoch measured in the underlying time unit
      * @dev Epochs are generally counted from the 'beginning' of time, depending on the underlying time unit

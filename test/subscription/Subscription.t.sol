@@ -26,7 +26,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     ERC20DecimalsMock private testToken;
     SubscriptionHandle public handle;
     uint256 public rate;
-    uint256 public lock;
+    uint24 public lock;
     uint64 public epochSize;
     uint256 public maxSupply;
 

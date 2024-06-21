@@ -314,6 +314,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._epochs[expiringEpoch].partialFunds += amount % ($._epochSize * rate);
     }
 
+    // TODO REMOVE ME
     /// @notice moves the subscription based on the
     function _moveInEpochs(
         uint256 oldDepositedAt,

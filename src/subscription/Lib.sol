@@ -53,6 +53,7 @@ library Lib {
         return externalAmount;
     }
 
+    // TODO REMOVE ME
     function adjustToRate(uint256 amount, uint256 rate)
         internal
         pure
@@ -67,7 +68,20 @@ library Lib {
         return depositedAt + uint64(amount / mRate);
     }
 
+    // TODO REMOVE ME
     function multipliedRate(uint256 rate, uint256 multiplier) internal pure returns (uint256) {
         return (rate * multiplier) / MULTIPLIER_BASE;
+    }
+
+    /**
+     * @notice calculates the validity of a certain amount (of funds) in relation to the given rate and multiplier
+     * @dev calculates the amount of time units a certain amount if valid for
+     * @param amount amount of funds
+     * @param rate the base rate of a sub scription
+     * @param multiplier individual multiplier that is applied to the rate
+     * @return the amount of time unit the amount is valid for
+     */
+    function validFor(uint256 amount, uint256 rate, uint256 multiplier) internal pure returns (uint64) {
+      return uint64((amount * MULTIPLIER_BASE) / (rate * multiplier));
     }
 }
