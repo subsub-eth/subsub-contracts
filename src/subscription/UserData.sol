@@ -32,7 +32,7 @@ abstract contract HasUserData {
 
     /**
      * @notice checks the status of a subscription
-     * @dev a subscription is active if it has not expired yet, now < expiration date
+     * @dev a subscription is active if it has not expired yet, now < expiration date, excluding the expiration date
      * @param tokenId subscription identifier
      * @return active status
      */
@@ -101,6 +101,9 @@ abstract contract HasUserData {
 
     /**
      * @notice returns the amount of total spent and yet unspent funds in the subscription, excluding tips
+     * @dev in an active subscription, the current time unit is considered spent in order to prevent
+     * subscribing and withdrawing within the same transaction and having an active sub without paying for
+     * at least one time unit
      * @param tokenId subscription identifier
      * @return spent the spent amount
      * @return unspent the unspent amount left in the subscription
@@ -278,10 +281,11 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         } else {
             // extending active subscription
             uint256 remainingDeposit = oldDeposit
-                - (
-                    ((now_ - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier))
-                        / Lib.MULTIPLIER_BASE
-                );
+            // spent amount
+            - (
+                ((now_ - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier))
+                    / Lib.MULTIPLIER_BASE
+            );
 
             // deposit is counted from initDepositAt
             newDeposit = oldDeposit + amount;
@@ -307,15 +311,17 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         uint256 lastDepositAt = $._subData[tokenId].lastDepositAt;
         uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
 
-        // locked + spent at last deposit
+        // locked + spent up until last deposit
         uint256 lockedAmount = $._subData[tokenId].lockedAmount
             + (
-                ((lastDepositAt - $._subData[tokenId].initDepositAt) * _rate() * $._subData[tokenId].multiplier)
+                ((lastDepositAt - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier))
                     / Lib.MULTIPLIER_BASE
             );
 
-        uint256 spentFunds = ((_now() - $._subData[tokenId].initDepositAt) * _rate() * $._subData[tokenId].multiplier)
-            / Lib.MULTIPLIER_BASE;
+        // the current block is spent, thus +1
+        uint256 spentFunds = (
+            (1 + _now() - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier)
+        ) / Lib.MULTIPLIER_BASE;
 
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (spentFunds).min(currentDeposit_));
     }
@@ -351,9 +357,9 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
             spentAmount = (totalDeposited - $._subData[tokenId].currentDeposit)
             // TODO fix rate
             + (
-                ((_now() - $._subData[tokenId].initDepositAt) * _rate() * $._subData[tokenId].multiplier)
+                ((1 + _now() - $._subData[tokenId].initDepositAt) * _rate() * $._subData[tokenId].multiplier)
                     / Lib.MULTIPLIER_BASE
-            );
+            ).min($._subData[tokenId].currentDeposit);
         }
 
         uint256 unspentAmount = totalDeposited - spentAmount;
