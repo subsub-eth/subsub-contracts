@@ -191,20 +191,19 @@ abstract contract Subscription is
         whenDisabled(RENEWAL_PAUSED)
         requireExists(tokenId)
     {
-        uint256 multiplier = _multiplier(tokenId);
-        uint256 mRate = _multipliedRate(multiplier);
-        uint256 internalAmount = amount.toInternal(_decimals()).adjustToRate(mRate);
-        require(internalAmount >= mRate, "SUB: amount too small");
+        uint256 multiplier_ = _multiplier(tokenId);
+        uint256 rate = _rate();
+        uint256 internalAmount = amount.toInternal(_decimals());
 
         {
-            (uint64 oldDeposit, uint256 newDeposit, uint256 lastDepositedAt, bool reactived) =
+            (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactived) =
                 _extendSubscription(tokenId, internalAmount);
 
             if (reactived) {
-                // subscription was inactive
-                _addToEpochs(newDeposit, multiplier, mRate);
+                // subscription was inactive, new streak was created, add "new" sub to epochs
+                _addToEpochs(newDeposit, multiplier_, rate);
             } else {
-                _moveInEpochs(lastDepositedAt, oldDeposit, _now(), newDeposit, multiplier, mRate);
+                _extendInEpochs(depositedAt, oldDeposit, newDeposit, multiplier_, rate);
             }
         }
 
@@ -224,31 +223,25 @@ abstract contract Subscription is
         _withdraw(tokenId, _withdrawableFromSubscription(tokenId));
     }
 
+    /**
+      @param amount internal representation (18 decimals) of amount to withdraw
+      **/
     function _withdraw(uint256 tokenId, uint256 amount) private {
         require(
             _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
         );
 
-        // TODO do not allow funds from the current time slot
-        // TODO move to withdraw
+        // TODO move to withdraw, prevent duplicate call in cancel() and third call in UserData
         uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
 
         // TODO remove, check in UserData
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
-        uint256 _lastDepositAt = _lastDepositedAt(tokenId);
         (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
         uint256 multiplier_ = _multiplier(tokenId);
-        _moveInEpochs(
-            _lastDepositAt,
-            oldDeposit,
-            _lastDepositAt,
-            newDeposit,
-            multiplier_,
-            // TODO weird?
-            _multipliedRate(multiplier_)
-        );
+
+        _reduceInEpochs(depositedAt, oldDeposit, newDeposit, multiplier_, _rate());
 
         uint256 externalAmount = amount.toExternal(_decimals());
         _paymentToken().safeTransfer(_msgSender(), externalAmount);

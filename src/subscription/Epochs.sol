@@ -101,23 +101,28 @@ abstract contract HasEpochs {
     function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual;
 
     /**
-     * @notice moves an existing, non-expired subscription in the epochs data
+     * @notice extends an active subscription in the epochs based on its coordinates
      * @dev the subscription is extended using the new deposit data and removed from the old deposit data location
-     * @param oldDepositedAt The time the subscription was originally deposited/started at
+     * @param depositedAt The time the subscription was originally deposited/started at
      * @param oldDeposit The amount of funds the original subscription contained
-     * @param newDepositedAt The time the subscription is now extended from (probably now)
      * @param newDeposit The amount of funds the subscription now contains
      * @param shares The number of shares this subscription contains
      * @param rate The rate that is applied to the amount, the contracts rate
      */
-    function _moveInEpochs(
-        uint256 oldDepositedAt,
-        uint256 oldDeposit,
-        uint256 newDepositedAt,
-        uint256 newDeposit,
-        uint256 shares,
-        uint256 rate
-    ) internal virtual;
+    function _extendInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+    internal virtual;
+
+    /**
+     * @notice reduces an active subscription in the epochs based on its coordinates
+     * @dev the subscription is reduced using the new deposit data and removed from the old deposit data location
+     * @param depositedAt The time the subscription was originally deposited/started at
+     * @param oldDeposit The amount of funds the original subscription contained
+     * @param newDeposit The amount of funds the subscription now contains
+     * @param shares The number of shares this subscription contains
+     * @param rate The rate that is applied to the amount, the contracts rate
+     */
+    function _reduceInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+        internal virtual;
 }
 
 abstract contract Epochs is Initializable, TimeAware, HasEpochs {
@@ -314,55 +319,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._epochs[expiringEpoch].partialFunds += amount % ($._epochSize * rate);
     }
 
-    // TODO REMOVE ME
-    /// @notice moves the subscription based on the
-    function _moveInEpochs(
-        uint256 oldDepositedAt,
-        uint256 oldDeposit,
-        uint256 newDepositedAt,
-        uint256 newDeposit,
-        uint256 shares,
-        uint256 rate
-    ) internal override {
-        // uint256 now_ = _now();
-        //
-        // // newDepositedAt >= now >= oldDepositedAt
-        // // basically add new sub
-        // // remove old expiration
-        // // unwind head only if oldStartEpoch == newExpEpoch
-        // // skip starting
-        //
-        // // adjust internal rate to number of shares
-        // rate = rate * shares;
-        //
-        // EpochsStorage storage $ = _getEpochsStorage();
-        // {
-        //     // when does the sub currently expire?
-        //     uint256 oldExpiringAt = (oldDeposit * Lib.MULTIPLIER_BASE).expiresAt(uint64(oldDepositedAt), rate);
-        //     require(oldExpiringAt >= now_, "Epoch: subscription is already expired");
-        //     // update old epoch
-        //     uint64 oldEpoch = uint64(oldExpiringAt / $._epochSize);
-        //     $._epochs[oldEpoch].expiring -= shares;
-        //     uint256 removable = (oldExpiringAt - uint256(((oldEpoch * $._epochSize))).max(now_)) * rate;
-        //     $._epochs[oldEpoch].partialFunds -= removable;
-        // }
-        //
-        // // update new epoch
-        // uint256 newEndingBlock = (newDeposit * Lib.MULTIPLIER_BASE).expiresAt(uint64(newDepositedAt), rate);
-        // uint64 newEpoch = uint64(newEndingBlock / $._epochSize);
-        // $._epochs[newEpoch].expiring += shares;
-        // $._epochs[newEpoch].partialFunds += (newEndingBlock - uint256(((newEpoch * $._epochSize))).max(now_)) * rate; // add access funds here
-        //
-        // // reduce newDeposit by partialFunds of beginning epoch
-        // // newDeposit = //newDeposit - ((newDepositedAt % $._epochSize))
-        //
-        // // attach the remainder of the funds that do not fill an epoch + dust
-        // // $._epochs[newEpoch].partialFunds +=
-        // //   (newDeposit * Lib.MULTIPLIER_BASE) % (rate * $._epochSize);
-    }
-
     function _extendInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
-        internal
+        internal override
     {
         require(oldDeposit <= newDeposit, "new deposit too small");
         rate = rate * shares;
@@ -435,7 +393,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     }
 
     function _reduceInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
-        internal
+        internal override
     {
         require(oldDeposit >= newDeposit, "Not reduce"); // sanity check
         rate = rate * shares;
