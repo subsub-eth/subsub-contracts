@@ -13,11 +13,11 @@ abstract contract HasUserData {
     struct SubData {
         uint24 multiplier;
         uint64 mintedAt; // mint date
-        uint64 initDepositAt; // start of a new subscription streak (on mint / on renewal after expired)
+        uint64 streakStartedAt; // start of a new subscription streak (on mint / on renewal after expired)
         uint64 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
         // it remains untouched on withdrawals and tips
         uint256 totalDeposited; // amount of tokens ever deposited
-        uint256 currentDeposit; // deposit since initDepositAt, resets with initDepositAt
+        uint256 currentDeposit; // deposit since streakStartedAt, resets with streakStartedAt
         uint256 lockedAmount; // amount of locked funds as of lastDepositAt
         uint256 tips; // amount of tips sent to this subscription
     }
@@ -228,7 +228,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         // to the calculated ending time slot (excluding)
         // active = [start, + deposit / (rate * multiplier))
         UserDataStorage storage $ = _getUserDataStorage();
-        uint64 depositAt = $._subData[tokenId].initDepositAt;
+        uint64 depositAt = $._subData[tokenId].streakStartedAt;
         uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
 
         return depositAt + currentDeposit_.validFor(_rate(), $._subData[tokenId].multiplier);
@@ -250,7 +250,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         $._subData[tokenId].mintedAt = now_;
 
         // init new subscription streak
-        $._subData[tokenId].initDepositAt = now_;
+        $._subData[tokenId].streakStartedAt = now_;
         $._subData[tokenId].lastDepositAt = now_;
         $._subData[tokenId].totalDeposited = amount;
         $._subData[tokenId].currentDeposit = amount;
@@ -276,18 +276,18 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
             // subscrption was expired and is being reactivated
             newDeposit = amount;
             // start new subscription streak
-            $._subData[tokenId].initDepositAt = now_;
+            $._subData[tokenId].streakStartedAt = now_;
             $._subData[tokenId].lockedAmount = (newDeposit * $._lock) / LOCK_BASE;
         } else {
             // extending active subscription
             uint256 remainingDeposit = oldDeposit
             // spent amount
             - (
-                ((now_ - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier))
+                ((now_ - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier))
                     / Lib.MULTIPLIER_BASE
             );
 
-            // deposit is counted from initDepositAt
+            // deposit is counted from streakStartedAt
             newDeposit = oldDeposit + amount;
 
             // locked amount is counted from lastDepositAt
@@ -298,7 +298,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         $._subData[tokenId].lastDepositAt = now_;
         $._subData[tokenId].totalDeposited += amount;
 
-        depositedAt = $._subData[tokenId].initDepositAt;
+        depositedAt = $._subData[tokenId].streakStartedAt;
     }
 
     function _withdrawableFromSubscription(uint256 tokenId) internal view override returns (uint256) {
@@ -314,13 +314,13 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         // locked + spent up until last deposit
         uint256 lockedAmount = $._subData[tokenId].lockedAmount
             + (
-                ((lastDepositAt - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier))
+                ((lastDepositAt - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier))
                     / Lib.MULTIPLIER_BASE
             );
 
         // the current block is spent, thus +1
         uint256 spentFunds = (
-            (1 + _now() - $._subData[tokenId].initDepositAt) * (_rate() * $._subData[tokenId].multiplier)
+            (1 + _now() - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier)
         ) / Lib.MULTIPLIER_BASE;
 
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (spentFunds).min(currentDeposit_));
@@ -342,7 +342,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
 
         // locked amount and last depositedAt remain unchanged
 
-        depositedAt = $._subData[tokenId].initDepositAt;
+        depositedAt = $._subData[tokenId].streakStartedAt;
     }
 
     function _spent(uint256 tokenId) internal view override returns (uint256, uint256) {
@@ -357,7 +357,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
             spentAmount = (totalDeposited - $._subData[tokenId].currentDeposit)
             // TODO fix rate
             + (
-                ((1 + _now() - $._subData[tokenId].initDepositAt) * _rate() * $._subData[tokenId].multiplier)
+                ((1 + _now() - $._subData[tokenId].streakStartedAt) * _rate() * $._subData[tokenId].multiplier)
                     / Lib.MULTIPLIER_BASE
             ).min($._subData[tokenId].currentDeposit);
         }
