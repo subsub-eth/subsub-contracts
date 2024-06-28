@@ -109,7 +109,7 @@ abstract contract HasEpochs {
      * @param shares The number of shares this subscription contains
      * @param rate The rate that is applied to the amount, the contracts rate
      */
-    function _extendInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+    function _extendInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
     internal virtual;
 
     /**
@@ -121,7 +121,7 @@ abstract contract HasEpochs {
      * @param shares The number of shares this subscription contains
      * @param rate The rate that is applied to the amount, the contracts rate
      */
-    function _reduceInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+    function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal virtual;
 }
 
@@ -175,7 +175,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
     function _currentEpoch() internal view override returns (uint64) {
         EpochsStorage storage $ = _getEpochsStorage();
-        return _now() / $._epochSize;
+        return uint64(_now() / $._epochSize);
     }
 
     function _claimed() internal view override returns (uint256) {
@@ -286,7 +286,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     }
 
     function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
-        uint64 now_ = _now();
+        uint256 now_ = _now();
 
         // adjust internal rate to number of shares
         rate = rate * shares;
@@ -319,7 +319,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._epochs[expiringEpoch].partialFunds += amount % ($._epochSize * rate);
     }
 
-    function _extendInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+    function _extendInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal override
     {
         require(oldDeposit <= newDeposit, "new deposit too small");
@@ -330,14 +330,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         newDeposit = newDeposit * Lib.MULTIPLIER_BASE;
 
         EpochsStorage storage $ = _getEpochsStorage();
-        uint64 startEpoch = depositedAt / $._epochSize;
+        uint64 startEpoch = uint64(depositedAt / $._epochSize);
 
-        uint64 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
+        uint256 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
         // TODO one off error?
         require(oldExpiresAt > _now(), "Subscription already expired"); // cannot be claimed or expired yet
 
-        uint64 oldExpireEpoch = oldExpiresAt / $._epochSize;
-        uint64 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
+        uint64 oldExpireEpoch = uint64(oldExpiresAt / $._epochSize);
+        uint256 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
 
         if (startEpoch == oldExpireEpoch) {
             // old sub starts and expires in same epoch => unwind all
@@ -363,7 +363,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             }
 
             // handle tail
-            uint64 expiringEpoch = newExpiresAt / $._epochSize;
+            uint64 expiringEpoch = uint64(newExpiresAt / $._epochSize);
             $._epochs[expiringEpoch].expiring += shares;
 
             // add the rest as partial Funds, might just be some dust
@@ -386,13 +386,13 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             $._epochs[oldExpireEpoch].expiring -= shares;
 
             // set new tail
-            uint64 newExpiringEpoch = newExpiresAt / $._epochSize;
+            uint64 newExpiringEpoch = uint64(newExpiresAt / $._epochSize);
             $._epochs[newExpiringEpoch].partialFunds += newDeposit % epochRate;
             $._epochs[newExpiringEpoch].expiring += shares;
         }
     }
 
-    function _reduceInEpochs(uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+    function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal override
     {
         require(oldDeposit >= newDeposit, "Not reduce"); // sanity check
@@ -405,14 +405,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // sub cannot be expired
 
         EpochsStorage storage $ = _getEpochsStorage();
-        uint64 startEpoch = depositedAt / $._epochSize;
+        uint64 startEpoch = uint64(depositedAt / $._epochSize);
 
-        uint64 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
+        uint256 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
         // require(oldExpiresAt >= _now()); // cannot be claimed or expired yet
 
-        uint64 oldExpireEpoch = oldExpiresAt / $._epochSize;
+        uint64 oldExpireEpoch = uint64(oldExpiresAt / $._epochSize);
 
-        uint64 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
+        uint256 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
 
         // the new sub cannot expire in the past
         // TODO one off error?
@@ -429,7 +429,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             $._epochs[oldExpireEpoch].partialFunds += newDeposit;
         } else {
             // the original sub spans across multiple epochs, we might only have to change the tail
-            uint64 newExpiringEpoch = newExpiresAt / $._epochSize;
+            uint64 newExpiringEpoch = uint64(newExpiresAt / $._epochSize);
 
             if (startEpoch == newExpiringEpoch) {
                 // the new sub starts and expires in the same epoch
@@ -437,7 +437,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
                 // remove tail and head funds from partialfunds
                 {
                     // handle head
-                    uint64 partialTimeUnits = $._epochSize - (depositedAt % $._epochSize); // sub spanned multiple epochs
+                    uint256 partialTimeUnits = $._epochSize - (depositedAt % $._epochSize); // sub spanned multiple epochs
                     uint256 partialFunds = partialTimeUnits * rate;
                     $._epochs[startEpoch].partialFunds -= partialFunds;
                     // keep start shares as is
@@ -460,7 +460,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
                 // the new sub still spans across multiple epochs, thus we only change the tail
                 // deduct head from deposit
                 {
-                    uint64 partialTimeUnits = $._epochSize - (depositedAt % $._epochSize); // sub spanned multiple epochs
+                    uint256 partialTimeUnits = $._epochSize - (depositedAt % $._epochSize); // sub spanned multiple epochs
                     uint256 partialFunds = partialTimeUnits * rate;
                     // keep start shares as is
                     oldDeposit -= partialFunds;

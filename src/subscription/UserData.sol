@@ -9,17 +9,19 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
+import "forge-std/console.sol";
+
 abstract contract HasUserData {
     struct SubData {
-        uint24 multiplier;
-        uint64 mintedAt; // mint date
-        uint64 streakStartedAt; // start of a new subscription streak (on mint / on renewal after expired)
-        uint64 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
+        uint256 mintedAt; // mint date
+        uint256 streakStartedAt; // start of a new subscription streak (on mint / on renewal after expired)
+        uint256 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
         // it remains untouched on withdrawals and tips
         uint256 totalDeposited; // amount of tokens ever deposited
         uint256 currentDeposit; // deposit since streakStartedAt, resets with streakStartedAt
         uint256 lockedAmount; // amount of locked funds as of lastDepositAt
         uint256 tips; // amount of tips sent to this subscription
+        uint24 multiplier;
     }
 
     uint24 public constant LOCK_BASE = 10_000; // == 100%
@@ -43,7 +45,7 @@ abstract contract HasUserData {
      * @param tokenId subscription identifier
      * @return expiration date
      */
-    function _expiresAt(uint256 tokenId) internal view virtual returns (uint64);
+    function _expiresAt(uint256 tokenId) internal view virtual returns (uint256);
 
     /**
      * @notice deletes a subscription and all its data
@@ -75,7 +77,7 @@ abstract contract HasUserData {
     function _extendSubscription(uint256 tokenId, uint256 amount)
         internal
         virtual
-        returns (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated);
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated);
 
     /**
      * @notice returns the amount that can be withdrawn from a given subscription
@@ -97,7 +99,7 @@ abstract contract HasUserData {
     function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
         internal
         virtual
-        returns (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit);
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit);
 
     /**
      * @notice returns the amount of total spent and yet unspent funds in the subscription, excluding tips
@@ -131,7 +133,7 @@ abstract contract HasUserData {
      * @param tokenId subscription identifier
      * @return the time unit date of the last deposit
      */
-    function _lastDepositedAt(uint256 tokenId) internal view virtual returns (uint64);
+    function _lastDepositedAt(uint256 tokenId) internal view virtual returns (uint256);
 
     /**
      * @notice adds the given amount of funds to the tips of a subscription
@@ -223,12 +225,12 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         return _now() < _expiresAt(tokenId);
     }
 
-    function _expiresAt(uint256 tokenId) internal view override returns (uint64) {
+    function _expiresAt(uint256 tokenId) internal view override returns (uint256) {
         // a subscription is active form the starting time slot (including)
         // to the calculated ending time slot (excluding)
         // active = [start, + deposit / (rate * multiplier))
         UserDataStorage storage $ = _getUserDataStorage();
-        uint64 depositAt = $._subData[tokenId].streakStartedAt;
+        uint256 depositAt = $._subData[tokenId].streakStartedAt;
         uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
 
         return depositAt + currentDeposit_.validFor(_rate(), $._subData[tokenId].multiplier);
@@ -240,7 +242,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     }
 
     function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal override {
-        uint64 now_ = _now();
+        uint256 now_ = _now();
 
         UserDataStorage storage $ = _getUserDataStorage();
         require($._subData[tokenId].mintedAt == 0, "Subscription already exists");
@@ -263,9 +265,9 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     function _extendSubscription(uint256 tokenId, uint256 amount)
         internal
         override
-        returns (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
     {
-        uint64 now_ = _now();
+        uint256 now_ = _now();
         UserDataStorage storage $ = _getUserDataStorage();
 
         oldDeposit = $._subData[tokenId].currentDeposit;
@@ -330,7 +332,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
         internal
         override
-        returns (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit)
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit)
     {
         require(amount <= _withdrawableFromSubscription(tokenId), "Withdraw amount too large");
 
@@ -377,7 +379,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         return $._subData[tokenId].multiplier;
     }
 
-    function _lastDepositedAt(uint256 tokenId) internal view override returns (uint64) {
+    function _lastDepositedAt(uint256 tokenId) internal view override returns (uint256) {
         UserDataStorage storage $ = _getUserDataStorage();
         return $._subData[tokenId].lastDepositAt;
     }

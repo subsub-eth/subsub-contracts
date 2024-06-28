@@ -11,8 +11,8 @@ contract TestEpochs is Epochs {
         __Epochs_init(epochSize_);
     }
 
-    function _now() internal view override returns (uint64) {
-        return uint64(block.number);
+    function _now() internal view override returns (uint256) {
+        return block.number;
     }
 
     function epochSize() external view virtual returns (uint64) {

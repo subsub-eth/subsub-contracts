@@ -196,7 +196,7 @@ abstract contract Subscription is
         uint256 internalAmount = amount.toInternal(_decimals());
 
         {
-            (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactived) =
+            (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactived) =
                 _extendSubscription(tokenId, internalAmount);
 
             if (reactived) {
@@ -237,7 +237,7 @@ abstract contract Subscription is
         // TODO remove, check in UserData
         require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
 
-        (uint64 depositedAt, uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
+        (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
         uint256 multiplier_ = _multiplier(tokenId);
 

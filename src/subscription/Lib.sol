@@ -64,8 +64,8 @@ library Lib {
     }
 
 
-    function expiresAt(uint256 amount, uint64 depositedAt, uint256 mRate) internal pure returns (uint64) {
-        return depositedAt + uint64(amount / mRate);
+    function expiresAt(uint256 amount, uint256 depositedAt, uint256 mRate) internal pure returns (uint256) {
+        return depositedAt + (amount / mRate);
     }
 
     // TODO REMOVE ME
@@ -81,7 +81,7 @@ library Lib {
      * @param multiplier individual multiplier that is applied to the rate
      * @return the amount of time unit the amount is valid for
      */
-    function validFor(uint256 amount, uint256 rate, uint256 multiplier) internal pure returns (uint64) {
-      return uint64((amount * MULTIPLIER_BASE) / (rate * multiplier));
+    function validFor(uint256 amount, uint256 rate, uint256 multiplier) internal pure returns (uint256) {
+      return (amount * MULTIPLIER_BASE) / (rate * multiplier);
     }
 }

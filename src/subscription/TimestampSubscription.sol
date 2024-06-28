@@ -6,7 +6,7 @@ import {DefaultSubscription} from "./Subscription.sol";
 contract TimestampSubscription is DefaultSubscription {
     constructor(address handleContract) DefaultSubscription(handleContract) {}
 
-    function _now() internal view override returns (uint64) {
-        return uint64(block.timestamp);
+    function _now() internal view override returns (uint256) {
+        return block.timestamp;
     }
 }

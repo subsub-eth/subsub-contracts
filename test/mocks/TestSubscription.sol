@@ -4,15 +4,15 @@ pragma solidity ^0.8.20;
 import "../../src/subscription/Subscription.sol";
 
 contract TestSubscription is DefaultSubscription {
-    uint64 private __now;
+    uint256 private __now;
 
     constructor(address handleContract) DefaultSubscription(handleContract) {}
 
-    function _now() internal view override returns (uint64) {
+    function _now() internal view override returns (uint256) {
         return __now;
     }
 
-    function setNow(uint64 newNow) public {
+    function setNow(uint256 newNow) public {
         __now = newNow;
     }
 
