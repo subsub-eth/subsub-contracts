@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
+import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/UserData.sol";
 
 contract TestUserData is UserData {
@@ -106,15 +107,22 @@ contract TestUserData is UserData {
 }
 
 contract UserDataTest is Test {
+    using Math for uint256;
+
     uint24 constant BASE_MULTI = 100;
+    uint24 constant MAX_MULTI = 10_000;
+    uint24 constant BASE_LOCK = 10_000;
+    uint24 constant MAX_LOCK = 10_000;
 
     TestUserData private sd;
 
+    uint256 private tokenId;
     uint24 private lock;
     uint256 private rate;
     uint64 private _block;
 
     function setUp() public {
+        tokenId = 1;
         lock = 100;
         rate = 10;
         _block = 1234;
@@ -122,21 +130,21 @@ contract UserDataTest is Test {
         sd = new TestUserData(lock, rate);
     }
 
-    function testAddTip(uint256 tokenId, uint256 amount) public {
-        sd.addTip(tokenId, amount);
-        assertEq(amount, sd.tips(tokenId), "Tip added to token");
+    function testAddTip(uint256 _tokenId, uint256 amount) public {
+        sd.addTip(_tokenId, amount);
+        assertEq(amount, sd.tips(_tokenId), "Tip added to token");
         assertEq(amount, sd.allTips(), "Tip added to contract");
         assertEq(0, sd.claimedTips(), "No tips were claimed");
     }
 
-    function testAddTip_incrementSingleToken(uint256 tokenId, uint64[] memory amounts) public {
+    function testAddTip_incrementSingleToken(uint256 _tokenId, uint64[] memory amounts) public {
         uint256 allTips = 0;
 
         for (uint256 i = 0; i < amounts.length; i++) {
             allTips += amounts[i];
-            sd.addTip(tokenId, amounts[i]);
+            sd.addTip(_tokenId, amounts[i]);
 
-            assertEq(allTips, sd.tips(tokenId), "Tip added to token");
+            assertEq(allTips, sd.tips(_tokenId), "Tip added to token");
             assertEq(allTips, sd.allTips(), "Tip added to contract");
             assertEq(0, sd.claimedTips(), "No tips were claimed");
         }
@@ -156,8 +164,8 @@ contract UserDataTest is Test {
         }
     }
 
-    function testClaimTips(uint256 tokenId, uint256 amount) public {
-        sd.addTip(tokenId, amount);
+    function testClaimTips(uint256 _tokenId, uint256 amount) public {
+        sd.addTip(_tokenId, amount);
 
         assertEq(amount, sd.claimableTips(), "all tips claimable");
 
@@ -166,7 +174,7 @@ contract UserDataTest is Test {
         assertEq(amount, claimed, "all tips claimed");
         assertEq(0, sd.claimableTips(), "no more tips to claim");
         assertEq(amount, sd.allTips(), "claimed tips still accounted for");
-        assertEq(amount, sd.tips(tokenId), "claimed tips in token still accounted for");
+        assertEq(amount, sd.tips(_tokenId), "claimed tips in token still accounted for");
     }
 
     function testClaimTips_multiple(uint256[] memory tokenIds, uint64 amount) public {
@@ -186,17 +194,16 @@ contract UserDataTest is Test {
         }
     }
 
-    function testCreateSub_duplicate(uint256 tokenId) public {
-        tokenId = bound(tokenId, 1, type(uint256).max);
+    function testCreateSub_duplicate(uint256 _tokenId) public {
+        _tokenId = bound(_tokenId, 1, type(uint256).max);
 
-        sd.createSubscription(tokenId, 0, BASE_MULTI);
+        sd.createSubscription(_tokenId, 0, BASE_MULTI);
 
         vm.expectRevert();
-        sd.createSubscription(tokenId, 0, BASE_MULTI);
+        sd.createSubscription(_tokenId, 0, BASE_MULTI);
     }
 
     function testCreateSub_empty() public {
-        uint256 tokenId = 1;
         uint256 amount = 0;
         uint24 multi = BASE_MULTI;
 
@@ -218,7 +225,6 @@ contract UserDataTest is Test {
     }
 
     function testCreateSub() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
 
@@ -277,8 +283,79 @@ contract UserDataTest is Test {
         assertEq(sd.lastDepositedAt(tokenId), _block, "last deposit still set");
     }
 
+    function testFuzz_CreateSub(uint256 amount, uint24 multi) public {
+        multi = uint24(bound(multi, BASE_MULTI, MAX_MULTI));
+
+        lock = uint24(bound(multi + multi, 1, MAX_LOCK));
+        // more than 1 time unit amount must be deposited
+        amount = bound(amount, ((rate * multi) / Lib.MULTIPLIER_BASE) + 1, type(uint128).max);
+
+        sd = new TestUserData(lock, rate);
+        uint256 blockRate = (rate * multi) / BASE_MULTI;
+
+        uint64 expiresAt = _block + uint64((amount * Lib.MULTIPLIER_BASE) / (rate * multi));
+        vm.roll(_block);
+
+        // create
+        sd.createSubscription(tokenId, amount, multi);
+
+        assertEq(sd.multiplier(tokenId), multi, "multiplier set");
+        assertTrue(sd.isActive(tokenId), "token active, in mint block");
+        assertEq(sd.expiresAt(tokenId), expiresAt, "token expires");
+        assertEq(
+            sd.withdrawableFromSubscription(tokenId),
+            amount - ((amount * lock) / BASE_LOCK).max((rate * multi) / Lib.MULTIPLIER_BASE),
+            "withdrawable only unlocked amount"
+        );
+        {
+            (uint256 spent, uint256 unspent) = sd.spent(tokenId);
+            assertEq(spent, blockRate, "init: 1st block spent");
+            assertEq(unspent, amount - blockRate, "init: rest unspent");
+        }
+        assertEq(sd.totalDeposited(tokenId), amount, "init: all in total deposited");
+        assertEq(sd.lastDepositedAt(tokenId), _block, "last deposit now");
+
+        // check half way
+
+        vm.roll(_block + ((expiresAt - _block) / 2));
+        assertEq(sd.multiplier(tokenId), multi, "half: multiplier set");
+        assertEq(
+            sd.withdrawableFromSubscription(tokenId),
+            amount
+                - (((1 + ((expiresAt - _block) / 2)) * rate * multi) / Lib.MULTIPLIER_BASE).max((amount * lock) / BASE_LOCK),
+            "half: half withdrawable, minus current block"
+        );
+        assertTrue(sd.isActive(tokenId), "half: token active");
+        {
+            (uint256 spent, uint256 unspent) = sd.spent(tokenId);
+            assertEq(
+                spent, (((1 + ((expiresAt - _block) / 2)) * rate * multi) / Lib.MULTIPLIER_BASE), "half: half spent"
+            );
+            assertEq(
+                unspent,
+                amount - (((1 + ((expiresAt - _block) / 2)) * rate * multi) / Lib.MULTIPLIER_BASE),
+                "half: half unspent"
+            );
+        }
+        assertEq(sd.totalDeposited(tokenId), amount, "half: all in total deposited");
+        assertEq(sd.lastDepositedAt(tokenId), _block, "half: last deposit still set");
+
+        // expire
+        vm.roll(expiresAt);
+
+        assertEq(sd.multiplier(tokenId), multi, "multiplier set");
+        assertEq(sd.withdrawableFromSubscription(tokenId), 0, "expired: nothing withdrawable");
+        assertFalse(sd.isActive(tokenId), "expired: token inactive");
+        {
+            (uint256 spent, uint256 unspent) = sd.spent(tokenId);
+            assertEq(spent, amount, "expired: all spent");
+            assertEq(unspent, 0, "expired: nothing unspent");
+        }
+        assertEq(sd.totalDeposited(tokenId), amount, "expired: all in total deposited");
+        assertEq(sd.lastDepositedAt(tokenId), _block, "last deposit still set");
+    }
+
     function testCreateSub_noLock() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
         lock = 0;
@@ -304,7 +381,6 @@ contract UserDataTest is Test {
     }
 
     function testExtendSub() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
 
@@ -398,7 +474,6 @@ contract UserDataTest is Test {
     }
 
     function testExtendSub_unlocked() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
 
@@ -462,7 +537,6 @@ contract UserDataTest is Test {
     }
 
     function testExtendSub_reactivate() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
 
@@ -484,7 +558,7 @@ contract UserDataTest is Test {
                 sd.extendSubscription(tokenId, addedAmount);
 
             assertTrue(reactivated, "extendedAt: subscription reactivated");
-            assertEq(oldDeposit, amount, "extendedAt: old deposit is the amount from the previous continuous sub");
+            assertEq(oldDeposit, amount, "extendedAt: old deposit is the amount from the previous sub streak");
             assertEq(newDeposit, addedAmount, "extendedAt: new deposit, restarted");
             assertEq(depositedAt, extendedAt, "extendedAt: init deposit updated");
         }
@@ -527,7 +601,6 @@ contract UserDataTest is Test {
     }
 
     function testReduceSub() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
 
@@ -583,7 +656,6 @@ contract UserDataTest is Test {
     }
 
     function testReduceSub_cancel() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
 
@@ -639,7 +711,6 @@ contract UserDataTest is Test {
     }
 
     function testReduceSub_cancel_noLock() public {
-        uint256 tokenId = 1;
         uint256 amount = 100_000;
         uint24 multi = BASE_MULTI;
         lock = 0;
@@ -654,11 +725,7 @@ contract UserDataTest is Test {
         assertEq(sd.multiplier(tokenId), multi, "multiplier set");
         assertTrue(sd.isActive(tokenId), "token active");
         assertEq(sd.expiresAt(tokenId), expiresAt, "token expires now");
-        assertEq(
-            sd.withdrawableFromSubscription(tokenId),
-            amount - rate,
-            "all funds except current block withdrawable"
-        );
+        assertEq(sd.withdrawableFromSubscription(tokenId), amount - rate, "all funds except current block withdrawable");
         {
             (uint256 spent, uint256 unspent) = sd.spent(tokenId);
             assertEq(spent, rate, "init: first block");

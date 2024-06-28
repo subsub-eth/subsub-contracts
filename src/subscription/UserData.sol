@@ -13,7 +13,7 @@ abstract contract HasUserData {
     struct SubData {
         uint24 multiplier;
         uint64 mintedAt; // mint date
-        uint64 initDepositAt; // start of a new continuous subscription period (on mint / on renewal after expired)
+        uint64 initDepositAt; // start of a new subscription streak (on mint / on renewal after expired)
         uint64 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
         // it remains untouched on withdrawals and tips
         uint256 totalDeposited; // amount of tokens ever deposited
@@ -63,14 +63,14 @@ abstract contract HasUserData {
     /**
      * @notice adds the given amount to an existing subscription
      * @dev the subscription is identified by the tokenId. It may be expired.
-     * The return values describe the state of the subscription and the coordinates and changes of the current, continuous subscription.
-     * If a subscription was expired before extending, a new continuous subscription is started with a new depositedAt date.
+     * The return values describe the state of the subscription and the coordinates and changes of the current subscription streak.
+     * If a subscription was expired before extending, a new subscription streak is started with a new depositedAt date.
      * @param tokenId subscription identifier
      * @param amount amount to add to the given subscription
-     * @return depositedAt start date of the current continuous subscription run
+     * @return depositedAt start date of the current subscription streak
      * @return oldDeposit deposited amount counting from the depositedAt date before extension
      * @return newDeposit deposited amount counting from the depositedAt data after extension
-     * @return reactivated flag if the subscription was expired and thus a new continuous subscription run is started
+     * @return reactivated flag if the subscription was expired and thus a new subscription streak is started
      */
     function _extendSubscription(uint256 tokenId, uint256 amount)
         internal
@@ -86,11 +86,11 @@ abstract contract HasUserData {
     function _withdrawableFromSubscription(uint256 tokenId) internal view virtual returns (uint256);
 
     /**
-     * @notice reduces the deposit amount of the existing subscription without changing the deposit time / start time of the current continuous subscription
+     * @notice reduces the deposit amount of the existing subscription without changing the deposit time / start time of the current subscription streak
      * @dev the subscription may not be expired and the funds that can be withdrawn have to be unspent and unlocked
      * @param tokenId subscription identifier
      * @param amount amount to withdraw from the subscription
-     * @return depositedAt start date of the current continuous subscription run
+     * @return depositedAt start date of the current subscription streak
      * @return oldDeposit deposited amount counting from the depositedAt date before extension
      * @return newDeposit deposited amount counting from the depositedAt data after extension
      */
@@ -127,7 +127,7 @@ abstract contract HasUserData {
 
     /**
      * @notice returns the date at which the last deposit for a given subscription took place
-     * @dev this value lies within the current or last continious subscription range and does not change on withdrawals
+     * @dev this value lies within the current or last subscription streak range and does not change on withdrawals
      * @param tokenId subscription identifier
      * @return the time unit date of the last deposit
      */
@@ -249,7 +249,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         $._subData[tokenId].multiplier = multiplier;
         $._subData[tokenId].mintedAt = now_;
 
-        // init new continuous subscription
+        // init new subscription streak
         $._subData[tokenId].initDepositAt = now_;
         $._subData[tokenId].lastDepositAt = now_;
         $._subData[tokenId].totalDeposited = amount;
@@ -275,7 +275,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         if (reactivated) {
             // subscrption was expired and is being reactivated
             newDeposit = amount;
-            // start new continuous subscription
+            // start new subscription streak
             $._subData[tokenId].initDepositAt = now_;
             $._subData[tokenId].lockedAmount = (newDeposit * $._lock) / LOCK_BASE;
         } else {
