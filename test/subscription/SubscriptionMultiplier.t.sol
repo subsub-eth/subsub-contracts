@@ -99,7 +99,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
             amount,
-            amount.toInternal(testToken.decimals()).adjustToRate(mRate),
+            amount.toInternal(testToken.decimals()),
             user,
             message
         );
@@ -114,10 +114,9 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
 
         uint256 lockedAmount = (amount.toInternal(testToken.decimals()) * lock) /
             subscription.LOCK_BASE();
-        lockedAmount = lockedAmount.adjustToRate(mRate);
         assertEq(
             subscription.withdrawable(tokenId),
-            (amount.toInternal(testToken.decimals()).adjustToRate(mRate) - lockedAmount)
+            (amount.toInternal(testToken.decimals()) - lockedAmount)
                 .toExternal(testToken.decimals()),
             "deposited amount partially locked"
         );
@@ -168,7 +167,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 claimable = subscription.claimable();
         assertEq(
             claimable,
-            (amount * 2).toInternal(testToken.decimals()).adjustToRate(mRate).toExternal(
+            (amount * 2).toInternal(testToken.decimals()).toExternal(
                 testToken.decimals()
             ),
             "full sub amount claimable"

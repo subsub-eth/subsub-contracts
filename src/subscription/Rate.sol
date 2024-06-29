@@ -9,8 +9,6 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 abstract contract HasRate {
-    function _multipliedRate(uint256 multiplier) internal view virtual returns (uint256);
-
     function _rate() internal view virtual returns (uint256);
 }
 
@@ -37,11 +35,6 @@ abstract contract Rate is Initializable, HasRate {
     function __Rate_init_unchained(uint256 rate) internal onlyInitializing {
         RateStorage storage $ = _getRateStorage();
         $._rate = rate;
-    }
-
-    function _multipliedRate(uint256 multiplier) internal view override returns (uint256) {
-        RateStorage storage $ = _getRateStorage();
-        return $._rate.multipliedRate(multiplier);
     }
 
     function _rate() internal view override returns (uint256) {

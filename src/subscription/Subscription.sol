@@ -166,14 +166,13 @@ abstract contract Subscription is
         // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = nextTokenId++;
-        uint256 mRate = _multipliedRate(multiplier);
 
-        uint256 internalAmount = amount.toInternal(_decimals()).adjustToRate(mRate);
+        uint256 internalAmount = amount.toInternal(_decimals());
 
         // TODO do we need return values?
         _createSubscription(tokenId, internalAmount, multiplier);
 
-        _addToEpochs(internalAmount, multiplier, mRate);
+        _addToEpochs(internalAmount, multiplier, _rate());
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);

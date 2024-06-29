@@ -88,7 +88,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
-            subscription.totalSupply() + 1, amount, amount.toInternal(testToken.decimals()).adjustToRate(rate), user, message
+            subscription.totalSupply() + 1, amount, amount.toInternal(testToken.decimals()), user, message
         );
 
         tokenId = subscription.mint(amount, 100, message);
@@ -96,10 +96,9 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         assertEq(testToken.balanceOf(address(subscription)), amount, "amount send to subscription contract");
 
         uint256 lockedAmount = (amount.toInternal(testToken.decimals()) * lock) / subscription.LOCK_BASE();
-        lockedAmount = lockedAmount.adjustToRate(rate);
         assertEq(
             subscription.withdrawable(tokenId),
-            (amount.toInternal(testToken.decimals()).adjustToRate(rate) - lockedAmount).toExternal(testToken.decimals()),
+            (amount.toInternal(testToken.decimals()) - lockedAmount).toExternal(testToken.decimals()),
             "deposited amount partially locked"
         );
     }
@@ -136,7 +135,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         uint256 claimable = subscription.claimable();
         assertEq(
             claimable,
-            (amount * 2).toInternal(decimals).adjustToRate(rate).toExternal(decimals),
+            (amount * 2).toInternal(decimals).toExternal(decimals),
             "full sub amount claimable"
         );
 

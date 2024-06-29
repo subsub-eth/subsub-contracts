@@ -17,10 +17,6 @@ contract TestUserData is UserData {
         return block.number;
     }
 
-    function _multipliedRate(uint256) internal pure override returns (uint256) {
-        revert("deprecated");
-    }
-
     function _rate() internal view override returns (uint256) {
         return rate;
     }
