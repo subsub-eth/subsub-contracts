@@ -283,10 +283,11 @@ contract UserDataTest is Test {
         assertEq(sd.lastDepositedAt(tokenId), _block, "last deposit still set");
     }
 
-    function testFuzz_CreateSub(uint256 amount, uint24 multi) public {
+    function testFuzz_CreateSub(uint256 amount, uint128 _rate, uint24 multi) public {
         multi = uint24(bound(multi, BASE_MULTI, MAX_MULTI));
 
         lock = uint24(bound(multi + multi, 1, MAX_LOCK));
+        rate = bound(_rate, 1, type(uint64).max);
         // more than 1 time unit amount must be deposited
         amount = bound(amount, ((rate * multi) / Lib.MULTIPLIER_BASE) + 1, type(uint128).max);
 
@@ -304,7 +305,9 @@ contract UserDataTest is Test {
         assertEq(sd.expiresAt(tokenId), expiresAt, "token expires");
         assertEq(
             sd.withdrawableFromSubscription(tokenId),
-            amount - ((amount * lock) / BASE_LOCK).max((rate * multi) / Lib.MULTIPLIER_BASE),
+            (amount - ((amount * lock) / BASE_LOCK)).min(
+                ((amount * Lib.MULTIPLIER_BASE) - (rate * multi)) / Lib.MULTIPLIER_BASE
+            ),
             "withdrawable only unlocked or unspent amount"
         );
         {
@@ -321,8 +324,8 @@ contract UserDataTest is Test {
         assertEq(sd.multiplier(tokenId), multi, "half: multiplier set");
         assertEq(
             sd.withdrawableFromSubscription(tokenId),
-            amount
-                - (((1 + ((expiresAt - _block) / 2)) * rate * multi) / Lib.MULTIPLIER_BASE).max((amount * lock) / BASE_LOCK),
+            (((amount * Lib.MULTIPLIER_BASE) - ((1 + ((expiresAt - _block) / 2)) * rate * multi)) / Lib.MULTIPLIER_BASE)
+                .min(amount - ((amount * lock) / BASE_LOCK)),
             "half: half withdrawable, minus current block"
         );
         assertTrue(sd.isActive(tokenId), "half: token active");
@@ -473,13 +476,14 @@ contract UserDataTest is Test {
         assertEq(sd.lastDepositedAt(tokenId), extendedAt, "last deposit still unchanged");
     }
 
-    function testFuzz_ExtendSub(uint256 amount, uint24 multi) public {
+    function testFuzz_ExtendSub(uint256 amount, uint128 _rate, uint24 multi) public {
         multi = uint24(bound(multi, BASE_MULTI, MAX_MULTI));
 
-        lock = uint24(bound(multi + multi, 0, MAX_LOCK));
+        lock = uint24(bound(uint256(multi) + _rate, 0, MAX_LOCK));
+        rate = bound(_rate, 1, type(uint64).max);
 
         // more than 1 time unit amount must be deposited
-        amount = bound(amount, ((rate * multi) / Lib.MULTIPLIER_BASE) + 1, type(uint128).max);
+        amount = bound(amount, ((rate * multi) / Lib.MULTIPLIER_BASE) + 1, type(uint256).max / 1_000_000);
 
         sd = new TestUserData(lock, rate);
 
@@ -493,7 +497,9 @@ contract UserDataTest is Test {
         assertEq(sd.expiresAt(tokenId), expiresAt, "token expires now");
         assertEq(
             sd.withdrawableFromSubscription(tokenId),
-            amount - ((amount * lock) / BASE_LOCK).max((rate * multi) / Lib.MULTIPLIER_BASE),
+            (amount - ((amount * lock) / BASE_LOCK)).min(
+                ((amount * Lib.MULTIPLIER_BASE) - (rate * multi)) / Lib.MULTIPLIER_BASE
+            ),
             "withdrawable only unlocked or unspent amount"
         );
 
@@ -522,19 +528,18 @@ contract UserDataTest is Test {
         assertTrue(sd.isActive(tokenId), "extendedAt: token active");
 
         {
-            uint256 total = amount + addedAmount;
-            console.log("total", total);
-            uint256 spentFunds = ((1 + extendedAt - _block) * (rate * multi)) / Lib.MULTIPLIER_BASE;
-            console.log("spent", spentFunds);
-            uint256 usedFunds = ((extendedAt - _block) * (rate * multi)) / Lib.MULTIPLIER_BASE;
-            uint256 lockedFunds = (((total - usedFunds) * lock) / BASE_LOCK) + usedFunds;
+            uint256 total = (amount + addedAmount) * Lib.MULTIPLIER_BASE;
+            uint256 spentFunds = (1 + extendedAt - _block) * (rate * multi);
+            uint256 usedFunds = ((extendedAt - _block) * (rate * multi));
+            // this is fucked, because the locked amount is actually precomputed and based
+            uint256 lockedFunds =
+                ((((total - usedFunds) / Lib.MULTIPLIER_BASE) * lock) / BASE_LOCK) * Lib.MULTIPLIER_BASE + usedFunds;
 
-
-            console.log("locked", lockedFunds);
-
+            console.log("spent", (total - spentFunds) / Lib.MULTIPLIER_BASE);
+            console.log("unlocked", (total - lockedFunds) / Lib.MULTIPLIER_BASE);
             assertEq(
                 sd.withdrawableFromSubscription(tokenId),
-                (total - spentFunds).min(total - lockedFunds),
+                (total - spentFunds).min(total - lockedFunds) / Lib.MULTIPLIER_BASE,
                 "extendedAt: withdrawable only unlocked or unspent amount"
             );
 
@@ -551,7 +556,7 @@ contract UserDataTest is Test {
             );
         }
         assertEq(sd.totalDeposited(tokenId), amount + addedAmount, "extendedAt: all in total deposited");
-        assertEq(sd.lastDepositedAt(tokenId), extendedAt, "extendedAt: last deposit unchanged");
+        assertEq(sd.lastDepositedAt(tokenId), extendedAt, "extendedAt: last deposit updated");
 
         // new expire
         vm.roll(_block + (((amount + addedAmount) * Lib.MULTIPLIER_BASE) / (rate * multi)));
@@ -852,5 +857,80 @@ contract UserDataTest is Test {
         // token becomes inactive in the following block
         vm.roll(reducedAt + 1);
         assertFalse(sd.isActive(tokenId), "expired: token inactive");
+    }
+
+    function testFuzz_ReduceSub(uint256 amount, uint128 _rate, uint24 multi) public {
+        multi = uint24(bound(multi, BASE_MULTI, MAX_MULTI));
+
+        lock = uint24(bound(multi + multi, 0, MAX_LOCK));
+
+        rate = bound(_rate, 1, type(uint128).max);
+
+        // more than 1 time unit amount must be deposited
+        amount = bound(amount, ((rate * multi) / Lib.MULTIPLIER_BASE) + 1, type(uint256).max / 100_000);
+
+        sd = new TestUserData(lock, rate);
+
+        uint256 expiresAt = _block + ((amount * Lib.MULTIPLIER_BASE) / (rate * multi));
+        vm.roll(_block);
+
+        // create
+        sd.createSubscription(tokenId, amount, multi);
+
+        // reduce sub
+        uint256 reducedAt = (bound(amount, _block, expiresAt - 1));
+        assertGe(expiresAt, reducedAt, "not yet expired");
+        vm.roll(reducedAt);
+
+        uint256 reducedAmount = bound(amount, 0, sd.withdrawableFromSubscription(tokenId));
+        {
+            uint256 newExpiresAt = _block + (((amount - reducedAmount) * Lib.MULTIPLIER_BASE) / (rate * multi));
+            uint256 withdrawable = sd.withdrawableFromSubscription(tokenId);
+
+            (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit) =
+                sd.withdrawFromSubscription(tokenId, reducedAmount);
+
+            assertEq(oldDeposit, amount, "reducedAt: old deposit");
+            assertEq(newDeposit, amount - reducedAmount, "reducedAt: new deposit, amount updated");
+            assertEq(depositedAt, _block, "reducedAt: init deposit unchanged");
+
+            assertEq(sd.multiplier(tokenId), multi, "reducedAt: multiplier unchanged");
+            assertEq(sd.expiresAt(tokenId), newExpiresAt, "reducedAt: token expires earlier");
+            assertTrue(sd.isActive(tokenId), "reducedAt: token active");
+
+            assertEq(
+                sd.withdrawableFromSubscription(tokenId),
+                withdrawable - reducedAmount,
+                "reducedAt: withdrawable only unlocked or unspent amount"
+            );
+        }
+
+        {
+            (uint256 spent, uint256 unspent) = sd.spent(tokenId);
+            assertEq(
+                spent,
+                ((1 + reducedAt - _block) * (rate * multi)) / Lib.MULTIPLIER_BASE,
+                "reducedAt: spent, mind current block, higher precision"
+            );
+            assertEq(
+                unspent,
+                (amount - reducedAmount) - ((1 + reducedAt - _block) * (rate * multi)) / Lib.MULTIPLIER_BASE,
+                "reducedAt: unspent, mind current block, higher precision"
+            );
+        }
+        assertEq(sd.totalDeposited(tokenId), amount - reducedAmount, "reducedAt: total deposited reduced");
+        assertEq(sd.lastDepositedAt(tokenId), _block, "reducedAt: last deposit unchanged");
+
+        // new expire
+        vm.roll(_block + (((amount - reducedAmount) * Lib.MULTIPLIER_BASE) / (rate * multi)));
+
+        assertEq(sd.withdrawableFromSubscription(tokenId), 0, "expired: nothing withdrawable");
+        assertFalse(sd.isActive(tokenId), "expired: token inactive");
+        {
+            (uint256 spent, uint256 unspent) = sd.spent(tokenId);
+            assertEq(spent, amount - reducedAmount, "expired: all spent");
+            assertEq(unspent, 0, "expired: nothing unspent");
+        }
+        assertEq(sd.totalDeposited(tokenId), amount - reducedAmount, "expired: all in total deposited");
     }
 }
