@@ -113,7 +113,7 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         );
 
         uint256 lockedAmount = (amount.toInternal(testToken.decimals()) * lock) /
-            subscription.LOCK_BASE();
+            Lib.LOCK_BASE;
         assertEq(
             subscription.withdrawable(tokenId),
             (amount.toInternal(testToken.decimals()) - lockedAmount)

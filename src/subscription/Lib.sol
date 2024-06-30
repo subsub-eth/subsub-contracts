@@ -9,7 +9,9 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
  * @dev Various functions to help conversions etc. associated with subscriptions
  */
 library Lib {
-    uint256 public constant MULTIPLIER_BASE = 100;
+    uint24 public constant MULTIPLIER_BASE = 100;
+
+    uint24 public constant LOCK_BASE = 10_000; // == 100%
 
     uint8 public constant INTERNAL_DECIMALS = 18;
 
@@ -54,8 +56,27 @@ library Lib {
     }
 
 
-    function expiresAt(uint256 amount, uint256 depositedAt, uint256 mRate) internal pure returns (uint256) {
-        return depositedAt + (amount / mRate);
+    /**
+     * @notice calculates the expiration date of a multiplied amount of funds based on the deposit date and the multiplied rate
+     * @param mAmount multiplied amount of funds
+     * @param depositedAt the deposit date
+     * @param mRate the multiplied rate of a sub
+     * @return the date the subscription expires (excluding)
+     */
+    function expiresAt(uint256 mAmount, uint256 depositedAt, uint256 mRate) internal pure returns (uint256) {
+        return depositedAt + (mAmount / mRate);
+    }
+
+    /**
+     * @notice calculates the expiration date of an amount of funds based on the deposit date, the rate, and the multiplier
+     * @param amount amount of funds
+     * @param depositedAt the deposit date
+     * @param rate the rate of the contract
+     * @param multiplier the multiplier of a sub
+     * @return the date the subscription expires (excluding)
+     */
+    function expiresAt(uint256 amount, uint256 depositedAt, uint256 rate, uint24 multiplier) internal pure returns (uint256) {
+        return depositedAt + validFor(amount, rate, multiplier);
     }
 
     /**
@@ -66,7 +87,17 @@ library Lib {
      * @param multiplier individual multiplier that is applied to the rate
      * @return the amount of time unit the amount is valid for
      */
-    function validFor(uint256 amount, uint256 rate, uint256 multiplier) internal pure returns (uint256) {
+    function validFor(uint256 amount, uint256 rate, uint24 multiplier) internal pure returns (uint256) {
       return (amount * MULTIPLIER_BASE) / (rate * multiplier);
+    }
+
+    /**
+     * @notice calculates the locked percentage of a given amount
+     * @param amount amount of funds
+     * @param lock the locked percentage
+     * @return the amount of locked funds
+     */
+    function asLocked(uint256 amount, uint24 lock) internal pure returns (uint256) {
+      return (amount * lock) / LOCK_BASE;
     }
 }

@@ -95,7 +95,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
         vm.stopPrank();
         assertEq(testToken.balanceOf(address(subscription)), amount, "amount send to subscription contract");
 
-        uint256 lockedAmount = (amount.toInternal(testToken.decimals()) * lock) / subscription.LOCK_BASE();
+        uint256 lockedAmount = (amount.toInternal(testToken.decimals()) * lock) / Lib.LOCK_BASE;
         assertEq(
             subscription.withdrawable(tokenId),
             (amount.toInternal(testToken.decimals()) - lockedAmount).toExternal(testToken.decimals()),

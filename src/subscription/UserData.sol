@@ -24,8 +24,6 @@ abstract contract HasUserData {
         uint24 multiplier;
     }
 
-    uint24 public constant LOCK_BASE = 10_000; // == 100%
-
     /**
      * @notice the percentage of unspent funds that are locked on a subscriber deposit
      * @return the percentage of unspent funds being locked on subscriber deposit
@@ -259,7 +257,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
 
         // set lockedAmount
         // the locked amount is rounded down, it is in favor of the subscriber
-        $._subData[tokenId].lockedAmount = (amount * $._lock) / LOCK_BASE;
+        $._subData[tokenId].lockedAmount = amount.asLocked($._lock);
     }
 
     function _extendSubscription(uint256 tokenId, uint256 amount)
@@ -279,7 +277,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
             newDeposit = amount;
             // start new subscription streak
             $._subData[tokenId].streakStartedAt = now_;
-            $._subData[tokenId].lockedAmount = (newDeposit * $._lock) / LOCK_BASE;
+            $._subData[tokenId].lockedAmount = newDeposit.asLocked($._lock);
         } else {
             // extending active subscription
             uint256 remainingDeposit = (
@@ -292,7 +290,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
             newDeposit = oldDeposit + amount;
 
             // locked amount is counted from lastDepositAt
-            $._subData[tokenId].lockedAmount = ((remainingDeposit + amount) * $._lock) / LOCK_BASE;
+            $._subData[tokenId].lockedAmount = (remainingDeposit + amount).asLocked($._lock);
         }
 
         $._subData[tokenId].currentDeposit = newDeposit;

@@ -200,7 +200,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.stopPrank();
         assertEq(testToken.balanceOf(address(subscription)), amount, "amount send to subscription contract");
 
-        uint256 lockedAmount = (amount * lock) / subscription.LOCK_BASE();
+        uint256 lockedAmount = (amount * lock) / Lib.LOCK_BASE;
         lockedAmount = (lockedAmount / rate) * rate;
         assertEq(
             subscription.withdrawable(tokenId),
@@ -414,7 +414,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(subscription.deposited(tokenId), 30_000, "30000 tokens deposited");
 
         uint256 fundsUsed = 5 * rate;
-        uint256 lockedAmount = ((((30_000 - fundsUsed) * lock) / subscription.LOCK_BASE()) / rate) * rate;
+        uint256 lockedAmount = ((((30_000 - fundsUsed) * lock) / Lib.LOCK_BASE) / rate) * rate;
         assertEq(
             subscription.withdrawable(tokenId), 29975 - lockedAmount, "Locked amount updated to 29975 - 295 = 29680"
         );
@@ -538,7 +538,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertTrue(subscription.isActive(tokenId), "subscription active");
         assertEq(
             subscription.withdrawable(tokenId),
-            initialDeposit - ((initialDeposit * lock) / subscription.LOCK_BASE()),
+            initialDeposit - ((initialDeposit * lock) / Lib.LOCK_BASE),
             "withdrawable deposit 9900"
         );
 
