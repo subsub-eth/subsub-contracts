@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/Rate.sol";
 
 contract TestRate is Rate {
@@ -16,8 +15,6 @@ contract TestRate is Rate {
 }
 
 contract RateTest is Test {
-    using Math for uint256;
-
     TestRate private rr;
 
     function setUp() public {

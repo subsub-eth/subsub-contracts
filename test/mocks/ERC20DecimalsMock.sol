@@ -6,10 +6,7 @@ import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {ERC20DecimalsMock as ERC20DecMock} from "openzeppelin-contracts/contracts/mocks/token/ERC20DecimalsMock.sol";
 
 contract ERC20DecimalsMock is ERC20DecMock {
-    constructor(uint8 decimals_)
-        ERC20DecMock(decimals_)
-        ERC20("Test Dollars", "testUSD")
-    {}
+    constructor(uint8 decimals_) ERC20DecMock(decimals_) ERC20("Test Dollars", "testUSD") {}
 
     function mint(address account, uint256 amount) external {
         _mint(account, amount);

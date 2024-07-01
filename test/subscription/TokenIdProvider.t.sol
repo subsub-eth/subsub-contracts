@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/TokenIdProvider.sol";
 
 contract TestTokenIdProvider is TokenIdProvider {
@@ -16,7 +15,6 @@ contract TestTokenIdProvider is TokenIdProvider {
 }
 
 contract TokenIdProviderTest is Test {
-    using Math for uint256;
 
     TestTokenIdProvider private provider;
     uint256 initId;

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/MaxSupply.sol";
 
 contract TestMaxSupply is MaxSupply {
@@ -16,7 +15,6 @@ contract TestMaxSupply is MaxSupply {
 }
 
 contract MaxSupplyTest is Test {
-    using Math for uint256;
 
     TestMaxSupply private ms;
 
