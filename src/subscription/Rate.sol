@@ -41,6 +41,4 @@ abstract contract Rate is Initializable, HasRate {
         RateStorage storage $ = _getRateStorage();
         return $._rate;
     }
-
-    // TODO _gap
 }
