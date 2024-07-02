@@ -4,6 +4,10 @@ pragma solidity ^0.8.20;
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 abstract contract HasTokenIdProvider {
+    /**
+     * @notice creates and returns the next token id
+     * @return a new token id to use
+     */
     function _nextTokenId() internal virtual returns (uint256);
 }
 

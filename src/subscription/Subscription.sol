@@ -6,6 +6,7 @@ import {Lib} from "./Lib.sol";
 import {ViewLib} from "./ViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
+import {TokenIdProvider, HasTokenIdProvider} from "./TokenIdProvider.sol";
 import {Epochs, HasEpochs} from "./Epochs.sol";
 import {Rate, HasRate} from "./Rate.sol";
 import {UserData, HasUserData} from "./UserData.sol";
@@ -37,6 +38,7 @@ abstract contract Subscription is
     ISubscription,
     TimeAware,
     HasMaxSupply,
+    HasTokenIdProvider,
     HasMetadata,
     HasRate,
     HasUserData,
@@ -54,9 +56,6 @@ abstract contract Subscription is
     using Strings for address;
 
     using ViewLib for Subscription;
-
-    // TODO replace me?
-    uint256 public nextTokenId;
 
     function __Subscription_init() internal onlyInitializing {
         __Subscription_init_unchained();
@@ -165,7 +164,7 @@ abstract contract Subscription is
         // TODO check minimum amount?
         // TODO handle 0 amount mints -> skip parts of code, new event type
         // uint subscriptionEnd = amount / rate;
-        uint256 tokenId = nextTokenId++;
+        uint256 tokenId = _nextTokenId();
 
         uint256 internalAmount = amount.toInternal(_decimals());
 
@@ -339,6 +338,7 @@ abstract contract Subscription is
 
 abstract contract DefaultSubscription is
     MaxSupply,
+    TokenIdProvider,
     Metadata,
     Rate,
     PaymentToken,
@@ -373,8 +373,7 @@ abstract contract DefaultSubscription is
         __UserData_init_unchained(_settings.lock);
         __PaymentToken_init_unchained(_settings.token);
         __MaxSupply_init_unchained(_settings.maxSupply);
+        __TokenIdProvider_init_unchained(0);
         __Metadata_init_unchained(_metadata.description, _metadata.image, _metadata.externalUrl);
-
-        nextTokenId = 1;
     }
 }
