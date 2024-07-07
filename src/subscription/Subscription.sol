@@ -30,8 +30,6 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-// should the tokenId 0 == owner?
-
 // responsbile for handling conversion of token amounts between internal and external representation
 abstract contract Subscription is
     Initializable,
@@ -79,6 +77,26 @@ abstract contract Subscription is
         MetadataStruct calldata _metadata,
         SubSettings calldata _settings
     ) external virtual;
+
+    /**
+     * @notice converts an mount to the internal representation
+     * @param amount the external representation
+     * @return the internal representation
+     *
+     */
+    function _asInternal(uint256 amount) internal view virtual returns (uint256) {
+        return amount.toInternal(_decimals());
+    }
+
+    /**
+     * @notice converts an mount to the internal representation
+     * @param amount the internal representation
+     * @return the external representation
+     *
+     */
+    function _asExternal(uint256 amount) internal view virtual returns (uint256) {
+        return amount.toExternal(_decimals());
+    }
 
     function settings()
         external
@@ -222,8 +240,9 @@ abstract contract Subscription is
     }
 
     /**
-      @param amount internal representation (18 decimals) of amount to withdraw
-      **/
+     * @param amount internal representation (18 decimals) of amount to withdraw
+     *
+     */
     function _withdraw(uint256 tokenId, uint256 amount) private {
         require(
             _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"

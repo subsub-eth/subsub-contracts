@@ -5,6 +5,11 @@ import "../../src/subscription/ISubscription.sol";
 import {ERC721Mock} from "./ERC721Mock.sol";
 
 // THIS IS A WORK IN PROGRESS, MAKE CHANGES AND ADDITIONS AS NEEDED
+/**
+ * @notice This implementation is intended to be used by tests that just need some sub. It does not fail
+ * @notice THIS IS A WORK IN PROGRESS, MAKE CHANGES AND ADDITIONS AS NEEDED
+ *
+ */
 contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
     mapping(uint256 => uint256) private _spentAmounts;
 
