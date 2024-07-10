@@ -3,6 +3,13 @@ pragma solidity ^0.8.20;
 
 import "../../src/subscription/Subscription.sol";
 
+abstract contract TestSubEvents {
+    event Burned(uint256 indexed tokenId);
+
+    event SubCreated(uint256 indexed tokenId, uint256 indexed amount, uint24 indexed multiplier);
+    event AddedToEpochs(uint256 indexed amount, uint256 indexed shares, uint256 indexed rate);
+}
+
 /**
  * @notice Abstract Sub implementation for testing
  * @dev inherits basic ERC721 and other CRUD functions
@@ -12,6 +19,7 @@ import "../../src/subscription/Subscription.sol";
  *
  */
 abstract contract AbstractTestSub is
+    TestSubEvents,
     // actual impl
     MaxSupply,
     TokenIdProvider,
@@ -61,6 +69,11 @@ abstract contract AbstractTestSub is
         lock = _settings.lock;
     }
 
+    // helpers
+    function simpleMint(address to, uint256 tokenId) external {
+        _safeMint(to, tokenId);
+    }
+
     // override HandleOwned
     function _checkOwner() internal view override {
         require(_msgSender() == _owner, "Not Owner");
@@ -92,11 +105,11 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _deleteSubscription(uint256 tokenId) internal pure override {
+    function _deleteSubscription(uint256 tokenId) internal virtual override {
         revert("SUB: not implemented");
     }
 
-    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal pure override {
+    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal virtual override {
         revert("SUB: not implemented");
     }
 
@@ -200,7 +213,7 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal pure override {
+    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual override {
         revert("SUB: not implemented");
     }
 
@@ -220,11 +233,11 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _asInternal(uint256) internal pure override returns (uint256) {
+    function _asInternal(uint256) internal view virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _asExternal(uint256) internal pure override returns (uint256) {
+    function _asExternal(uint256) internal view virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 }

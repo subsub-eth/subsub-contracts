@@ -18,10 +18,7 @@ import "../../src/subscription/handle/SubscriptionHandle.sol";
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-
-// TODO test toExternal, toInternal
-
-contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags {
+contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags, TestSubEvents {
     Subscription public sub;
 
     address public owner;
@@ -39,19 +36,21 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     uint8 public decimals;
 
     function setUp() public {
-      owner = address(10);
-      alice = address(11);
-      metadata = MetadataStruct("description", "image", "externalUrl");
-      rate = 5;
-      lock = 100;
-      epochSize = 10;
-      maxSupply = 10_000;
-      decimals = 12;
+        owner = address(10);
+        alice = address(11);
+        metadata = MetadataStruct("description", "image", "externalUrl");
+        rate = 5;
+        lock = 100;
+        epochSize = 10;
+        maxSupply = 10_000;
+        decimals = 12;
 
-      testToken = new ERC20DecimalsMock(decimals);
-      settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
+        testToken = new ERC20DecimalsMock(decimals);
+        testToken.mint(alice, 10_000_000_000 ether);
 
-      sub = new SimpleTestSub(owner, "name", "symbol", metadata, settings);
+        settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
+
+        sub = new SimpleTestSub(owner, "name", "symbol", metadata, settings);
     }
 
     function testSetExternalUrl() public {
@@ -104,6 +103,116 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         vm.expectRevert();
         sub.setDescription(desc);
+    }
+
+    function testSetFlags(uint256 flags) public {
+        flags = bound(flags, 0, ALL_FLAGS);
+        vm.prank(owner);
+        sub.setFlags(flags);
+    }
+
+    function testSetFlags_invalid(uint256 flags) public {
+        flags = bound(flags, ALL_FLAGS + 1, type(uint256).max);
+        vm.startPrank(alice);
+
+        vm.expectRevert();
+        sub.setFlags(flags);
+    }
+
+    function testSetFlags_notOwner() public {
+        uint256 flags = 1;
+        vm.startPrank(alice);
+
+        vm.expectRevert();
+        sub.setFlags(flags);
+    }
+
+    function testBurn(uint256 tokenId) public {
+        BurnSub _sub = new BurnSub();
+
+        _sub.simpleMint(alice, tokenId);
+
+        assertEq(_sub.balanceOf(alice), 1, "Token created");
+
+        vm.prank(alice);
+        vm.expectEmit();
+        emit Burned(tokenId);
+
+        _sub.burn(tokenId);
+
+        assertEq(_sub.balanceOf(alice), 0, "Token burned");
+    }
+
+    function testBurn_notOwner(uint256 tokenId) public {
+        BurnSub _sub = new BurnSub();
+
+        _sub.simpleMint(alice, tokenId);
+
+        assertEq(_sub.balanceOf(alice), 1, "Token created");
+
+        vm.expectRevert();
+        _sub.burn(tokenId);
+    }
+
+    function testMint(uint256 amount, uint24 multiplier, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+        multiplier = uint24(bound(multiplier, 100, 100_000));
+
+        MintSub _sub = new MintSub(owner, settings);
+
+        vm.startPrank(alice);
+        testToken.approve(address(_sub), amount);
+
+        vm.expectEmit();
+        emit SubCreated(1, amount * 10, multiplier);
+        vm.expectEmit();
+        emit AddedToEpochs(amount * 10, multiplier, rate);
+        vm.expectEmit();
+        emit SubscriptionRenewed(1, amount, amount * 10, alice, message);
+
+        _sub.mint(amount, multiplier, message);
+
+        assertEq(_sub.balanceOf(alice), 1, "Token created");
+        assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
+    }
+
+    function testMint_maxSupply(uint256 amount, uint24 multiplier, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+        multiplier = uint24(bound(multiplier, 100, 100_000));
+
+        settings.maxSupply = 1;
+        MintSub _sub = new MintSub(owner, settings);
+
+        vm.startPrank(alice);
+        testToken.approve(address(_sub), amount);
+        _sub.mint(amount, multiplier, message);
+
+        vm.expectRevert("SUB: max supply reached");
+        _sub.mint(amount, multiplier, message);
+    }
+
+    function testMint_invalidMultiplier(uint256 amount, uint24 multiplier, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+        multiplier = uint24(bound(multiplier, 0, 99));
+
+        MintSub _sub = new MintSub(owner, settings);
+
+        vm.startPrank(alice);
+
+        vm.expectRevert("SUB: multiplier invalid");
+        _sub.mint(amount, multiplier, message);
+    }
+
+    function testMint_invalidMultiplier_large(uint256 amount, uint24 multiplier, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+        multiplier = uint24(bound(multiplier, 100_001, type(uint24).max));
+
+        MintSub _sub = new MintSub(owner, settings);
+
+        vm.startPrank(alice);
+
+        vm.expectRevert("SUB: multiplier invalid");
+        _sub.mint(amount, multiplier, message);
     }
 
     // ERC1967Proxy public subscriptionProxy;
@@ -1158,4 +1267,42 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     //     vm.expectRevert("Flag: setting enabled");
     //     subscription.tip(tokenId, 100, "");
     // }
+}
+
+contract BurnSub is AbstractTestSub {
+    constructor()
+        AbstractTestSub(
+            address(0),
+            "name",
+            "symbol",
+            MetadataStruct("description", "image", "externalUrl"),
+            SubSettings(new ERC20DecimalsMock(18), 0, 0, 0, 100)
+        )
+    {}
+
+    function _deleteSubscription(uint256 tokenId) internal override {
+        emit Burned(tokenId);
+    }
+}
+
+contract MintSub is AbstractTestSub {
+    constructor(address owner, SubSettings memory settings)
+        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
+    {}
+
+    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal override {
+        emit SubCreated(tokenId, amount, multiplier);
+    }
+
+    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
+        emit AddedToEpochs(amount, shares, rate);
+    }
+
+    function _asInternal(uint256 v) internal view virtual override returns (uint256) {
+        return v * 10;
+    }
+
+    function _asExternal(uint256 v) internal view virtual override returns (uint256) {
+        return v / 10;
+    }
 }

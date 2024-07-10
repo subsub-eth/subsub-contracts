@@ -136,11 +136,11 @@ abstract contract Subscription is
     }
 
     function claimed() external view returns (uint256) {
-        return _claimed().toExternal(_decimals());
+        return _asExternal(_claimed());
     }
 
     function claimedTips() external view returns (uint256) {
-        return _claimedTips().toExternal(_decimals());
+        return _asExternal(_claimedTips());
     }
 
     function activeSubShares() external view returns (uint256) {
@@ -152,10 +152,9 @@ abstract contract Subscription is
         view
         virtual
         override(ERC721Upgradeable, IERC721Metadata)
+        requireExists(tokenId)
         returns (string memory)
     {
-        require(_ownerOf(tokenId) != address(0), "SUB: Token does not exist");
-
         return this.tokenData(tokenId);
     }
 
@@ -184,7 +183,7 @@ abstract contract Subscription is
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = _nextTokenId();
 
-        uint256 internalAmount = amount.toInternal(_decimals());
+        uint256 internalAmount = _asInternal(amount);
 
         // TODO do we need return values?
         _createSubscription(tokenId, internalAmount, multiplier);
@@ -209,7 +208,7 @@ abstract contract Subscription is
     {
         uint256 multiplier_ = _multiplier(tokenId);
         uint256 rate = _rate();
-        uint256 internalAmount = amount.toInternal(_decimals());
+        uint256 internalAmount = _asInternal(amount);
 
         {
             (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactived) =
@@ -232,7 +231,7 @@ abstract contract Subscription is
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external requireExists(tokenId) {
-        _withdraw(tokenId, amount.toInternal(_decimals()));
+        _withdraw(tokenId, _asInternal(amount));
     }
 
     function cancel(uint256 tokenId) external requireExists(tokenId) {
@@ -260,7 +259,7 @@ abstract contract Subscription is
 
         _reduceInEpochs(depositedAt, oldDeposit, newDeposit, multiplier_, _rate());
 
-        uint256 externalAmount = amount.toExternal(_decimals());
+        uint256 externalAmount = _asExternal(amount);
         _paymentToken().safeTransfer(_msgSender(), externalAmount);
 
         emit SubscriptionWithdrawn(tokenId, externalAmount, _totalDeposited(tokenId));
@@ -276,7 +275,7 @@ abstract contract Subscription is
     }
 
     function deposited(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _totalDeposited(tokenId).toExternal(_decimals());
+        return _asExternal(_totalDeposited(tokenId));
     }
 
     function expiresAt(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -284,21 +283,21 @@ abstract contract Subscription is
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _withdrawableFromSubscription(tokenId).toExternal(_decimals());
+        return _asExternal(_withdrawableFromSubscription(tokenId));
     }
 
     function spent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (uint256 spentAmount,) = _spent(tokenId);
-        return spentAmount.toExternal(_decimals());
+        return _asExternal(spentAmount);
     }
 
     function unspent(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         (, uint256 unspentAmount) = _spent(tokenId);
-        return unspentAmount.toExternal(_decimals());
+        return _asExternal(unspentAmount);
     }
 
     function tips(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _tips(tokenId).toExternal(_decimals());
+        return _asExternal(_tips(tokenId));
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message)
@@ -308,11 +307,11 @@ abstract contract Subscription is
     {
         require(amount > 0, "SUB: amount too small");
 
-        _addTip(tokenId, amount.toInternal(_decimals()));
+        _addTip(tokenId, _asInternal(amount));
 
         _paymentToken().safeTransferFrom(_msgSender(), address(this), amount);
 
-        emit Tipped(tokenId, amount, _tips(tokenId).toExternal(_decimals()), _msgSender(), message);
+        emit Tipped(tokenId, amount, _asExternal(_tips(tokenId)), _msgSender(), message);
         emit MetadataUpdate(tokenId);
     }
 
@@ -322,17 +321,17 @@ abstract contract Subscription is
         amount += _claimTips();
 
         // convert to external amount
-        amount = amount.toExternal(_decimals());
+        amount = _asExternal(amount);
 
         _paymentToken().safeTransfer(to, amount);
 
-        emit FundsClaimed(amount, _claimed().toExternal(_decimals()));
+        emit FundsClaimed(amount, _asExternal(_claimed()));
     }
 
     function claimable(uint256 startEpoch, uint256 endEpoch) public view returns (uint256) {
         (uint256 amount,,) = _scanEpochs(_rate(), _currentEpoch());
 
-        return amount.toExternal(_decimals());
+        return _asExternal(amount);
     }
 
     function claimable() external view returns (uint256) {
@@ -343,15 +342,15 @@ abstract contract Subscription is
         uint256 amount = _claimTips();
 
         // convert to external amount
-        amount = amount.toExternal(_decimals());
+        amount = _asExternal(amount);
 
         _paymentToken().safeTransfer(to, amount);
 
-        emit TipsClaimed(amount, _claimedTips().toExternal(_decimals()));
+        emit TipsClaimed(amount, _asExternal(_claimedTips()));
     }
 
     function claimableTips() external view returns (uint256) {
-        return _claimableTips().toExternal(_decimals());
+        return _asExternal(_claimableTips());
     }
 }
 
