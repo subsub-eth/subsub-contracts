@@ -8,6 +8,20 @@ abstract contract TestSubEvents {
 
     event SubCreated(uint256 indexed tokenId, uint256 indexed amount, uint24 indexed multiplier);
     event AddedToEpochs(uint256 indexed amount, uint256 indexed shares, uint256 indexed rate);
+
+    event SubExtended(uint256 indexed tokenId, uint256 indexed amount);
+    event EpochsAdded(
+        uint256 indexed amount,
+        uint256 shares,
+        uint256 rate
+    );
+    event EpochsExtended(
+        uint256 indexed depositedAt,
+        uint256 indexed oldDeposit,
+        uint256 indexed newDeposit,
+        uint256 shares,
+        uint256 rate
+    );
 }
 
 /**
@@ -115,7 +129,7 @@ abstract contract AbstractTestSub is
 
     function _extendSubscription(uint256 tokenId, uint256 amount)
         internal
-        pure
+        virtual
         override
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
     {
@@ -139,11 +153,11 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _totalDeposited(uint256 tokenId) internal pure override returns (uint256) {
+    function _totalDeposited(uint256 tokenId) internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _multiplier(uint256 tokenId) internal pure override returns (uint24) {
+    function _multiplier(uint256 tokenId) internal pure virtual override returns (uint24) {
         revert("SUB: not implemented");
     }
 
@@ -219,7 +233,7 @@ abstract contract AbstractTestSub is
 
     function _extendInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal
-        pure
+        virtual
         override
     {
         revert("SUB: not implemented");

@@ -195,7 +195,7 @@ abstract contract Subscription is
 
         _safeMint(msg.sender, tokenId);
 
-        emit SubscriptionRenewed(tokenId, amount, internalAmount, msg.sender, message);
+        emit SubscriptionRenewed(tokenId, amount, _totalDeposited(tokenId), msg.sender, message);
 
         return tokenId;
     }

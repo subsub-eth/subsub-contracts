@@ -19,6 +19,8 @@ import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags, TestSubEvents {
+    event MetadataUpdate(uint256 _tokenId);
+
     Subscription public sub;
 
     address public owner;
@@ -127,12 +129,14 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         sub.setFlags(flags);
     }
 
+    // TODO check that no payment tokens are being transferred
     function testBurn(uint256 tokenId) public {
         BurnSub _sub = new BurnSub();
 
         _sub.simpleMint(alice, tokenId);
 
-        assertEq(_sub.balanceOf(alice), 1, "Token created");
+        assertEq(_sub.totalSupply(), 1, "Token created");
+        assertEq(_sub.balanceOf(alice), 1, "Token created to user");
 
         vm.prank(alice);
         vm.expectEmit();
@@ -140,15 +144,31 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         _sub.burn(tokenId);
 
-        assertEq(_sub.balanceOf(alice), 0, "Token burned");
+        assertEq(_sub.totalSupply(), 0, "Token burned");
+        assertEq(_sub.balanceOf(alice), 0, "Token burned from user");
     }
 
-    function testBurn_notOwner(uint256 tokenId) public {
+    function testBurn_notOwner(uint256 tokenId, address user) public {
+        vm.assume(alice != user && user != address(this));
         BurnSub _sub = new BurnSub();
 
         _sub.simpleMint(alice, tokenId);
 
-        assertEq(_sub.balanceOf(alice), 1, "Token created");
+        assertEq(_sub.balanceOf(alice), 1, "Token created to user");
+
+        vm.startPrank(user);
+        vm.expectRevert();
+        _sub.burn(tokenId);
+    }
+
+    function testBurn_twice(uint256 tokenId) public {
+        BurnSub _sub = new BurnSub();
+
+        _sub.simpleMint(alice, tokenId);
+
+        vm.prank(alice);
+
+        _sub.burn(tokenId);
 
         vm.expectRevert();
         _sub.burn(tokenId);
@@ -164,11 +184,11 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         testToken.approve(address(_sub), amount);
 
         vm.expectEmit();
-        emit SubCreated(1, amount * 10, multiplier);
+        emit SubCreated(1, amount * _sub.CONV(), multiplier);
         vm.expectEmit();
-        emit AddedToEpochs(amount * 10, multiplier, rate);
+        emit AddedToEpochs(amount * _sub.CONV(), multiplier, rate);
         vm.expectEmit();
-        emit SubscriptionRenewed(1, amount, amount * 10, alice, message);
+        emit SubscriptionRenewed(1, amount, _sub.TOTAL_DEPOSITED(), alice, message);
 
         _sub.mint(amount, multiplier, message);
 
@@ -187,6 +207,18 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         testToken.approve(address(_sub), amount);
         _sub.mint(amount, multiplier, message);
 
+        vm.expectRevert("SUB: max supply reached");
+        _sub.mint(amount, multiplier, message);
+    }
+
+    function testMint_maxSupply0(uint256 amount, uint24 multiplier, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+        multiplier = uint24(bound(multiplier, 100, 100_000));
+
+        settings.maxSupply = 0;
+        MintSub _sub = new MintSub(owner, settings);
+
+        vm.startPrank(alice);
         vm.expectRevert("SUB: max supply reached");
         _sub.mint(amount, multiplier, message);
     }
@@ -213,6 +245,114 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         vm.expectRevert("SUB: multiplier invalid");
         _sub.mint(amount, multiplier, message);
+    }
+
+    function testMint_mintPaused(uint256 amount, uint24 multiplier, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+        multiplier = uint24(bound(multiplier, 100_001, type(uint24).max));
+
+        MintSub _sub = new MintSub(owner, settings);
+        vm.prank(owner);
+        _sub.setFlags(MINTING_PAUSED);
+
+        vm.expectRevert("Flag: setting enabled");
+        _sub.mint(amount, multiplier, message);
+    }
+
+    function testRenew(uint256 tokenId, uint256 amount, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+
+        RenewExtendSub _sub = new RenewExtendSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(alice);
+        testToken.approve(address(_sub), amount);
+        assertEq(testToken.balanceOf(address(_sub)), 0, "no tokens in contract");
+
+        vm.expectEmit();
+        emit SubExtended(tokenId, amount * _sub.CONV());
+        vm.expectEmit();
+        emit EpochsExtended(_sub.DEPOSITED_AT(), _sub.OLD_DEPOSIT(), _sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        vm.expectEmit();
+        emit SubscriptionRenewed(tokenId, amount, _sub.TOTAL_DEPOSITED(), alice, message);
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.renew(tokenId, amount, message);
+
+        assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
+    }
+
+    function testRenew_reactivate(uint256 tokenId, uint256 amount, string calldata message) public {
+        amount = bound(amount, 0, testToken.balanceOf(alice));
+
+        RenewReactivateSub _sub = new RenewReactivateSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(alice);
+        testToken.approve(address(_sub), amount);
+        assertEq(testToken.balanceOf(address(_sub)), 0, "no tokens in contract");
+
+        vm.expectEmit();
+        emit SubExtended(tokenId, amount * _sub.CONV());
+        vm.expectEmit();
+        emit EpochsAdded(_sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        vm.expectEmit();
+        emit SubscriptionRenewed(tokenId, amount, _sub.TOTAL_DEPOSITED(), alice, message);
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.renew(tokenId, amount, message);
+
+        assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
+    }
+
+    function testRenew_otherUser(address user, uint256 tokenId, uint256 amount, string calldata message) public {
+        vm.assume(user != alice && user != address(this));
+
+        testToken.mint(user, 100_000_000_000 ether);
+        amount = bound(amount, 0, testToken.balanceOf(user));
+
+        RenewExtendSub _sub = new RenewExtendSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(user);
+        testToken.approve(address(_sub), amount);
+        assertEq(testToken.balanceOf(address(_sub)), 0, "no tokens in contract");
+
+        vm.expectEmit();
+        emit SubExtended(tokenId, amount * _sub.CONV());
+        vm.expectEmit();
+        emit EpochsExtended(_sub.DEPOSITED_AT(), _sub.OLD_DEPOSIT(), _sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        vm.expectEmit();
+        emit SubscriptionRenewed(tokenId, amount, _sub.TOTAL_DEPOSITED(), user, message);
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.renew(tokenId, amount, message);
+
+        assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
+    }
+
+    function testRenew_noToken(address user, uint256 tokenId, uint256 amount, string calldata message) public {
+        RenewExtendSub _sub = new RenewExtendSub(owner, settings);
+
+        vm.startPrank(user);
+
+        vm.expectRevert("SUB: subscription does not exist");
+        _sub.renew(tokenId, amount, message);
+    }
+
+    function testRenew_paused(address user, uint256 tokenId, uint256 amount, string calldata message) public {
+        RenewExtendSub _sub = new RenewExtendSub(owner, settings);
+
+        vm.prank(owner);
+        _sub.setFlags(RENEWAL_PAUSED);
+
+        vm.startPrank(user);
+
+        vm.expectRevert("Flag: setting enabled");
+        _sub.renew(tokenId, amount, message);
     }
 
     // ERC1967Proxy public subscriptionProxy;
@@ -283,348 +423,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     // }
     //
     //
-    //
-    // function mintToken(address user, uint256 amount) private returns (uint256 tokenId) {
-    //     vm.startPrank(user);
-    //     testToken.approve(address(subscription), amount);
-    //
-    //     vm.expectEmit();
-    //     emit SubscriptionRenewed(subscription.totalSupply() + 1, amount, (amount / rate) * rate, user, message);
-    //
-    //     tokenId = subscription.mint(amount, 100, message);
-    //     vm.stopPrank();
-    //     assertEq(testToken.balanceOf(address(subscription)), amount, "amount send to subscription contract");
-    //
-    //     uint256 lockedAmount = (amount * lock) / Lib.LOCK_BASE;
-    //     lockedAmount = (lockedAmount / rate) * rate;
-    //     assertEq(
-    //         subscription.withdrawable(tokenId),
-    //         (amount / rate) * rate - lockedAmount,
-    //         "deposited amount partially locked"
-    //     );
-    // }
-    //
-    // function testMint() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     bool active = subscription.isActive(tokenId);
-    //     uint256 end = subscription.expiresAt(tokenId);
-    //
-    //     assertEq(tokenId, 1, "subscription has first token id");
-    //     assertEq(end, currentTime + 20, "subscription ends at 20");
-    //     assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
-    //     assertTrue(active, "subscription active");
-    // }
-    //
-    // function testMint_multiplierTooSmall() public {
-    //     vm.expectRevert("SUB: multiplier invalid");
-    //     subscription.mint(0, 99, "");
-    // }
-    //
-    // function testMint_multiplierTooLarge() public {
-    //     vm.expectRevert("SUB: multiplier invalid");
-    //     subscription.mint(0, 100_001, "");
-    // }
-    //
-    // function testMint_zeroAmount() public {
-    //     uint256 tokenId = mintToken(alice, 0);
-    //
-    //     bool active = subscription.isActive(tokenId);
-    //     uint256 end = subscription.expiresAt(tokenId);
-    //
-    //     assertEq(tokenId, 1, "subscription has first token id");
-    //     assertEq(end, currentTime, "subscription ends at current block");
-    //     assertEq(subscription.deposited(tokenId), 0, "0 tokens deposited");
-    //     assertFalse(active, "subscription active");
-    // }
-    //
-    // function testMint_whenPaused() public {
-    //     vm.prank(owner);
-    //     subscription.setFlags(MINTING_PAUSED);
-    //
-    //     vm.expectRevert("Flag: setting enabled");
-    //     subscription.mint(1, 100, "");
-    //
-    //     vm.prank(owner);
-    //     subscription.setFlags(0);
-    //
-    //     mintToken(alice, 100);
-    // }
-    //
-    // function testMaxSupply() public {
-    //     Subscription sub = createSubWithProxy();
-    //     settings.maxSupply = 1;
-    //     sub.initialize("test", "test", metadata, settings);
-    //
-    //     assertEq(0, sub.totalSupply());
-    //
-    //     vm.startPrank(alice);
-    //     sub.mint(0, 100, "");
-    //
-    //     assertEq(1, sub.totalSupply());
-    //
-    //     vm.expectRevert("SUB: max supply reached");
-    //     sub.mint(0, 100, "");
-    // }
-    //
-    // function testMaxSupply_none() public {
-    //     Subscription sub = createSubWithProxy();
-    //     settings.maxSupply = 0;
-    //     sub.initialize("test", "test", metadata, settings);
-    //
-    //     vm.startPrank(alice);
-    //     vm.expectRevert("SUB: max supply reached");
-    //     sub.mint(0, 100, "");
-    // }
-    //
-    // function testMaxSupply_withBurn() public {
-    //     Subscription sub = createSubWithProxy();
-    //     settings.maxSupply = 1;
-    //     sub.initialize("test", "test", metadata, settings);
-    //
-    //     assertEq(0, sub.totalSupply());
-    //
-    //     vm.startPrank(alice);
-    //     uint256 tokenId = sub.mint(0, 100, "");
-    //     assertEq(1, sub.totalSupply());
-    //
-    //     sub.burn(tokenId);
-    //     assertEq(0, sub.totalSupply());
-    //
-    //     sub.mint(0, 100, "");
-    //     assertEq(1, sub.totalSupply());
-    //
-    //     vm.expectRevert("SUB: max supply reached");
-    //     sub.mint(0, 100, "");
-    // }
-    //
-    // function testBurn() public {
-    //     uint256 amount = 100;
-    //     uint256 tokenId = mintToken(alice, amount);
-    //
-    //     assertEq(subscription.totalSupply(), 1, "only one sub exists");
-    //
-    //     assertEq(testToken.balanceOf(address(subscription)), amount, "sub contract has tokens");
-    //
-    //     vm.prank(alice);
-    //     subscription.burn(tokenId);
-    //
-    //     assertEq(subscription.totalSupply(), 0, "no subs exist");
-    //     assertEq(testToken.balanceOf(address(subscription)), amount, "sub contract still has tokens");
-    //     assertEq(subscription.balanceOf(alice), 0, "alice does not own any subs anymore");
-    //
-    //     // bahhhh
-    //     (uint256 a, uint256 b, uint256 c, uint256 d, uint256 e, uint256 f) = subscription.getSubData(tokenId);
-    //
-    //     assertEq(0, a);
-    //     assertEq(0, b);
-    //     assertEq(0, c);
-    //     assertEq(0, d);
-    //     assertEq(0, e);
-    //     assertEq(0, f);
-    //
-    //     vm.startPrank(alice);
-    //     vm.expectRevert("SUB: subscription does not exist");
-    //     subscription.deposited(tokenId);
-    // }
-    //
-    // function testBurn_nonExisting() public {
-    //     vm.expectRevert("SUB: not the owner");
-    //     subscription.burn(123123);
-    // }
-    //
-    // function testBurn_notTwice() public {
-    //     uint256 tokenId = mintToken(alice, 0);
-    //
-    //     vm.startPrank(alice);
-    //     subscription.burn(tokenId);
-    //
-    //     vm.expectRevert("SUB: not the owner");
-    //     subscription.burn(tokenId);
-    // }
-    //
-    // function testBurn_notOwner() public {
-    //     uint256 tokenId = mintToken(alice, 0);
-    //
-    //     vm.startPrank(bob);
-    //     vm.expectRevert("SUB: not the owner");
-    //     subscription.burn(tokenId);
-    // }
-    //
-    // function testIsActive() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     assertEq(tokenId, 1, "subscription has first token id");
-    //
-    //     // fast forward
-    //     setCurrentTime(currentTime + 5);
-    //     bool active = subscription.isActive(tokenId);
-    //
-    //     assertTrue(active, "subscription active");
-    // }
-    //
-    // function testIsActive_lastBlock() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     assertEq(tokenId, 1, "subscription has first token id");
-    //
-    //     // fast forward
-    //     setCurrentTime(currentTime + 19);
-    //     bool active = subscription.isActive(tokenId);
-    //
-    //     assertTrue(active, "subscription active");
-    //
-    //     setCurrentTime(currentTime + 1); // + 20
-    //     active = subscription.isActive(tokenId);
-    //
-    //     assertFalse(active, "subscription inactive");
-    // }
-    //
-    // function testRenew() public {
-    //     uint256 initialDeposit = 10_000;
-    //     uint256 tokenId = mintToken(alice, initialDeposit);
-    //
-    //     uint256 initialEnd = subscription.expiresAt(tokenId);
-    //     assertEq(initialEnd, currentTime + 2000, "subscription initially ends at 2000");
-    //     assertEq(subscription.deposited(tokenId), initialDeposit, "10_000 tokens deposited");
-    //
-    //     // fast forward
-    //     setCurrentTime(currentTime + 5);
-    //
-    //     vm.expectEmit();
-    //     emit SubscriptionRenewed(tokenId, 20_000, 30_000, address(this), message);
-    //
-    //     vm.expectEmit();
-    //     emit MetadataUpdate(tokenId);
-    //
-    //     assertFalse(subscription.flagsEnabled(RENEWAL_PAUSED), "contract is not paused");
-    //
-    //     subscription.renew(tokenId, 20_000, message);
-    //
-    //     assertEq(testToken.balanceOf(address(subscription)), 30_000, "all tokens deposited");
-    //
-    //     assertTrue(subscription.isActive(tokenId), "subscription is active");
-    //     uint256 end = subscription.expiresAt(tokenId);
-    //     assertEq(end, initialEnd + 4_000, "subscription expires at 6000");
-    //     assertEq(subscription.deposited(tokenId), 30_000, "30000 tokens deposited");
-    //
-    //     uint256 fundsUsed = 5 * rate;
-    //     uint256 lockedAmount = ((((30_000 - fundsUsed) * lock) / Lib.LOCK_BASE) / rate) * rate;
-    //     assertEq(
-    //         subscription.withdrawable(tokenId), 29975 - lockedAmount, "Locked amount updated to 29975 - 295 = 29680"
-    //     );
-    // }
-    //
-    // function testRenew_whenPaused() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     // fast forward
-    //     setCurrentTime(currentTime + 5);
-    //
-    //     vm.prank(owner);
-    //     subscription.setFlags(RENEWAL_PAUSED);
-    //
-    //     vm.expectRevert("Flag: setting enabled");
-    //     subscription.renew(tokenId, 100, "");
-    // }
-    //
-    // function testRenew_revert_nonExisting() public {
-    //     uint256 tokenId = 100;
-    //
-    //     vm.expectRevert("SUB: subscription does not exist");
-    //     subscription.renew(tokenId, 200, message);
-    //
-    //     assertEq(testToken.balanceOf(address(subscription)), 0, "no tokens sent");
-    // }
-    //
-    // function testRenew_zeroAmount() public {
-    //     uint256 tokenId = mintToken(alice, 0);
-    //
-    //     vm.expectRevert("SUB: amount too small");
-    //     subscription.renew(tokenId, 0, "too small");
-    // }
-    //
-    // function testRenew_minAmount() public {
-    //     uint256 tokenId = mintToken(alice, 0);
-    //
-    //     subscription.renew(tokenId, rate, "just right");
-    //
-    //     assertEq(subscription.deposited(tokenId), rate, "min renewal");
-    //
-    //     vm.expectRevert("SUB: amount too small");
-    //     subscription.renew(tokenId, rate - 1, "too small");
-    // }
-    //
-    // function testRenew_afterMint() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     uint256 initialEnd = subscription.expiresAt(tokenId);
-    //     assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
-    //     assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
-    //
-    //     vm.expectEmit(true, true, true, true);
-    //     emit SubscriptionRenewed(tokenId, 200, 300, address(this), message);
-    //
-    //     subscription.renew(tokenId, 200, message);
-    //
-    //     assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
-    //
-    //     assertTrue(subscription.isActive(tokenId), "subscription is active");
-    //     uint256 end = subscription.expiresAt(tokenId);
-    //     assertEq(end, initialEnd + 40, "subscription ends at 60");
-    //     assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
-    // }
-    //
-    // function testRenew_inActive() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     uint256 initialEnd = subscription.expiresAt(tokenId);
-    //     assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
-    //
-    //     // fast forward
-    //     uint64 ff = 50;
-    //     setCurrentTime(currentTime + ff);
-    //     assertFalse(subscription.isActive(tokenId), "subscription is inactive");
-    //     assertEq(subscription.deposited(tokenId), 100, "100 tokens deposited");
-    //
-    //     vm.expectEmit(true, true, true, true);
-    //     emit SubscriptionRenewed(tokenId, 200, 300, address(this), message);
-    //
-    //     subscription.renew(tokenId, 200, message);
-    //
-    //     assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
-    //
-    //     assertTrue(subscription.isActive(tokenId), "subscription is active");
-    //     uint256 end = subscription.expiresAt(tokenId);
-    //     assertEq(end, currentTime + 40, "subscription ends at 90");
-    //     assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
-    // }
-    //
-    // function testRenew_notOwner() public {
-    //     uint256 tokenId = mintToken(alice, 100);
-    //
-    //     uint256 initialEnd = subscription.expiresAt(tokenId);
-    //     assertEq(initialEnd, currentTime + 20, "subscription initially ends at 20");
-    //
-    //     uint256 amount = 200;
-    //     vm.startPrank(bob);
-    //
-    //     testToken.approve(address(subscription), amount);
-    //
-    //     vm.expectEmit(true, true, true, true);
-    //     emit SubscriptionRenewed(tokenId, 200, 300, bob, message);
-    //
-    //     subscription.renew(tokenId, amount, message);
-    //
-    //     vm.stopPrank();
-    //
-    //     assertEq(testToken.balanceOf(address(subscription)), 300, "all tokens deposited");
-    //
-    //     assertTrue(subscription.isActive(tokenId), "subscription is active");
-    //     uint256 end = subscription.expiresAt(tokenId);
-    //     assertEq(end, initialEnd + (amount / rate), "subscription end extended");
-    //     assertEq(subscription.deposited(tokenId), 300, "300 tokens deposited");
-    // }
     //
     // function testWithdrawable() public {
     //     uint256 initialDeposit = 10_000;
@@ -1286,9 +1084,16 @@ contract BurnSub is AbstractTestSub {
 }
 
 contract MintSub is AbstractTestSub {
+    uint256 public constant CONV = 10;
+    uint256 public constant TOTAL_DEPOSITED = 9876;
+
     constructor(address owner, SubSettings memory settings)
         AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
     {}
+
+    function _totalDeposited(uint256 tokenId) internal pure override returns (uint256) {
+        return TOTAL_DEPOSITED;
+    }
 
     function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal override {
         emit SubCreated(tokenId, amount, multiplier);
@@ -1299,10 +1104,109 @@ contract MintSub is AbstractTestSub {
     }
 
     function _asInternal(uint256 v) internal view virtual override returns (uint256) {
-        return v * 10;
+        return v * CONV;
     }
 
     function _asExternal(uint256 v) internal view virtual override returns (uint256) {
-        return v / 10;
+        return v / CONV;
+    }
+}
+
+contract RenewExtendSub is AbstractTestSub {
+    uint256 public constant CONV = 10;
+    uint24 public constant MULTI = 9999;
+
+    uint256 public constant DEPOSITED_AT = 1234;
+    uint256 public constant OLD_DEPOSIT = 2345;
+    uint256 public constant NEW_DEPOSIT = 6789;
+
+    uint256 public constant TOTAL_DEPOSITED = 9876;
+
+    constructor(address owner, SubSettings memory settings)
+        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
+    {}
+
+    function _multiplier(uint256 tokenId) internal pure override returns (uint24) {
+        return MULTI;
+    }
+
+    function _extendSubscription(uint256 tokenId, uint256 amount)
+        internal
+        override
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
+    {
+        emit SubExtended(tokenId, amount);
+
+        depositedAt = DEPOSITED_AT;
+        oldDeposit = OLD_DEPOSIT;
+        newDeposit = NEW_DEPOSIT;
+        reactivated = false;
+    }
+
+    function _extendInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+        internal
+        override
+    {
+        emit EpochsExtended(depositedAt, oldDeposit, newDeposit, shares, rate);
+    }
+
+    function _totalDeposited(uint256 tokenId) internal pure override returns (uint256) {
+        return TOTAL_DEPOSITED;
+    }
+
+    function _asInternal(uint256 v) internal view virtual override returns (uint256) {
+        return v * CONV;
+    }
+
+    function _asExternal(uint256 v) internal view virtual override returns (uint256) {
+        return v / CONV;
+    }
+}
+
+contract RenewReactivateSub is AbstractTestSub {
+    uint256 public constant CONV = 10;
+    uint24 public constant MULTI = 9999;
+
+    uint256 public constant DEPOSITED_AT = 1234;
+    uint256 public constant OLD_DEPOSIT = 2345;
+    uint256 public constant NEW_DEPOSIT = 6789;
+
+    uint256 public constant TOTAL_DEPOSITED = 9876;
+
+    constructor(address owner, SubSettings memory settings)
+        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
+    {}
+
+    function _multiplier(uint256 tokenId) internal pure override returns (uint24) {
+        return MULTI;
+    }
+
+    function _extendSubscription(uint256 tokenId, uint256 amount)
+        internal
+        override
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
+    {
+        emit SubExtended(tokenId, amount);
+
+        depositedAt = DEPOSITED_AT;
+        oldDeposit = OLD_DEPOSIT;
+        newDeposit = NEW_DEPOSIT;
+        reactivated = true;
+    }
+
+    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
+        emit EpochsAdded(amount, shares, rate);
+    }
+
+    function _totalDeposited(uint256 tokenId) internal pure override returns (uint256) {
+        return TOTAL_DEPOSITED;
+    }
+
+    function _asInternal(uint256 v) internal view virtual override returns (uint256) {
+        return v * CONV;
+    }
+
+    function _asExternal(uint256 v) internal view virtual override returns (uint256) {
+        return v / CONV;
     }
 }
