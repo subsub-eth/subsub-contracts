@@ -176,10 +176,7 @@ abstract contract Subscription is
         // check max supply
         require(totalSupply() < _maxSupply(), "SUB: max supply reached");
         // multiplier must be larger that 1x and less than 1000x
-        // TODO in one call
-        require(multiplier >= 100 && multiplier <= 100_000, "SUB: multiplier invalid");
-        // TODO check minimum amount?
-        // TODO handle 0 amount mints -> skip parts of code, new event type
+        require(multiplier >= Lib.MULTIPLIER_BASE && multiplier <= 100_000, "SUB: multiplier invalid");
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = _nextTokenId();
 
@@ -378,7 +375,7 @@ abstract contract DefaultSubscription is
     ) external override initializer {
         require(_settings.epochSize > 0, "SUB: invalid epochSize");
         require(address(_settings.token) != address(0), "SUB: token cannot be 0 address");
-        require(_settings.lock <= 10_000, "SUB: lock percentage out of range");
+        require(_settings.lock <= Lib.LOCK_BASE, "SUB: lock percentage out of range");
         require(_settings.rate > 0, "SUB: rate cannot be 0");
         // TODO FIXME
         // require(_settings.epochSize >= 1 days, "SUB: epoch size has to be at least 1 day");

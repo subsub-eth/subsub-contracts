@@ -11,6 +11,9 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol";
 
+// TODO store the longest sub streak
+// TODO change multiplier
+
 abstract contract HasUserData {
     struct SubData {
         uint256 mintedAt; // mint date
