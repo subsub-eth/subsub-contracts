@@ -88,7 +88,7 @@ contract SubscriptionConversionTest is Test, SubscriptionEvents, ClaimEvents {
 
         vm.expectEmit(true, true, true, true);
         emit SubscriptionRenewed(
-            subscription.totalSupply() + 1, amount, amount.toInternal(testToken.decimals()), user, message
+            subscription.totalSupply() + 1, amount, user, amount.toInternal(testToken.decimals()), message
         );
 
         tokenId = subscription.mint(amount, 100, message);

@@ -18,21 +18,23 @@ interface SubscriptionEvents {
     event SubscriptionRenewed(
         uint256 indexed tokenId,
         uint256 indexed addedAmount,
-        uint256 indexed deposited,
-        address depositor,
+        address indexed depositor,
+        uint256 deposited,
         string message
     );
 
     /**
      * @notice Withdrawn event is emitted when an active subscription is reduced by withdrawing funds
      */
-    event SubscriptionWithdrawn(uint256 indexed tokenId, uint256 indexed removedAmount, uint256 indexed deposited);
+    event SubscriptionWithdrawn(
+        uint256 indexed tokenId, uint256 indexed removedAmount, address indexed receiver, uint256 deposited
+    );
 
     /**
      * @notice Tipped event is emitted when a tip was deposited into a subscription
      */
     event Tipped(
-        uint256 indexed tokenId, uint256 indexed amount, uint256 indexed deposited, address depositor, string message
+        uint256 indexed tokenId, uint256 indexed amount, address indexed depositor, uint256 deposited, string message
     );
 }
 

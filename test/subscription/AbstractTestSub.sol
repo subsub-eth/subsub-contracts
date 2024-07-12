@@ -10,11 +10,7 @@ abstract contract TestSubEvents {
     event AddedToEpochs(uint256 indexed amount, uint256 indexed shares, uint256 indexed rate);
 
     event SubExtended(uint256 indexed tokenId, uint256 indexed amount);
-    event EpochsAdded(
-        uint256 indexed amount,
-        uint256 shares,
-        uint256 rate
-    );
+    event EpochsAdded(uint256 indexed amount, uint256 shares, uint256 rate);
     event EpochsExtended(
         uint256 indexed depositedAt,
         uint256 indexed oldDeposit,
@@ -22,6 +18,17 @@ abstract contract TestSubEvents {
         uint256 shares,
         uint256 rate
     );
+
+    event SubWithdrawn(uint256 indexed tokenId, uint256 indexed amount);
+    event EpochsReduced(
+        uint256 indexed depositedAt,
+        uint256 indexed oldDeposit,
+        uint256 indexed newDeposit,
+        uint256 shares,
+        uint256 rate
+    );
+
+    event TipAdded(uint256 indexed tokenId, uint256 indexed amount);
 }
 
 /**
@@ -111,85 +118,85 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _isActive(uint256 tokenId) internal pure override returns (bool) {
+    function _isActive(uint256) internal pure override returns (bool) {
         revert("SUB: not implemented");
     }
 
-    function _expiresAt(uint256 tokenId) internal pure override returns (uint256) {
+    function _expiresAt(uint256) internal pure override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _deleteSubscription(uint256 tokenId) internal virtual override {
+    function _deleteSubscription(uint256) internal virtual override {
         revert("SUB: not implemented");
     }
 
-    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal virtual override {
+    function _createSubscription(uint256, uint256, uint24) internal virtual override {
         revert("SUB: not implemented");
     }
 
-    function _extendSubscription(uint256 tokenId, uint256 amount)
+    function _extendSubscription(uint256, uint256)
         internal
         virtual
         override
-        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
+        returns (uint256, uint256, uint256, bool)
     {
         revert("SUB: not implemented");
     }
 
-    function _withdrawableFromSubscription(uint256 tokenId) internal pure override returns (uint256) {
+    function _withdrawableFromSubscription(uint256) internal view virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
+    function _withdrawFromSubscription(uint256, uint256)
         internal
-        pure
+        virtual
         override
-        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit)
+        returns (uint256, uint256, uint256)
     {
         revert("SUB: not implemented");
     }
 
-    function _spent(uint256 tokenId) internal pure override returns (uint256 spent, uint256 unspent) {
+    function _spent(uint256) internal pure override returns (uint256, uint256) {
         revert("SUB: not implemented");
     }
 
-    function _totalDeposited(uint256 tokenId) internal pure virtual override returns (uint256) {
+    function _totalDeposited(uint256) internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _multiplier(uint256 tokenId) internal pure virtual override returns (uint24) {
+    function _multiplier(uint256) internal pure virtual override returns (uint24) {
         revert("SUB: not implemented");
     }
 
-    function _lastDepositedAt(uint256 tokenId) internal pure override returns (uint256) {
+    function _lastDepositedAt(uint256) internal pure override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _addTip(uint256 tokenId, uint256 amount) internal pure override {
+    function _addTip(uint256, uint256) internal virtual override {
         revert("SUB: not implemented");
     }
 
-    function _tips(uint256 tokenId) internal pure override returns (uint256) {
+    function _tips(uint256) internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _allTips() internal pure override returns (uint256) {
+    function _allTips() internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _claimedTips() internal pure override returns (uint256) {
+    function _claimedTips() internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _claimableTips() internal pure override returns (uint256) {
+    function _claimableTips() internal view virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _claimTips() internal override returns (uint256) {
+    function _claimTips() internal virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _getSubData(uint256 tokenId) internal pure override returns (SubData memory) {
+    function _getSubData(uint256) internal pure override returns (SubData memory) {
         revert("SUB: not implemented");
     }
 
@@ -198,11 +205,11 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _currentEpoch() internal pure override returns (uint64) {
+    function _currentEpoch() internal pure virtual override returns (uint64) {
         revert("SUB: not implemented");
     }
 
-    function _lastProcessedEpoch() internal pure override returns (uint64) {
+    function _lastProcessedEpoch() internal pure virtual override returns (uint64) {
         revert("SUB: not implemented");
     }
 
@@ -210,40 +217,27 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _claimed() internal pure override returns (uint256) {
+    function _claimed() internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _scanEpochs(uint256 rate, uint64 upToEpoch)
-        internal
-        pure
-        override
-        returns (uint256 amount, uint256 starting, uint256 expiring)
-    {
+    function _scanEpochs(uint256, uint64) internal view virtual override returns (uint256, uint256, uint256) {
         revert("SUB: not implemented");
     }
 
-    function _claimEpochs(uint256 rate) internal pure override returns (uint256) {
+    function _claimEpochs(uint256) internal virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual override {
+    function _addToEpochs(uint256, uint256, uint256) internal virtual override {
         revert("SUB: not implemented");
     }
 
-    function _extendInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
-        internal
-        virtual
-        override
-    {
+    function _extendInEpochs(uint256, uint256, uint256, uint256, uint256) internal virtual override {
         revert("SUB: not implemented");
     }
 
-    function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
-        internal
-        pure
-        override
-    {
+    function _reduceInEpochs(uint256, uint256, uint256, uint256, uint256) internal virtual override {
         revert("SUB: not implemented");
     }
 

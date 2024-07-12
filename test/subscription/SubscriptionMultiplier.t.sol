@@ -99,8 +99,8 @@ contract SubscriptionMultiplierTest is Test, SubscriptionEvents, ClaimEvents {
         emit SubscriptionRenewed(
             subscription.totalSupply() + 1,
             amount,
-            amount.toInternal(testToken.decimals()),
             user,
+            amount.toInternal(testToken.decimals()),
             message
         );
 

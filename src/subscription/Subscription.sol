@@ -192,7 +192,7 @@ abstract contract Subscription is
 
         _safeMint(msg.sender, tokenId);
 
-        emit SubscriptionRenewed(tokenId, amount, _totalDeposited(tokenId), msg.sender, message);
+        emit SubscriptionRenewed(tokenId, amount, _msgSender(), _totalDeposited(tokenId), message);
 
         return tokenId;
     }
@@ -223,7 +223,7 @@ abstract contract Subscription is
         // we use the ORIGINAL amount here
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
 
-        emit SubscriptionRenewed(tokenId, amount, _totalDeposited(tokenId), msg.sender, message);
+        emit SubscriptionRenewed(tokenId, amount, _msgSender(), _totalDeposited(tokenId), message);
         emit MetadataUpdate(tokenId);
     }
 
@@ -244,22 +244,15 @@ abstract contract Subscription is
             _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
         );
 
-        // TODO move to withdraw, prevent duplicate call in cancel() and third call in UserData
-        uint256 withdrawable_ = _withdrawableFromSubscription(tokenId);
-
-        // TODO remove, check in UserData
-        require(amount <= withdrawable_, "SUB: amount exceeds withdrawable");
-
+        // amount is checked in _withdrawFromSubscription
         (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 
-        uint256 multiplier_ = _multiplier(tokenId);
-
-        _reduceInEpochs(depositedAt, oldDeposit, newDeposit, multiplier_, _rate());
+        _reduceInEpochs(depositedAt, oldDeposit, newDeposit, _multiplier(tokenId), _rate());
 
         uint256 externalAmount = _asExternal(amount);
         _paymentToken().safeTransfer(_msgSender(), externalAmount);
 
-        emit SubscriptionWithdrawn(tokenId, externalAmount, _totalDeposited(tokenId));
+        emit SubscriptionWithdrawn(tokenId, externalAmount, _msgSender(), _totalDeposited(tokenId));
         emit MetadataUpdate(tokenId);
     }
 
@@ -294,7 +287,7 @@ abstract contract Subscription is
     }
 
     function tips(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
-        return _asExternal(_tips(tokenId));
+        return _tips(tokenId);
     }
 
     function tip(uint256 tokenId, uint256 amount, string calldata message)
@@ -304,18 +297,17 @@ abstract contract Subscription is
     {
         require(amount > 0, "SUB: amount too small");
 
-        _addTip(tokenId, _asInternal(amount));
+        _addTip(tokenId, amount);
 
         _paymentToken().safeTransferFrom(_msgSender(), address(this), amount);
 
-        emit Tipped(tokenId, amount, _asExternal(_tips(tokenId)), _msgSender(), message);
+        emit Tipped(tokenId, amount, _msgSender(), _tips(tokenId), message);
         emit MetadataUpdate(tokenId);
     }
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwner {
         uint256 amount = _claimEpochs(_rate());
-        amount += _claimTips();
 
         // convert to external amount
         amount = _asExternal(amount);
@@ -338,16 +330,13 @@ abstract contract Subscription is
     function claimTips(address to) external onlyOwner {
         uint256 amount = _claimTips();
 
-        // convert to external amount
-        amount = _asExternal(amount);
-
         _paymentToken().safeTransfer(to, amount);
 
-        emit TipsClaimed(amount, _asExternal(_claimedTips()));
+        emit TipsClaimed(amount, _claimedTips());
     }
 
     function claimableTips() external view returns (uint256) {
-        return _asExternal(_claimableTips());
+        return _claimableTips();
     }
 }
 
