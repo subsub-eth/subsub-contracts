@@ -10,6 +10,7 @@ import {TokenIdProvider, HasTokenIdProvider} from "./TokenIdProvider.sol";
 import {Epochs, HasEpochs} from "./Epochs.sol";
 import {Rate, HasRate} from "./Rate.sol";
 import {UserData, HasUserData} from "./UserData.sol";
+import {Tips, HasTips} from "./Tips.sol";
 import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
 import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";
 import {Metadata, HasMetadata} from "./Metadata.sol";
@@ -40,6 +41,7 @@ abstract contract Subscription is
     HasMetadata,
     HasRate,
     HasUserData,
+    HasTips,
     HasPaymentToken,
     HasEpochs,
     HasHandleOwned,
@@ -348,6 +350,7 @@ abstract contract DefaultSubscription is
     PaymentToken,
     Epochs,
     UserData,
+    Tips,
     HandleOwned,
     FlagSettings,
     Subscription
@@ -375,6 +378,7 @@ abstract contract DefaultSubscription is
         __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
         __UserData_init_unchained(_settings.lock);
+        __Tips_init_unchained();
         __PaymentToken_init_unchained(_settings.token);
         __MaxSupply_init_unchained(_settings.maxSupply);
         __TokenIdProvider_init_unchained(0);

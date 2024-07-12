@@ -23,7 +23,6 @@ abstract contract HasUserData {
         uint256 totalDeposited; // amount of tokens ever deposited
         uint256 currentDeposit; // deposit since streakStartedAt, resets with streakStartedAt
         uint256 lockedAmount; // amount of locked funds as of lastDepositAt
-        uint256 tips; // amount of tips sent to this subscription
         uint24 multiplier;
     }
 
@@ -135,45 +134,6 @@ abstract contract HasUserData {
      * @return the time unit date of the last deposit
      */
     function _lastDepositedAt(uint256 tokenId) internal view virtual returns (uint256);
-
-    /**
-     * @notice adds the given amount of funds to the tips of a subscription
-     * @param tokenId subscription identifier
-     * @param amount tip amount
-     */
-    function _addTip(uint256 tokenId, uint256 amount) internal virtual;
-
-    /**
-     * @notice returns the amount of tips placed in the given subscription
-     * @param tokenId subscription identifier
-     * @return the total amount of tips
-     */
-    function _tips(uint256 tokenId) internal view virtual returns (uint256);
-
-    /**
-     * @notice returns the amount of all tips placed in this contract
-     * @return the total amount of tips in this contract
-     */
-    function _allTips() internal view virtual returns (uint256);
-
-    /**
-     * @notice returns the amount of tips that were claimed from this contract
-     * @return the total amount of tips claimed from this contract
-     */
-    function _claimedTips() internal view virtual returns (uint256);
-
-    /**
-     * @notice returns the amount of tips that can be claimed from this contract
-     * @dev returns the amount of not yet claimed tips
-     * @return the amount of tips claimable from this contract
-     */
-    function _claimableTips() internal view virtual returns (uint256);
-
-    /**
-     * @notice claims the available tips from this contract
-     * @return the amount of tips that were claimed by this call
-     */
-    function _claimTips() internal virtual returns (uint256);
 
     /**
      * @notice returns the internal storage struct of a given subscription
@@ -383,39 +343,6 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     function _lastDepositedAt(uint256 tokenId) internal view override returns (uint256) {
         UserDataStorage storage $ = _getUserDataStorage();
         return $._subData[tokenId].lastDepositAt;
-    }
-
-    function _addTip(uint256 tokenId, uint256 amount) internal override {
-        UserDataStorage storage $ = _getUserDataStorage();
-        // TODO change me
-        $._subData[tokenId].tips += amount;
-        $._allTips += amount;
-    }
-
-    function _tips(uint256 tokenId) internal view override returns (uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._subData[tokenId].tips;
-    }
-
-    function _allTips() internal view override returns (uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._allTips;
-    }
-
-    function _claimedTips() internal view override returns (uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._claimedTips;
-    }
-
-    function _claimableTips() internal view override returns (uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._allTips - $._claimedTips;
-    }
-
-    function _claimTips() internal override returns (uint256 claimable) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        claimable = $._allTips - $._claimedTips;
-        $._claimedTips = $._allTips;
     }
 
     function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {
