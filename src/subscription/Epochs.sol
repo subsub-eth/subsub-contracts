@@ -187,13 +187,9 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._lastProcessedEpoch = uint64((uint256(_currentEpoch())).max(1) - 1); // current epoch -1 or 0
     }
 
-    function _getEpoch(uint64 epoch) internal view virtual override returns (Epoch memory) {
+    function _getEpoch(uint64 epoch) internal view virtual override returns (Epoch memory) {}
 
-    }
-
-    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {
-
-    }
+    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {}
 
     function _epochSize() internal view override returns (uint64) {
         EpochsStorage storage $ = _getEpochsStorage();
@@ -255,6 +251,23 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         override
         returns (uint256 amount, uint256 starting, uint256 expiring)
     {
+        (amount, starting, expiring,) = scanEpochs_(rate, upToEpoch);
+    }
+
+    /**
+     * @notice scan epochs starting from last processed to given epoch
+     * @param rate the rate to apply
+     * @param upToEpoch the epoch to scan to, excluding
+     * @return amount the total amount of funds processed
+     * @return starting the number of starting shares
+     * @return expiring the number of expiring shares
+     * @return lastEpoch the last epoch being processed, 0 if there was no scanning
+     */
+    function scanEpochs_(uint256 rate, uint64 upToEpoch)
+        private
+        view
+        returns (uint256 amount, uint256 starting, uint256 expiring, uint64 lastEpoch)
+    {
         EpochsStorage storage $ = _getEpochsStorage();
         uint256 _activeSubs = $._activeSubShares;
 
@@ -282,6 +295,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
             // add new subs starting in this epoch, sanitized
             _activeSubs += epochStarting;
+
+            lastEpoch = i;
         }
         // the amount is mutliplied by the shares and has to be returned to its base
         amount = amount / Lib.MULTIPLIER_BASE;
@@ -290,11 +305,11 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     function _claimEpochs(uint256 rate, uint64 upToEpoch) internal override returns (uint256) {
         require(upToEpoch > 0, "SUB: cannot handle epoch 0");
 
-        (uint256 amount, uint256 starting, uint256 expiring) = _scanEpochs(rate, upToEpoch);
+        (uint256 amount, uint256 starting, uint256 expiring, uint64 lastEpoch) = scanEpochs_(rate, upToEpoch);
 
         // delete epochs
         EpochsStorage storage $ = _getEpochsStorage();
-        for (uint64 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i < upToEpoch; i++) {
+        for (uint64 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i <= lastEpoch; i++) {
             delete $._epochs[i];
         }
 
@@ -304,8 +319,10 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             $._activeSubShares -= expiring - starting;
         }
 
-        // TODO FIXME this might be exploitable
-        $._lastProcessedEpoch = upToEpoch - 1;
+        // lastEpoch might be 0, if there was nothing to process
+        if ($._lastProcessedEpoch < lastEpoch) {
+            $._lastProcessedEpoch = lastEpoch;
+        }
         $._claimed += amount;
         $._initialClaim = true;
 
