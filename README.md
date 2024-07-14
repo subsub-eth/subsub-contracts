@@ -60,9 +60,9 @@ Relevant contracts are printed as logs
 
 ## Open TODOs
 
+- create/rewrite smoke/integration tests
+- change multiplier -> ends current sub streak
 - merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
-- use a combined storage for subscription instead of each mixin having its own, gas optimiziation?
-- write individual mixin tests
 - "upgrade"/migrate to other subscription: separate migrated funds from
   accumulated ones, enable via flag
 - upgrade function / flow, migrating one token into another

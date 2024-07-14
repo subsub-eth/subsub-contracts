@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../../src/subscription/Subscription.sol";
+import "../../src/subscription/Epochs.sol";
 
 abstract contract TestSubEvents {
     event Burned(uint256 indexed tokenId);
@@ -200,6 +201,14 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
+    function _getEpoch(uint64 epoch) internal view virtual override returns (Epoch memory) {
+        revert("SUB: not implemented");
+    }
+
+    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {
+        revert("SUB: not implemented");
+    }
+
     // Epochs
     function _epochSize() internal pure override returns (uint64) {
         revert("SUB: not implemented");
@@ -225,7 +234,7 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _claimEpochs(uint256) internal virtual override returns (uint256) {
+    function _claimEpochs(uint256 rate, uint64 upToEpoch) internal virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 

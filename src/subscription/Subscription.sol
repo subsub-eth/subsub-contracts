@@ -309,7 +309,7 @@ abstract contract Subscription is
 
     /// @notice The owner claims their rewards
     function claim(address to) external onlyOwner {
-        uint256 amount = _claimEpochs(_rate());
+        uint256 amount = _claimEpochs(_rate(), _currentEpoch());
 
         // convert to external amount
         amount = _asExternal(amount);

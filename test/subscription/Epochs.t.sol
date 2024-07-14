@@ -60,8 +60,8 @@ contract TestEpochs is Epochs {
         _reduceInEpochs(depositedAt, oldDeposit, newDeposit, shares, rate);
     }
 
-    function claim(uint256 rate) external returns (uint256) {
-        return _claimEpochs(rate);
+    function claim(uint256 rate, uint64 upToEpoch) external returns (uint256) {
+        return _claimEpochs(rate, upToEpoch);
     }
 }
 
@@ -92,14 +92,14 @@ contract EpochsTest is Test {
         vm.roll(block.number + 2 * epochSize);
 
         (uint256 claimable,,) = e.scanEpochs(rate, e.currentEpoch());
-        uint256 claimed = e.claim(rate);
+        uint256 claimed = e.claim(rate, e.currentEpoch());
         assertEq(claimable, claimed, "1st claim: claimed amount equal to claimable");
         assertEq(claimed, e.claimed(), "1st claim: claimed amount stored in contract");
 
         vm.roll(block.number + jump);
 
         (claimable,,) = e.scanEpochs(rate, e.currentEpoch());
-        uint256 claimed2 = e.claim(rate);
+        uint256 claimed2 = e.claim(rate, e.currentEpoch());
         assertEq(claimable, claimed2, "2nd claim: claimed amount equal to claimable");
         assertEq(claimed + claimed2, e.claimed(), "2nd claim: claimed amount is updated");
     }
@@ -1003,7 +1003,7 @@ contract EpochsTest is Test {
             // claim epoch 0
             vm.roll(initDepositAt + epochSize);
 
-            uint256 amount = e.claim(rate);
+            uint256 amount = e.claim(rate, e.currentEpoch());
             totalClaimed += amount;
 
             assertEq(amount, (rate * shares * (epochSize - initDepositAt)) / 100, "epoch 0: partial funds claimable");
@@ -1013,7 +1013,7 @@ contract EpochsTest is Test {
             assertEq(shares, e.activeSubShares(), "epoch 0: shares active");
 
             // try second claim -> no change
-            amount = e.claim(rate);
+            amount = e.claim(rate, e.currentEpoch());
             assertEq(amount, 0, "epoch 0, 2: second claim ineffective");
             assertEq(totalClaimed, e.claimed(), "epoch 0, 2: total claimed");
             assertEq(0, e.lastProcessedEpoch(), "epoch 0, 2: last processed epoch");
@@ -1026,7 +1026,7 @@ contract EpochsTest is Test {
             for (uint64 i = 2; i <= (uint64(initExpiresAt) / epochSize); i++) {
                 vm.roll(initDepositAt + (i * epochSize));
 
-                uint256 amount = e.claim(rate);
+                uint256 amount = e.claim(rate, e.currentEpoch());
                 totalClaimed += amount;
                 assertEq(amount, (rate * shares * epochSize) / 100, "epoch i: partial funds claimable");
 
@@ -1035,7 +1035,7 @@ contract EpochsTest is Test {
                 assertEq(shares, e.activeSubShares(), "epoch i: shares active");
 
                 // try second claim -> no change
-                amount = e.claim(rate);
+                amount = e.claim(rate, e.currentEpoch());
                 assertEq(amount, 0, "epoch i, 2: second claim ineffective");
                 assertEq(totalClaimed, e.claimed(), "epoch i, 2: total claimed");
                 assertEq(i - 1, e.lastProcessedEpoch(), "epoch i, 2: last processed epoch");
@@ -1046,7 +1046,7 @@ contract EpochsTest is Test {
         {
             vm.roll(initExpiresAt + epochSize);
 
-            uint256 amount = e.claim(rate);
+            uint256 amount = e.claim(rate, e.currentEpoch());
             totalClaimed += amount;
 
             assertEq(totalClaimed, e.claimed(), "last epoch: total claimed");
@@ -1055,7 +1055,7 @@ contract EpochsTest is Test {
             assertEq(0, e.activeSubShares(), "last epoch: shares not active");
 
             // try second claim -> no change
-            amount = e.claim(rate);
+            amount = e.claim(rate, e.currentEpoch());
             assertEq(amount, 0, "last epoch, 2: second claim ineffective");
             assertEq(totalClaimed, e.claimed(), "last epoch, 2: total claimed");
             assertEq(totalClaimed, initDeposit, "last epoch, 2: total claimable funds");
@@ -1077,7 +1077,7 @@ contract EpochsTest is Test {
         // claim epoch 0
         vm.roll(initDepositAt + epochSize);
 
-        uint256 amount = e.claim(rate);
+        uint256 amount = e.claim(rate, e.currentEpoch());
 
         assertEq(amount, initDeposit, "epoch 0: partial funds claimable");
 
@@ -1101,7 +1101,7 @@ contract EpochsTest is Test {
         {
             vm.roll(initExpiresAt + epochSize);
 
-            e.claim(rate);
+            e.claim(rate, e.currentEpoch());
 
             assertEq(initDeposit, e.claimed(), "last epoch: total funds claimed");
             assertEq(initExpiresAt / epochSize, e.lastProcessedEpoch(), "last epoch: last processed epoch");
@@ -1137,7 +1137,7 @@ contract EpochsTest is Test {
 
         vm.roll(deposit1ExpiresAt.max(deposit2ExpiresAt) + epochSize);
 
-        e.claim(rate);
+        e.claim(rate, e.currentEpoch());
 
         assertEq(deposit1 + deposit2, e.claimed(), "last epoch: total funds claimed");
         assertEq(
@@ -1158,8 +1158,11 @@ contract EpochsTest is Test {
         // initialize sub
         e.addNewSub(initDeposit, shares, rate);
 
+        uint64 currentEpoch = e.currentEpoch();
+        assertEq(currentEpoch, 0, "current epoch is 0");
+
         vm.expectRevert(); // cannot handle claim of epoch 0
-        e.claim(rate);
+        e.claim(rate, currentEpoch);
     }
 
     function testClaim_noSubs(uint64 epoch) public {
@@ -1167,7 +1170,7 @@ contract EpochsTest is Test {
 
         vm.roll(epochSize * epoch);
 
-        uint256 amount = e.claim(rate);
+        uint256 amount = e.claim(rate, e.currentEpoch());
         assertEq(0, amount, "no funds claimed");
 
         assertEq(0, e.claimed(), "total funds 0");

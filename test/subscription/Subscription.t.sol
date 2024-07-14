@@ -311,7 +311,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testRenew_otherUser(address user, uint256 tokenId, uint256 amount, string calldata message) public {
-        vm.assume(user != alice && user != address(this));
+        vm.assume(user != address(0) && user != alice && user != address(this));
 
         testToken.mint(user, 100_000_000_000 ether);
         amount = bound(amount, 0, testToken.balanceOf(user));
@@ -470,7 +470,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testClaim(address to, uint256 claimable) public {
-        vm.assume(to != alice);
+        vm.assume(to != address(0) && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
         uint256 exClaimable = claimable / _sub.CONV();
@@ -519,6 +519,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testTip_anyUser(address user, uint256 tokenId, uint256 amount, string calldata message) public {
+        vm.assume(user != address(0));
         testToken.mint(user, 100_000_000_000 ether);
         amount = bound(amount, 1, testToken.balanceOf(user));
 
@@ -568,7 +569,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testClaimTips(address to, uint256 claimable) public {
-        vm.assume(to != alice);
+        vm.assume(to != address(0) && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         TipSub _sub = new TipSub(owner, settings, claimable);
         testToken.mint(address(_sub), claimable);
@@ -815,7 +816,7 @@ contract ClaimSub is AbstractTestSub {
         b = 0;
     }
 
-    function _claimEpochs(uint256) internal view override returns (uint256) {
+    function _claimEpochs(uint256, uint64) internal view override returns (uint256) {
         return claimable_;
     }
 
