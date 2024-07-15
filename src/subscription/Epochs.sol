@@ -304,6 +304,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
     function _claimEpochs(uint256 rate, uint64 upToEpoch) internal override returns (uint256) {
         require(upToEpoch > 0, "SUB: cannot handle epoch 0");
+        require(upToEpoch <= _currentEpoch(), "SUB: cannot claim current epoch");
 
         (uint256 amount, uint256 starting, uint256 expiring, uint64 lastEpoch) = scanEpochs_(rate, upToEpoch);
 

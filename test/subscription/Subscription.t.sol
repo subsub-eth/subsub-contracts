@@ -485,6 +485,33 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
     }
 
+    function testClaimBatch(address to, uint256 claimable, uint64 upToEpoch) public {
+        vm.assume(to != address(0) && to != alice);
+        claimable = bound(claimable, 0, type(uint192).max);
+        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
+        uint256 exClaimable = claimable / _sub.CONV();
+        testToken.mint(address(_sub), exClaimable);
+
+        vm.startPrank(owner);
+        vm.expectEmit();
+        emit FundsClaimed(exClaimable, _sub.TOTAL_CLAIMED() / _sub.CONV());
+
+        _sub.claim(to, upToEpoch);
+
+        assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
+    }
+
+    function testClaimBatch_notOwner(address user, address to, uint256 claimable, uint64 upToEpoch) public {
+        vm.assume(user != owner);
+        claimable = bound(claimable, 0, type(uint192).max);
+        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
+
+        vm.startPrank(user);
+        vm.expectRevert();
+
+        _sub.claim(to, upToEpoch);
+    }
+
     function testClaim_notOwner(address user, address to, uint256 claimable) public {
         vm.assume(user != owner);
         claimable = bound(claimable, 0, type(uint192).max);
