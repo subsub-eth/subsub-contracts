@@ -37,10 +37,13 @@ test-contract CONTRACT:
   forge test -vvv --match-contract {{CONTRACT}}
 
 # clean all
-clean: forge-clean pnpm-clean
+clean: forge-clean pnpm-clean clean-pack
 
 forge-clean:
   forge clean
 
 pnpm-clean:
   pnpm clean
+
+clean-pack:
+  rm -f createz-contracts-*.tgz
