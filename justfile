@@ -14,6 +14,8 @@ build-all: build test typechain pnpm-pack
 # generate typechain types
 typechain:
   find ./out -type f -name '*.abi.json' -execdir bash -c 'mv -- "$0" "${0%.abi.json}.abi"' {} \;
+  install -d abi
+  cd out && cp --parents **/*.abi ../abi
   pnpm run generate-types
 
 # pnpm pack

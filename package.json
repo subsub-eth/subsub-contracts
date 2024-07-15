@@ -3,7 +3,7 @@
   "version": "0.2.0-alpha.14",
   "description": "CreateZ contracts",
   "scripts": {
-    "clean": "rimraf types dist",
+    "clean": "rimraf types dist abi",
     "pack-unpack": "rimraf dist && pnpm pack && mkdir dist && tar --strip-components=1 -xvzf createz-contracts-*.tgz -C dist && rimraf createz-contracts-*.tgz",
     "generate-types": "pnpm run generate-types-ethers-v6",
     "generate-types-ethers-v6": "typechain --target=ethers-v6 --show-stack-traces --discriminate-types 'out/!(*.t.sol)/*.abi'",
@@ -12,6 +12,7 @@
   "files": [
     "README.md",
     "LICENSE",
+    "abi/**",
     "src/**",
     "types/**"
   ],
