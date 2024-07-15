@@ -187,9 +187,15 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._lastProcessedEpoch = uint64((uint256(_currentEpoch())).max(1) - 1); // current epoch -1 or 0
     }
 
-    function _getEpoch(uint64 epoch) internal view virtual override returns (Epoch memory) {}
+    function _getEpoch(uint64 epoch) internal view virtual override returns (Epoch memory) {
+        EpochsStorage storage $ = _getEpochsStorage();
+        return $._epochs[epoch];
+    }
 
-    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {}
+    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {
+        EpochsStorage storage $ = _getEpochsStorage();
+        $._epochs[epoch] = data;
+    }
 
     function _epochSize() internal view override returns (uint64) {
         EpochsStorage storage $ = _getEpochsStorage();

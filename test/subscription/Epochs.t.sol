@@ -11,6 +11,14 @@ contract TestEpochs is Epochs {
         __Epochs_init(epochSize_);
     }
 
+    function getEpoch(uint64 epoch) external view virtual returns (Epoch memory) {
+        return _getEpoch(epoch);
+    }
+
+    function setEpoch(uint64 epoch, Epoch memory data) external virtual {
+        _setEpoch(epoch, data);
+    }
+
     function _now() internal view override returns (uint256) {
         return block.number;
     }
@@ -1148,20 +1156,15 @@ contract EpochsTest is Test {
         assertEq(0, e.activeSubShares(), "last epoch: all shares not active after expire");
     }
 
-    function testClaim_epoch0(uint16 shares) public {
-        uint256 initDeposit = 100_000;
-        uint256 initDepositAt = 10;
+    function testClaim_epoch0(uint256 time) public {
+        time = bound(time, 0, epochSize - 1);
 
-        shares = uint16(bound(shares, 100, 10_000));
-
-        vm.roll(initDepositAt);
-        // initialize sub
-        e.addNewSub(initDeposit, shares, rate);
+        vm.roll(time);
 
         uint64 currentEpoch = e.currentEpoch();
         assertEq(currentEpoch, 0, "current epoch is 0");
 
-        vm.expectRevert(); // cannot handle claim of epoch 0
+        vm.expectRevert("SUB: cannot handle epoch 0"); // cannot handle claim of epoch 0
         e.claim(rate, currentEpoch);
     }
 
@@ -1176,5 +1179,18 @@ contract EpochsTest is Test {
         assertEq(0, e.claimed(), "total funds 0");
         assertEq(epoch - 1, e.lastProcessedEpoch(), "last processed epoch advanced to previous epoch");
         assertEq(0, e.activeSubShares(), "no subs exist");
+    }
+
+    function testClaim_futureEpoch(uint256 time, uint256 future) public {
+        // some realistic time
+        time = bound(time, 0, type(uint64).max - 1_000);
+        // some time in the next epoch
+        future = bound(future, time + epochSize, type(uint64).max);
+
+        vm.roll(time);
+        // initialize sub
+
+        vm.expectRevert("SUB: cannot claim current epoch");
+        e.claim(rate, uint64(future / epochSize));
     }
 }
