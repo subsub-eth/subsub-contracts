@@ -6,7 +6,7 @@
     "clean": "rimraf types dist",
     "pack-unpack": "rimraf dist && pnpm pack && mkdir dist && tar --strip-components=1 -xvzf createz-contracts-*.tgz -C dist && rimraf createz-contracts-*.tgz",
     "generate-types": "pnpm run generate-types-ethers-v6",
-    "generate-types-ethers-v6": "typechain --target=ethers-v6 --show-stack-traces --discriminate-types 'out/!(*.t.sol)/*.json'",
+    "generate-types-ethers-v6": "typechain --target=ethers-v6 --show-stack-traces --discriminate-types 'out/!(*.t.sol)/*.abi.json'",
     "deploy-local": "forge script script/Deploy.s.sol:DeployScript --fork-url http://localhost:8545 --broadcast"
   },
   "files": [
