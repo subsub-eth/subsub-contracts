@@ -22,7 +22,7 @@ jobs:
       - name: Run Forge build
         run: |
           forge --version
-          forge build --sizes
+          forge build --sizes --extra-output-files abi
         id: build
 
       - name: Run Forge tests
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: json-abi
-          path: out/
+          path: out/**/*.abi.json
           retention-days: 1
 
 
@@ -53,13 +53,13 @@ jobs:
       - uses: actions/setup-node@v4
         name: Install Node
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
 
       - uses: pnpm/action-setup@v2
         name: Install pnpm
         with:
-          version: 8
+          version: 9
 
       - run: pnpm install --frozen-lockfile
         name: Install Dependencies
@@ -93,13 +93,13 @@ jobs:
       - uses: actions/setup-node@v4
         name: Install Node
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
 
       - uses: pnpm/action-setup@v2
         name: Install pnpm
         with:
-          version: 8
+          version: 9
 
       - run: pnpm install --frozen-lockfile
         name: Install Dependencies
