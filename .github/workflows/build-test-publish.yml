@@ -29,10 +29,15 @@ jobs:
         run: |
           forge test -vvv
         id: test
+
+      - name: Move ABI files
+        run: |
+          find ./out -type f -name '*.abi.json' -execdir bash -c 'mv -- "$0" "${0%.abi.json}.abi"' {} \;
+
       - uses: actions/upload-artifact@v4
         with:
           name: json-abi
-          path: out/**/*.abi.json
+          path: out/**/*.abi
           retention-days: 1
 
 
@@ -89,6 +94,11 @@ jobs:
         with:
           name: ts-types
           path: types/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: json-abi
+          path: abi/
 
       - uses: actions/setup-node@v4
         name: Install Node
