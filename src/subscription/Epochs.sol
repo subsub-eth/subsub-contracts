@@ -126,43 +126,6 @@ abstract contract HasEpochs {
     function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal
         virtual;
-
-    /**
-     * @notice returns the raw data of an epoch
-     * @dev the raw epoch data access is meant for debugging/testing
-     * @param epoch the epoch id to get
-     * @return raw epoch data
-     */
-    function _getEpoch(uint64 epoch) internal view virtual returns (Epoch memory);
-
-    /**
-     * @notice set raw epoch data
-     * @dev setting raw epoch data is meant for testing and debugging
-     * @param epoch the epoch id
-     * @param data the epoch data to set
-     */
-    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual;
-
-    /**
-     * @notice set last processed epoch
-     * @dev for testing and debugging
-     * @param epoch the epoch id
-     */
-    function _setLastProcessedEpoch(uint64 epoch) internal virtual;
-
-    /**
-     * @notice set active sub shares
-     * @dev for testing and debugging
-     * @param shares number of shares
-     */
-    function _setActiveSubShares(uint256 shares) internal virtual;
-
-    /**
-     * @notice set claimed amount
-     * @dev for testing and debugging
-     * @param claimed amount of claimed funds
-     */
-    function _setClaimed(uint256 claimed) internal virtual;
 }
 
 abstract contract Epochs is Initializable, TimeAware, HasEpochs {
@@ -208,27 +171,64 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._lastProcessedEpoch = uint64((uint256(_currentEpoch())).max(1) - 1); // current epoch -1 or 0
     }
 
-    function _getEpoch(uint64 epoch) internal view virtual override returns (Epoch memory) {
+    /**
+     * @notice returns the raw data of an epoch
+     * @dev the raw epoch data access is meant for debugging/testing
+     * @param epoch the epoch id to get
+     * @return raw epoch data
+     */
+    function _getEpoch(uint64 epoch) internal view virtual returns (Epoch memory) {
         EpochsStorage storage $ = _getEpochsStorage();
         return $._epochs[epoch];
     }
 
-    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {
+    /**
+     * @notice set raw epoch data
+     * @dev setting raw epoch data is meant for testing and debugging
+     * @param epoch the epoch id
+     * @param data the epoch data to set
+     */
+    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual {
         EpochsStorage storage $ = _getEpochsStorage();
         $._epochs[epoch] = data;
     }
 
-    function _setLastProcessedEpoch(uint64 epoch) internal virtual override {
+    /**
+     * @notice set last processed epoch
+     * @dev for testing and debugging
+     * @param epoch the epoch id
+     */
+    function _setLastProcessedEpoch(uint64 epoch) internal virtual {
         EpochsStorage storage $ = _getEpochsStorage();
         $._lastProcessedEpoch = epoch;
     }
 
-    function _setActiveSubShares(uint256 shares) internal virtual override {
+    /**
+     * @notice set active sub shares
+     * @dev for testing and debugging
+     * @param shares number of shares
+     */
+    function _setActiveSubShares(uint256 shares) internal virtual {
         EpochsStorage storage $ = _getEpochsStorage();
         $._activeSubShares = shares;
     }
 
-    function _setClaimed(uint256 claimed) internal virtual override {
+    /**
+     * @notice get active sub shares
+     * @dev for testing and debugging
+     * @return number of active shares (internal state)
+     */
+    function _getActiveSubShares() internal virtual returns (uint256) {
+        EpochsStorage storage $ = _getEpochsStorage();
+        return $._activeSubShares;
+    }
+
+    /**
+     * @notice set claimed amount
+     * @dev for testing and debugging
+     * @param claimed amount of claimed funds
+     */
+    function _setClaimed(uint256 claimed) internal virtual {
         EpochsStorage storage $ = _getEpochsStorage();
         $._claimed = claimed;
     }
@@ -348,10 +348,13 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         require(upToEpoch > 0, "SUB: cannot handle epoch 0");
         require(upToEpoch <= _currentEpoch(), "SUB: cannot claim current epoch");
 
+        EpochsStorage storage $ = _getEpochsStorage();
+
+        require(upToEpoch > $._lastProcessedEpoch, "SUB: cannot claim claimed epoch");
+
         (uint256 amount, uint256 starting, uint256 expiring, uint64 lastEpoch) = scanEpochs_(rate, upToEpoch);
 
         // delete epochs
-        EpochsStorage storage $ = _getEpochsStorage();
         for (uint64 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i <= lastEpoch; i++) {
             delete $._epochs[i];
         }
