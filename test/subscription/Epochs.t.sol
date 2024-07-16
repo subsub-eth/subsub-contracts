@@ -183,6 +183,201 @@ contract EpochsTest is Test {
         assertEq(450, e.activeSubShares());
     }
 
+    function testActiveSubShares_sameEpochExpired() public {
+        e.setLastProcessedEpoch(1);
+        e.setEpoch(2, Epoch(200, 200, 0));
+
+        vm.roll(3 * epochSize);
+        assertEq(0, e.activeSubShares());
+    }
+
+    function testActiveSubShares_moreExpiring() public {
+        e.setLastProcessedEpoch(1);
+        e.setActiveSubShares(150);
+        e.setEpoch(2, Epoch(350, 200, 0));
+
+        vm.roll(2 * epochSize);
+        assertEq(350, e.activeSubShares());
+
+        vm.roll(3 * epochSize);
+        assertEq(0, e.activeSubShares());
+    }
+
+    function testScanEpochs() public {
+        uint64 upToEpoch = 10;
+        uint256 activeShares = 3_000;
+
+        e.setActiveSubShares(activeShares);
+        e.setLastProcessedEpoch(1);
+
+        e.setEpoch(2, Epoch({expiring: 100, starting: 200, partialFunds: 1_000}));
+        e.setEpoch(4, Epoch({expiring: 500, starting: 0, partialFunds: 60_000}));
+        e.setEpoch(8, Epoch({expiring: 0, starting: 888, partialFunds: 2_000}));
+
+        e.setEpoch(upToEpoch, Epoch({expiring: 9999, starting: 9999, partialFunds: 99999}));
+
+        (uint256 amount, uint256 starting, uint256 expiring) = e.scanEpochs(rate, upToEpoch);
+
+        // 2: 3k - 100 * epochRate + 1k => 2901k
+        // 3: 3.1k * epochRate => 3100k
+        // 4: 2.6k * epochRate + 60k => 2660k
+        // 5-7: 2.6k * epochRate => 3 * 2600k => 7800k
+        // 8: 2600 * epochRate + 2k => 2602k
+        // 9: 3488 * epochRate => 3488k
+        // div MULTI_BASE => 22_551_000 / 100 => 225_510
+        assertEq(amount, 225_510, "amount");
+        assertEq(expiring, 600, "expiring");
+        assertEq(starting, 1088, "expiring");
+    }
+
+    function testClaimEpochs() public {
+        uint64 upToEpoch = 10;
+        uint256 claimed = 10_000_000;
+        uint256 activeShares = 3_000;
+
+        e.setActiveSubShares(activeShares);
+        e.setClaimed(claimed);
+        e.setLastProcessedEpoch(1);
+
+        e.setEpoch(2, Epoch({expiring: 100, starting: 200, partialFunds: 1_000}));
+        e.setEpoch(4, Epoch({expiring: 500, starting: 0, partialFunds: 60_000}));
+        e.setEpoch(8, Epoch({expiring: 0, starting: 888, partialFunds: 2_000}));
+
+        e.setEpoch(upToEpoch, Epoch({expiring: 9999, starting: 9999, partialFunds: 99999}));
+        e.setEpoch(upToEpoch + 1, Epoch({expiring: 7777, starting: 7777, partialFunds: 77777}));
+
+        vm.roll(upToEpoch * epochSize);
+
+        // do not re-test scanEpoch
+        (uint256 claimableAmount,,) = e.scanEpochs(rate, upToEpoch);
+
+        // do test
+        uint256 claimedAmount = e.claim(rate, upToEpoch);
+
+        assertEq(claimedAmount, claimableAmount, "claimable amount claimed");
+        assertEq(e.claimed(), claimed + claimedAmount, "Claimed incremented");
+        assertEq(e.lastProcessedEpoch(), upToEpoch - 1, "lastProcessedEpoch updated to previous value");
+        assertEq(e.getActiveSubShares(), activeShares - 100 + 200 - 500 + 888, "active shares processes");
+        assertEq(e.getEpoch(2).partialFunds, 0, "epoch 2 deleted");
+        assertEq(e.getEpoch(4).partialFunds, 0, "epoch 4 deleted");
+        assertEq(e.getEpoch(8).partialFunds, 0, "epoch 8 deleted");
+
+        assertEq(e.getEpoch(upToEpoch).partialFunds, 99999, "epoch current epoch not deleted");
+    }
+
+    function testClaimEpochs_deleteClaimed(uint64 upToEpoch, uint64 lastProcessedEpoch, uint64 currentEpoch) public {
+        lastProcessedEpoch = uint64(bound(lastProcessedEpoch, 1, 100));
+        upToEpoch = uint64(bound(upToEpoch, lastProcessedEpoch + 1, 200));
+        currentEpoch = uint64(bound(currentEpoch, upToEpoch, 300));
+
+        uint256 claimed = 10_000_000;
+        uint256 activeShares = 3_000;
+
+        e.setActiveSubShares(activeShares);
+        e.setClaimed(claimed);
+        e.setLastProcessedEpoch(1);
+
+        for (uint64 i = lastProcessedEpoch + 1; i < upToEpoch; i++) {
+            e.setEpoch(i, Epoch({expiring: 100, starting: 200, partialFunds: 1_000}));
+        }
+
+        vm.roll(upToEpoch * epochSize);
+
+        // do not re-test scanEpoch
+        (uint256 claimableAmount,,) = e.scanEpochs(rate, upToEpoch);
+
+        // do test
+        uint256 claimedAmount = e.claim(rate, upToEpoch);
+
+        assertEq(claimedAmount, claimableAmount, "claimable amount claimed");
+        assertEq(e.claimed(), claimed + claimedAmount, "Claimed incremented");
+        assertEq(e.lastProcessedEpoch(), upToEpoch - 1, "lastProcessedEpoch updated to previous value");
+        assertEq(
+            e.getActiveSubShares(),
+            activeShares + (100 * (upToEpoch - (lastProcessedEpoch + 1))),
+            "active shares processed"
+        );
+
+        for (uint64 i = lastProcessedEpoch + 1; i < upToEpoch; i++) {
+            assertEq(e.getEpoch(i).partialFunds, 0, "epoch i deleted");
+        }
+    }
+
+    function testClaimEpochs_futureEpochsUnchanged(
+        uint64 upToEpoch,
+        uint64 futureEpoch,
+        uint64 lastProcessedEpoch,
+        uint64 currentEpoch
+    ) public {
+        // lastProcessedEpoch -> upToEpoch -> currentEpoch -> futureEpoch
+
+        lastProcessedEpoch = uint64(bound(lastProcessedEpoch, 0, 100));
+        upToEpoch = uint64(bound(upToEpoch, lastProcessedEpoch + 1, 200));
+        currentEpoch = uint64(bound(currentEpoch, upToEpoch, 300));
+        futureEpoch = uint64(bound(futureEpoch, currentEpoch, 400));
+
+        e.setLastProcessedEpoch(lastProcessedEpoch);
+
+        e.setEpoch(futureEpoch, Epoch({expiring: 9999, starting: 9999, partialFunds: 99999}));
+        e.setEpoch(futureEpoch + 1, Epoch({expiring: 7777, starting: 7777, partialFunds: 77777}));
+
+        vm.roll(uint256(currentEpoch) * uint256(epochSize));
+
+        // do test
+        uint256 claimedAmount = e.claim(rate, upToEpoch);
+
+        assertEq(claimedAmount, 0, "claimable amount claimed");
+        assertEq(e.claimed(), 0, "Claimed unchanged");
+        assertEq(e.lastProcessedEpoch(), upToEpoch - 1, "lastProcessedEpoch updated to previous value");
+        assertEq(e.getActiveSubShares(), 0, "active shares unchanged");
+
+        assertEq(e.getEpoch(futureEpoch).partialFunds, 99999, "unclaimed epoch not deleted");
+        assertEq(e.getEpoch(futureEpoch + 1).partialFunds, 77777, "unclaimed epoch not deleted (2)");
+    }
+
+    function testClaimEpochs_alreadyClaimed(uint64 upToEpoch, uint64 currentEpoch) public {
+        currentEpoch = uint64(bound(currentEpoch, 2, type(uint64).max - 2));
+        upToEpoch = uint64(bound(upToEpoch, 1, currentEpoch - 1));
+
+        e.setLastProcessedEpoch(currentEpoch - 1);
+
+        vm.roll(uint256(currentEpoch) * uint256(epochSize));
+
+        vm.expectRevert("SUB: cannot claim claimed epoch");
+        e.claim(rate, upToEpoch);
+    }
+
+    function testClaimEpochs_twice() public {
+        e.setLastProcessedEpoch(10);
+
+        vm.roll(20 * epochSize);
+
+        e.claim(rate, 19);
+        e.claim(rate, 19);
+    }
+
+    function testClaimEpochs_epoch0(uint256 _rate) public {
+        vm.expectRevert("SUB: cannot handle epoch 0");
+        e.claim(_rate, 0);
+    }
+
+    function testClaimEpochs_futureEpoch(uint256 time, uint256 future) public {
+        // some realistic time
+        time = bound(time, 0, type(uint64).max - 1_000);
+        // some time in the next epoch
+        future = bound(future, time + epochSize, type(uint64).max);
+
+        vm.roll(time);
+        // initialize sub
+
+        vm.expectRevert("SUB: cannot claim current epoch");
+        e.claim(rate, uint64(future / epochSize));
+    }
+
+    ////////////////////////////
+    // integration test like
+    ////////////////////////////
+
     function testActiveSubShares_new() public {
         uint256 shares = 100;
         e.addNewSub(100_000, shares, rate);
@@ -1232,150 +1427,5 @@ contract EpochsTest is Test {
         assertEq(0, e.claimed(), "total funds 0");
         assertEq(epoch - 1, e.lastProcessedEpoch(), "last processed epoch advanced to previous epoch");
         assertEq(0, e.activeSubShares(), "no subs exist");
-    }
-
-    function testClaimEpochs() public {
-        uint64 upToEpoch = 10;
-        uint256 claimed = 10_000_000;
-        uint256 activeShares = 3_000;
-
-        e.setActiveSubShares(activeShares);
-        e.setClaimed(claimed);
-        e.setLastProcessedEpoch(1);
-
-        e.setEpoch(2, Epoch({expiring: 100, starting: 200, partialFunds: 1_000}));
-        e.setEpoch(4, Epoch({expiring: 500, starting: 0, partialFunds: 60_000}));
-        e.setEpoch(8, Epoch({expiring: 0, starting: 888, partialFunds: 2_000}));
-
-        e.setEpoch(upToEpoch, Epoch({expiring: 9999, starting: 9999, partialFunds: 99999}));
-        e.setEpoch(upToEpoch + 1, Epoch({expiring: 7777, starting: 7777, partialFunds: 77777}));
-
-        vm.roll(upToEpoch * epochSize);
-
-        // do not re-test scanEpoch
-        (uint256 claimableAmount,,) = e.scanEpochs(rate, upToEpoch);
-
-        // do test
-        uint256 claimedAmount = e.claim(rate, upToEpoch);
-
-        assertEq(claimedAmount, claimableAmount, "claimable amount claimed");
-        assertEq(e.claimed(), claimed + claimedAmount, "Claimed incremented");
-        assertEq(e.lastProcessedEpoch(), upToEpoch - 1, "lastProcessedEpoch updated to previous value");
-        assertEq(e.getActiveSubShares(), activeShares - 100 + 200 - 500 + 888, "active shares processes");
-        assertEq(e.getEpoch(2).partialFunds, 0, "epoch 2 deleted");
-        assertEq(e.getEpoch(4).partialFunds, 0, "epoch 4 deleted");
-        assertEq(e.getEpoch(8).partialFunds, 0, "epoch 8 deleted");
-
-        assertEq(e.getEpoch(upToEpoch).partialFunds, 99999, "epoch current epoch not deleted");
-    }
-
-    function testClaimEpochs_deleteClaimed(uint64 upToEpoch, uint64 lastProcessedEpoch, uint64 currentEpoch) public {
-        lastProcessedEpoch = uint64(bound(lastProcessedEpoch, 1, 100));
-        upToEpoch = uint64(bound(upToEpoch, lastProcessedEpoch + 1, 200));
-        currentEpoch = uint64(bound(currentEpoch, upToEpoch, 300));
-
-        uint256 claimed = 10_000_000;
-        uint256 activeShares = 3_000;
-
-        e.setActiveSubShares(activeShares);
-        e.setClaimed(claimed);
-        e.setLastProcessedEpoch(1);
-
-        for (uint64 i = lastProcessedEpoch + 1; i < upToEpoch; i++) {
-            e.setEpoch(i, Epoch({expiring: 100, starting: 200, partialFunds: 1_000}));
-        }
-
-        vm.roll(upToEpoch * epochSize);
-
-        // do not re-test scanEpoch
-        (uint256 claimableAmount,,) = e.scanEpochs(rate, upToEpoch);
-
-        // do test
-        uint256 claimedAmount = e.claim(rate, upToEpoch);
-
-        assertEq(claimedAmount, claimableAmount, "claimable amount claimed");
-        assertEq(e.claimed(), claimed + claimedAmount, "Claimed incremented");
-        assertEq(e.lastProcessedEpoch(), upToEpoch - 1, "lastProcessedEpoch updated to previous value");
-        assertEq(
-            e.getActiveSubShares(),
-            activeShares + (100 * (upToEpoch - (lastProcessedEpoch + 1))),
-            "active shares processed"
-        );
-
-        for (uint64 i = lastProcessedEpoch + 1; i < upToEpoch; i++) {
-            assertEq(e.getEpoch(i).partialFunds, 0, "epoch i deleted");
-        }
-    }
-
-    function testClaimEpochs_futureEpochsUnchanged(
-        uint64 upToEpoch,
-        uint64 futureEpoch,
-        uint64 lastProcessedEpoch,
-        uint64 currentEpoch
-    ) public {
-        // lastProcessedEpoch -> upToEpoch -> currentEpoch -> futureEpoch
-
-        lastProcessedEpoch = uint64(bound(lastProcessedEpoch, 0, 100));
-        upToEpoch = uint64(bound(upToEpoch, lastProcessedEpoch + 1, 200));
-        currentEpoch = uint64(bound(currentEpoch, upToEpoch, 300));
-        futureEpoch = uint64(bound(futureEpoch, currentEpoch, 400));
-
-        e.setLastProcessedEpoch(lastProcessedEpoch);
-
-        e.setEpoch(futureEpoch, Epoch({expiring: 9999, starting: 9999, partialFunds: 99999}));
-        e.setEpoch(futureEpoch + 1, Epoch({expiring: 7777, starting: 7777, partialFunds: 77777}));
-
-        vm.roll(uint256(currentEpoch) * uint256(epochSize));
-
-        // do test
-        uint256 claimedAmount = e.claim(rate, upToEpoch);
-
-        assertEq(claimedAmount, 0, "claimable amount claimed");
-        assertEq(e.claimed(), 0, "Claimed unchanged");
-        assertEq(e.lastProcessedEpoch(), upToEpoch - 1, "lastProcessedEpoch updated to previous value");
-        assertEq(e.getActiveSubShares(), 0, "active shares unchanged");
-
-        assertEq(e.getEpoch(futureEpoch).partialFunds, 99999, "unclaimed epoch not deleted");
-        assertEq(e.getEpoch(futureEpoch + 1).partialFunds, 77777, "unclaimed epoch not deleted (2)");
-    }
-
-    function testClaimEpochs_alreadyClaimed(uint64 upToEpoch, uint64 currentEpoch) public {
-        currentEpoch = uint64(bound(currentEpoch, 2, type(uint64).max - 2));
-        upToEpoch = uint64(bound(upToEpoch, 1, currentEpoch - 1));
-
-        e.setLastProcessedEpoch(currentEpoch - 1);
-
-        vm.roll(uint256(currentEpoch) * uint256(epochSize));
-
-        vm.expectRevert("SUB: cannot claim claimed epoch");
-        e.claim(rate, upToEpoch);
-    }
-
-    function testClaimEpochs_twice() public {
-
-        e.setLastProcessedEpoch(10);
-
-        vm.roll(20 * epochSize);
-
-        e.claim(rate, 19);
-        e.claim(rate, 19);
-    }
-
-    function testClaimEpochs_epoch0(uint256 _rate) public {
-        vm.expectRevert("SUB: cannot handle epoch 0");
-        e.claim(_rate, 0);
-    }
-
-    function testClaimEpochs_futureEpoch(uint256 time, uint256 future) public {
-        // some realistic time
-        time = bound(time, 0, type(uint64).max - 1_000);
-        // some time in the next epoch
-        future = bound(future, time + epochSize, type(uint64).max);
-
-        vm.roll(time);
-        // initialize sub
-
-        vm.expectRevert("SUB: cannot claim current epoch");
-        e.claim(rate, uint64(future / epochSize));
     }
 }
