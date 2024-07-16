@@ -142,6 +142,27 @@ abstract contract HasEpochs {
      * @param data the epoch data to set
      */
     function _setEpoch(uint64 epoch, Epoch memory data) internal virtual;
+
+    /**
+     * @notice set last processed epoch
+     * @dev for testing and debugging
+     * @param epoch the epoch id
+     */
+    function _setLastProcessedEpoch(uint64 epoch) internal virtual;
+
+    /**
+     * @notice set active sub shares
+     * @dev for testing and debugging
+     * @param shares number of shares
+     */
+    function _setActiveSubShares(uint256 shares) internal virtual;
+
+    /**
+     * @notice set claimed amount
+     * @dev for testing and debugging
+     * @param claimed amount of claimed funds
+     */
+    function _setClaimed(uint256 claimed) internal virtual;
 }
 
 abstract contract Epochs is Initializable, TimeAware, HasEpochs {
@@ -195,6 +216,21 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     function _setEpoch(uint64 epoch, Epoch memory data) internal virtual override {
         EpochsStorage storage $ = _getEpochsStorage();
         $._epochs[epoch] = data;
+    }
+
+    function _setLastProcessedEpoch(uint64 epoch) internal virtual override {
+        EpochsStorage storage $ = _getEpochsStorage();
+        $._lastProcessedEpoch = epoch;
+    }
+
+    function _setActiveSubShares(uint256 shares) internal virtual override {
+        EpochsStorage storage $ = _getEpochsStorage();
+        $._activeSubShares = shares;
+    }
+
+    function _setClaimed(uint256 claimed) internal virtual override {
+        EpochsStorage storage $ = _getEpochsStorage();
+        $._claimed = claimed;
     }
 
     function _epochSize() internal view override returns (uint64) {

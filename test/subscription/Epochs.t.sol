@@ -19,6 +19,18 @@ contract TestEpochs is Epochs {
         _setEpoch(epoch, data);
     }
 
+    function setLastProcessedEpoch(uint64 epoch) external virtual {
+        _setLastProcessedEpoch(epoch);
+    }
+
+    function setActiveSubShares(uint256 shares) external virtual {
+        _setActiveSubShares(shares);
+    }
+
+    function setClaimed(uint256 claimed) external virtual {
+        _setClaimed(claimed);
+    }
+
     function _now() internal view override returns (uint256) {
         return block.number;
     }
@@ -128,6 +140,43 @@ contract EpochsTest is Test {
         assertEq(
             (block.number / epochSize) - 1, e.lastProcessedEpoch(), "last processed epoch initialized to last epoch"
         );
+    }
+
+    function testActiveSubShares() public {
+        e.setEpoch(0, Epoch(100, 200, 0));
+        e.setEpoch(2, Epoch(100, 200, 0));
+        e.setEpoch(4, Epoch(100, 200, 0));
+
+        vm.roll(1);
+        assertEq(200, e.activeSubShares());
+
+        vm.roll(1 * epochSize);
+        assertEq(100, e.activeSubShares());
+
+        vm.roll(2 * epochSize);
+        assertEq(300, e.activeSubShares());
+
+        vm.roll(3 * epochSize);
+        assertEq(200, e.activeSubShares());
+
+        vm.roll(4 * epochSize);
+        assertEq(400, e.activeSubShares());
+    }
+
+    function testActiveSubShares_persisted() public {
+        e.setLastProcessedEpoch(1);
+        e.setActiveSubShares(150);
+        e.setEpoch(2, Epoch(100, 200, 0));
+        e.setEpoch(4, Epoch(100, 200, 0));
+
+        vm.roll(2 * epochSize);
+        assertEq(350, e.activeSubShares());
+
+        vm.roll(3 * epochSize);
+        assertEq(250, e.activeSubShares());
+
+        vm.roll(4 * epochSize);
+        assertEq(450, e.activeSubShares());
     }
 
     function testActiveSubShares_new() public {

@@ -209,6 +209,18 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
+    function _setLastProcessedEpoch(uint64 epoch) internal virtual override {
+        revert("SUB: not implemented");
+    }
+
+    function _setActiveSubShares(uint256 shares) internal virtual override {
+        revert("SUB: not implemented");
+    }
+
+    function _setClaimed(uint256 claimed) internal virtual override {
+        revert("SUB: not implemented");
+    }
+
     // Epochs
     function _epochSize() internal pure override returns (uint64) {
         revert("SUB: not implemented");
