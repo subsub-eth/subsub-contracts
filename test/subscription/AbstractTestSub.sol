@@ -157,6 +157,10 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
+    function _changeMultiplier(uint256, uint24) internal virtual override returns (bool, MultiplierChanged memory) {
+        revert("SUB: not implemented");
+    }
+
     function _spent(uint256) internal pure override returns (uint256, uint256) {
         revert("SUB: not implemented");
     }

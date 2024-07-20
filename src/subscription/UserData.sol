@@ -11,9 +11,6 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 import "forge-std/console.sol";
 
-// TODO store the longest sub streak
-// TODO change multiplier
-
 abstract contract HasUserData {
     struct SubData {
         uint256 mintedAt; // mint date
@@ -100,6 +97,32 @@ abstract contract HasUserData {
         internal
         virtual
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit);
+
+    /**
+     * @notice Change data
+     *
+     */
+    struct MultiplierChanged {
+        uint256 oldDepositAt;
+        uint256 oldAmount;
+        uint24 oldMultiplier;
+        uint256 reducedAmount;
+        uint256 newDepositAt;
+        uint256 newAmount;
+    }
+
+    /**
+     * @notice changes the multiplier of a subscription by ending the current streak, if any, and starting a new one with the new multiplier
+     * @dev the subscription may be expired
+     * @param tokenId subscription identifier
+     * @param newMultiplier the new multiplier value
+     * @return isActive the active state of the subscription
+     * @return change data reflecting the change of an active subscription, all values are 0 if the sub is inactive
+     */
+    function _changeMultiplier(uint256 tokenId, uint24 newMultiplier)
+        internal
+        virtual
+        returns (bool isActive, MultiplierChanged memory change);
 
     /**
      * @notice returns the amount of total spent and yet unspent funds in the subscription, excluding tips
@@ -305,6 +328,63 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         depositedAt = $._subData[tokenId].streakStartedAt;
     }
 
+    function _changeMultiplier(uint256 tokenId, uint24 newMultiplier)
+        internal
+        virtual
+        override
+        returns (bool isActive, MultiplierChanged memory change)
+    {
+        isActive = _isActive(tokenId);
+
+        SubData storage subData = _getUserDataStorage()._subData[tokenId];
+        uint256 now_ = _now();
+        if (isActive) {
+            change = resetStreak(subData, now_);
+        } else {
+            // create a new streak with 0 funds
+            subData.streakStartedAt = now_;
+            subData.lastDepositAt = now_;
+            subData.currentDeposit = 0;
+            subData.lockedAmount = 0;
+        }
+
+        subData.multiplier = newMultiplier;
+    }
+
+    /**
+     * @notice ends the current streak of a given active subscription at the given time and starts a new streak. Unspent funds are moved to the new streak and the locked amount is reduced accordingly
+     * @dev the new streak starts at the following time unit after the given time. The amount of funds to transfer to the new streak is calculated based on the rate and the multiplier in the given sub data.
+     * @param subData sub to reset
+     * @param time time to reset to
+     * @return change info about the applied changes
+     */
+    function resetStreak(SubData storage subData, uint256 time) private returns (MultiplierChanged memory change) {
+        // reset streakStartedAt
+        // reset lastDepositAt
+        // reduce currentDeposit according to spent
+        // reduce locked amount according to spent
+        uint256 spent = currentStreakSpent(subData, time, _rate());
+
+        change.oldDepositAt = subData.streakStartedAt;
+        change.oldAmount = subData.currentDeposit;
+        change.oldMultiplier = subData.multiplier;
+
+        // streak should start in the next time unit, spent includes the current time unit
+        time++;
+        subData.streakStartedAt = time;
+        subData.lastDepositAt = time;
+        subData.currentDeposit -= spent;
+        if (subData.lockedAmount < spent) {
+            subData.lockedAmount = 0;
+        } else {
+            subData.lockedAmount -= spent;
+        }
+
+        change.reducedAmount = spent;
+        change.newDepositAt = time;
+        change.newAmount = subData.currentDeposit;
+    }
+
     function _spent(uint256 tokenId) internal view override returns (uint256, uint256) {
         UserDataStorage storage $ = _getUserDataStorage();
         uint256 totalDeposited = $._subData[tokenId].totalDeposited;
@@ -314,20 +394,55 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         if (!_isActive(tokenId)) {
             spentAmount = totalDeposited;
         } else {
-            uint256 currentDeposit = $._subData[tokenId].currentDeposit * Lib.MULTIPLIER_BASE;
-            spentAmount = ((totalDeposited * Lib.MULTIPLIER_BASE) - currentDeposit)
-            // TODO fix rate
-            + ((1 + _now() - $._subData[tokenId].streakStartedAt) * _rate() * $._subData[tokenId].multiplier).min(
-                currentDeposit
-            );
-
-            // postpone rebasing
-            spentAmount = spentAmount / Lib.MULTIPLIER_BASE;
+            spentAmount = totalSpent($._subData[tokenId], _now(), _rate());
         }
 
         uint256 unspentAmount = totalDeposited - spentAmount;
 
         return (spentAmount, unspentAmount);
+    }
+
+    /**
+     * @notice calculates the amount of funds spent in a currently active streak until the given time (including)
+     * @dev the active state of the sub is not tested
+     * @param subData active subscription
+     * @param time time to reset to
+     * @param rate the rate to apply
+     * @return amount of funds spent
+     */
+    function currentStreakSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
+        uint256 currentDeposit = subData.currentDeposit * Lib.MULTIPLIER_BASE;
+        // postpone rebasing
+        return multipliedCurrentStreakSpent(subData, currentDeposit, time, rate) / Lib.MULTIPLIER_BASE;
+    }
+
+    /**
+     * @notice calculates the multiplied amount of funds spent in a currently active streak until the given time (including)
+     * @dev the amount must be capped as the calc includes the given time
+     * @param subData active subscription
+     * @param multipliedMaxAmount capped max amount
+     * @param time time to reset to
+     * @param rate the rate to apply
+     * @return amount of funds spent in an inflated, multiplied state
+     */
+    function multipliedCurrentStreakSpent(
+        SubData storage subData,
+        uint256 multipliedMaxAmount,
+        uint256 time,
+        uint256 rate
+    ) private view returns (uint256) {
+        return ((1 + time - subData.streakStartedAt) * rate * subData.multiplier).min(multipliedMaxAmount);
+    }
+
+    // time including
+    function totalSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
+        uint256 currentDeposit = subData.currentDeposit * Lib.MULTIPLIER_BASE;
+        uint256 spentAmount = ((subData.totalDeposited * Lib.MULTIPLIER_BASE) - currentDeposit)
+        // TODO fix rate
+        + multipliedCurrentStreakSpent(subData, currentDeposit, time, rate);
+
+        // postpone rebasing
+        return spentAmount / Lib.MULTIPLIER_BASE;
     }
 
     function _totalDeposited(uint256 tokenId) internal view override returns (uint256) {
@@ -348,5 +463,10 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {
         UserDataStorage storage $ = _getUserDataStorage();
         return $._subData[tokenId];
+    }
+
+    function _setSubData(uint256 tokenId, SubData memory data) internal {
+        UserDataStorage storage $ = _getUserDataStorage();
+        $._subData[tokenId] = data;
     }
 }

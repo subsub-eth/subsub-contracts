@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/UserData.sol";
+import {HelperLib} from "../../src/HelperLib.sol";
 
 contract TestUserData is UserData {
     uint256 private rate;
@@ -15,6 +16,14 @@ contract TestUserData is UserData {
 
     function _now() internal view override returns (uint256) {
         return block.number;
+    }
+
+    function getSubData(uint256 tokenId) public view returns (SubData memory) {
+        return _getSubData(tokenId);
+    }
+
+    function setSubData(uint256 tokenId, SubData memory data) public {
+        _setSubData(tokenId, data);
     }
 
     function _rate() internal view override returns (uint256) {
@@ -69,6 +78,10 @@ contract TestUserData is UserData {
         return _withdrawFromSubscription(tokenId, amount);
     }
 
+    function changeMultiplier(uint256 tokenId, uint24 newMultiplier) public returns (bool, MultiplierChanged memory) {
+        return _changeMultiplier(tokenId, newMultiplier);
+    }
+
     function spent(uint256 tokenId) public view virtual returns (uint256 spent_, uint256 unspent) {
         return _spent(tokenId);
     }
@@ -80,6 +93,7 @@ contract TestUserData is UserData {
 
 contract UserDataTest is Test {
     using Math for uint256;
+    using HelperLib for uint256;
 
     uint24 constant BASE_MULTI = 100;
     uint24 constant MAX_MULTI = 10_000;
@@ -840,5 +854,119 @@ contract UserDataTest is Test {
             assertEq(unspent, 0, "expired: nothing unspent");
         }
         assertEq(sd.totalDeposited(tokenId), amount - reducedAmount, "expired: all in total deposited");
+    }
+
+    function testChangeMultiplier(uint256 t) public {
+        HasUserData.SubData memory od = HasUserData.SubData({
+            mintedAt: 10,
+            streakStartedAt: 100,
+            lastDepositAt: 100,
+            totalDeposited: 2501,
+            currentDeposit: 2003,
+            lockedAmount: 1002,
+            multiplier: 100
+        });
+        sd.setSubData(tokenId, od);
+
+        t = bound(t, od.streakStartedAt, od.streakStartedAt + (od.currentDeposit / rate) - 1);
+        uint256 t1 = t + 1;
+        uint256 tt = t1 - od.streakStartedAt;
+        vm.roll(t);
+
+        uint24 newMulti = 200;
+
+        (bool isActive, HasUserData.MultiplierChanged memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        assertTrue(isActive, "sub not active");
+        assertEq(changed.oldDepositAt, od.streakStartedAt, "changed: old deposit at");
+        assertEq(changed.oldAmount, od.currentDeposit, "changed: old amount");
+        assertEq(changed.oldMultiplier, od.multiplier, "changed: old multiplier");
+        assertEq(changed.reducedAmount, tt * rate, "changed: reducedAmount");
+        assertEq(changed.newDepositAt, t1, "changed: new deposit at");
+        assertEq(changed.newAmount, od.currentDeposit - (tt * rate), "changed: new amount");
+
+        HasUserData.SubData memory subData = sd.getSubData(tokenId);
+
+        assertEq(subData.multiplier, newMulti, "multiplier changed");
+        assertEq(subData.mintedAt, od.mintedAt, "mintedAd unchanged");
+        assertEq(subData.totalDeposited, od.totalDeposited, "totalDeposited unchanged");
+        assertEq(subData.streakStartedAt, t1, "streakStartedAt updated");
+        assertEq(subData.lastDepositAt, t1, "lastDepositAt updated");
+        assertEq(subData.currentDeposit, od.currentDeposit - (tt * rate), "currentDeposit reduced");
+        assertEq(subData.lockedAmount, od.lockedAmount.subTo0(tt * rate), "lockedAmount reduced");
+    }
+
+    function testChangeMultiplier_expiringBlock() public {
+        HasUserData.SubData memory od = HasUserData.SubData({
+            mintedAt: 10,
+            streakStartedAt: 100,
+            lastDepositAt: 100,
+            totalDeposited: 2501, // add dust
+            currentDeposit: 2003,
+            lockedAmount: 2002,
+            multiplier: 100
+        });
+        sd.setSubData(tokenId, od);
+
+        uint256 t = 299;
+        uint256 t1 = t + 1;
+        vm.roll(t);
+
+        uint24 newMulti = 200;
+
+        (bool isActive, HasUserData.MultiplierChanged memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        assertTrue(isActive, "sub not active");
+        assertEq(changed.oldDepositAt, od.streakStartedAt, "changed: old deposit at");
+        assertEq(changed.oldAmount, od.currentDeposit, "changed: old amount");
+        assertEq(changed.oldMultiplier, od.multiplier, "changed: old multiplier");
+        assertEq(changed.reducedAmount, 2000, "changed: reducedAmount");
+        assertEq(changed.newDepositAt, t1, "changed: new deposit at");
+        assertEq(changed.newAmount, 3, "changed: new amount");
+
+        HasUserData.SubData memory subData = sd.getSubData(tokenId);
+
+        assertEq(subData.multiplier, newMulti, "multiplier changed");
+        assertEq(subData.mintedAt, od.mintedAt, "mintedAd unchanged");
+        assertEq(subData.totalDeposited, od.totalDeposited, "totalDeposited unchanged");
+        assertEq(subData.streakStartedAt, t1, "streakStartedAt updated");
+        assertEq(subData.lastDepositAt, t1, "lastDepositAt updated");
+        assertEq(subData.currentDeposit, 3, "currentDeposit reduced");
+        assertEq(subData.lockedAmount, 2, "lockedAmount reduced");
+    }
+
+    function testChangeMultiplier_inactive() public {
+        HasUserData.SubData memory od = HasUserData.SubData({
+            mintedAt: 10,
+            streakStartedAt: 100,
+            lastDepositAt: 100,
+            totalDeposited: 2501,
+            currentDeposit: 2003,
+            lockedAmount: 1002,
+            multiplier: 100
+        });
+        sd.setSubData(tokenId, od);
+
+        uint256 t = 1000;
+        vm.roll(t);
+
+        uint24 newMulti = 200;
+
+        (bool isActive, HasUserData.MultiplierChanged memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        assertFalse(isActive, "sub not active");
+        assertEq(changed.oldDepositAt, 0, "changed: old deposit at");
+        assertEq(changed.oldAmount, 0, "changed: old amount");
+        assertEq(changed.oldMultiplier, 0, "changed: old multiplier");
+        assertEq(changed.reducedAmount, 0, "changed: reducedAmount");
+        assertEq(changed.newDepositAt, 0, "changed: new deposit at");
+        assertEq(changed.newAmount, 0, "changed: new amount");
+
+        HasUserData.SubData memory subData = sd.getSubData(tokenId);
+
+        assertEq(subData.multiplier, newMulti, "multiplier changed");
+        assertEq(subData.mintedAt, od.mintedAt, "mintedAd unchanged");
+        assertEq(subData.totalDeposited, od.totalDeposited, "totalDeposited unchanged");
+        assertEq(subData.streakStartedAt, t, "streakStartedAt reset");
+        assertEq(subData.lastDepositAt, t, "lastDepositAt reset");
+        assertEq(subData.currentDeposit, 0, "currentDeposit reset");
+        assertEq(subData.lockedAmount, 0, "lockedAmount reset");
     }
 }

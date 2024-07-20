@@ -61,8 +61,10 @@ Relevant contracts are printed as logs
 ## Open TODOs
 
 - create/rewrite smoke/integration tests
+- store the longest streak - amount of funds vs time
 - change multiplier -> ends current sub streak
 - merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
+- Diamond
 - "upgrade"/migrate to other subscription: separate migrated funds from
   accumulated ones, enable via flag
 - upgrade function / flow, migrating one token into another
