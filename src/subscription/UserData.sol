@@ -339,7 +339,8 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         SubData storage subData = _getUserDataStorage()._subData[tokenId];
         uint256 now_ = _now();
         if (isActive) {
-            change = resetStreak(subData, now_);
+            // +1 as the current timeunit is already paid for using the current multiplier, thus the streak has to start at the next time unit
+            change = resetStreak(subData, now_ + 1);
         } else {
             // create a new streak with 0 funds
             subData.streakStartedAt = now_;
@@ -369,8 +370,6 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         change.oldAmount = subData.currentDeposit;
         change.oldMultiplier = subData.multiplier;
 
-        // streak should start in the next time unit, spent includes the current time unit
-        time++;
         subData.streakStartedAt = time;
         subData.lastDepositAt = time;
         subData.currentDeposit -= spent;
@@ -394,7 +393,8 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         if (!_isActive(tokenId)) {
             spentAmount = totalDeposited;
         } else {
-            spentAmount = totalSpent($._subData[tokenId], _now(), _rate());
+            // +1 as we want to include the current timeunit
+            spentAmount = totalSpent($._subData[tokenId], _now() + 1, _rate());
         }
 
         uint256 unspentAmount = totalDeposited - spentAmount;
@@ -403,45 +403,46 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
     }
 
     /**
-     * @notice calculates the amount of funds spent in a currently active streak until the given time (including)
+     * @notice calculates the amount of funds spent in a currently active streak until the given time (excluding)
      * @dev the active state of the sub is not tested
      * @param subData active subscription
-     * @param time time to reset to
+     * @param time up until to calculate the spent amount
      * @param rate the rate to apply
      * @return amount of funds spent
      */
     function currentStreakSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
-        uint256 currentDeposit = subData.currentDeposit * Lib.MULTIPLIER_BASE;
-        // postpone rebasing
-        return multipliedCurrentStreakSpent(subData, currentDeposit, time, rate) / Lib.MULTIPLIER_BASE;
+        // postponed rebasing
+        return multipliedCurrentStreakSpent(subData, time, rate) / Lib.MULTIPLIER_BASE;
     }
 
     /**
-     * @notice calculates the multiplied amount of funds spent in a currently active streak until the given time (including)
-     * @dev the amount must be capped as the calc includes the given time
+     * @notice calculates the multiplied amount of funds spent in a currently active streak until the given time (excluding)
      * @param subData active subscription
-     * @param multipliedMaxAmount capped max amount
-     * @param time time to reset to
+     * @param time up until to calculate the spent amount
      * @param rate the rate to apply
      * @return amount of funds spent in an inflated, multiplied state
      */
-    function multipliedCurrentStreakSpent(
-        SubData storage subData,
-        uint256 multipliedMaxAmount,
-        uint256 time,
-        uint256 rate
-    ) private view returns (uint256) {
-        return ((1 + time - subData.streakStartedAt) * rate * subData.multiplier).min(multipliedMaxAmount);
+    function multipliedCurrentStreakSpent(SubData storage subData, uint256 time, uint256 rate)
+        private
+        view
+        returns (uint256)
+    {
+        return ((time - subData.streakStartedAt) * rate * subData.multiplier);
     }
 
-    // time including
+    /**
+     * @notice calculates the amount of funds spent in total in the given subscription
+     * @param subData subscription
+     * @param time up until to calculate the spent amount
+     * @param rate the rate to apply
+     * @return amount of funds spent in the subscription
+     */
     function totalSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
         uint256 currentDeposit = subData.currentDeposit * Lib.MULTIPLIER_BASE;
         uint256 spentAmount = ((subData.totalDeposited * Lib.MULTIPLIER_BASE) - currentDeposit)
-        // TODO fix rate
-        + multipliedCurrentStreakSpent(subData, currentDeposit, time, rate);
+        + multipliedCurrentStreakSpent(subData, time, rate);
 
-        // postpone rebasing
+        // postponed rebasing
         return spentAmount / Lib.MULTIPLIER_BASE;
     }
 
