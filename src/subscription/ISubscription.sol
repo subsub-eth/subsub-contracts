@@ -80,7 +80,7 @@ struct SubSettings {
      * @notice The size of an epoch measured in the underlying time unit
      * @dev Epochs are generally counted from the 'beginning' of time, depending on the underlying time unit
      */
-    uint64 epochSize;
+    uint256 epochSize;
     /**
      * @notice The maximum supply of subscription that can be minted
      */
@@ -125,6 +125,14 @@ interface Subscribable is SubscriptionEvents {
      * @param tokenId id of the subscription token
      */
     function cancel(uint256 tokenId) external;
+
+    /**
+     * @notice changes the mutliplier of a given subscription
+     * @notice the current subscription streak, if any, is ended and a new streak with the new multiplier is started
+     * @param tokenId id of the subscription token
+     * @param multiplier the new multiplier to apply
+     */
+    function changeMultiplier(uint256 tokenId, uint24 multiplier) external;
 
     /**
      * @notice Checks if a subscription is still valid

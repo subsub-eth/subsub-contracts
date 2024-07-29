@@ -21,6 +21,8 @@ contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
 
     function cancel(uint256 tokenId) external {}
 
+    function changeMultiplier(uint256 tokenId, uint24 multiplier) external {}
+
     function isActive(uint256 tokenId) external view returns (bool) {}
 
     function multiplier(uint256 tokenId) external view returns (uint24) {}

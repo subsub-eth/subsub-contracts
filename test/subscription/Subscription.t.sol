@@ -33,7 +33,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     SubSettings public settings;
     uint256 public rate;
     uint24 public lock;
-    uint64 public epochSize;
+    uint256 public epochSize;
     uint256 public maxSupply;
 
     uint8 public decimals;
@@ -189,7 +189,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.expectEmit();
         emit SubCreated(1, amount * _sub.CONV(), multiplier);
         vm.expectEmit();
-        emit AddedToEpochs(amount * _sub.CONV(), multiplier, rate);
+        emit AddedToEpochs(block.number, amount * _sub.CONV(), multiplier, rate);
         vm.expectEmit();
         emit SubscriptionRenewed(1, amount, alice, _sub.TOTAL_DEPOSITED(), message);
 
@@ -299,7 +299,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.expectEmit();
         emit SubExtended(tokenId, amount * _sub.CONV());
         vm.expectEmit();
-        emit EpochsAdded(_sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        emit AddedToEpochs(block.number, _sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
         vm.expectEmit();
         emit SubscriptionRenewed(tokenId, amount, alice, _sub.TOTAL_DEPOSITED(), message);
         vm.expectEmit();
@@ -485,7 +485,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
     }
 
-    function testClaimBatch(address to, uint256 claimable, uint64 upToEpoch) public {
+    function testClaimBatch(address to, uint256 claimable, uint256 upToEpoch) public {
         vm.assume(to != address(0) && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -501,7 +501,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
     }
 
-    function testClaimBatch_notOwner(address user, address to, uint256 claimable, uint64 upToEpoch) public {
+    function testClaimBatch_notOwner(address user, address to, uint256 claimable, uint256 upToEpoch) public {
         vm.assume(user != owner);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -653,8 +653,8 @@ contract MintSub is AbstractTestSub {
         emit SubCreated(tokenId, amount, multiplier);
     }
 
-    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
-        emit AddedToEpochs(amount, shares, rate);
+    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
+        emit AddedToEpochs(depositedAt, amount, shares, rate);
     }
 
     function _asInternal(uint256 v) internal view virtual override returns (uint256) {
@@ -748,8 +748,8 @@ contract RenewReactivateSub is AbstractTestSub {
         reactivated = true;
     }
 
-    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
-        emit EpochsAdded(amount, shares, rate);
+    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
+        emit AddedToEpochs(depositedAt, amount, shares, rate);
     }
 
     function _totalDeposited(uint256) internal pure override returns (uint256) {
@@ -825,8 +825,8 @@ contract WithdrawSub is AbstractTestSub {
 contract ClaimSub is AbstractTestSub {
     uint256 public constant CONV = 10;
 
-    uint64 public constant CURRENT_EPOCH = 1234;
-    uint64 public constant LAST_PROCESSED_EPOCH = 2345;
+    uint256 public constant CURRENT_EPOCH = 1234;
+    uint256 public constant LAST_PROCESSED_EPOCH = 2345;
     uint256 public constant TOTAL_CLAIMED = 9876;
 
     uint256 public claimable_;
@@ -837,21 +837,21 @@ contract ClaimSub is AbstractTestSub {
         claimable_ = _claimable;
     }
 
-    function _scanEpochs(uint256, uint64) internal view override returns (uint256 amount, uint256 a, uint256 b) {
+    function _scanEpochs(uint256, uint256) internal view override returns (uint256 amount, uint256 a, uint256 b) {
         amount = claimable_;
         a = 0;
         b = 0;
     }
 
-    function _claimEpochs(uint256, uint64) internal view override returns (uint256) {
+    function _claimEpochs(uint256, uint256) internal view override returns (uint256) {
         return claimable_;
     }
 
-    function _currentEpoch() internal pure override returns (uint64) {
+    function _currentEpoch() internal pure override returns (uint256) {
         return CURRENT_EPOCH;
     }
 
-    function _lastProcessedEpoch() internal pure override returns (uint64) {
+    function _lastProcessedEpoch() internal pure override returns (uint256) {
         return LAST_PROCESSED_EPOCH;
     }
 
@@ -883,7 +883,7 @@ contract TipSub is AbstractTestSub {
         claimable_ = _claimable;
     }
 
-    function _scanEpochs(uint256, uint64) internal view override returns (uint256 amount, uint256 a, uint256 b) {
+    function _scanEpochs(uint256, uint256) internal view override returns (uint256 amount, uint256 a, uint256 b) {
         amount = claimable_;
         a = 0;
         b = 0;

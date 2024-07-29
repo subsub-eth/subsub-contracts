@@ -8,10 +8,9 @@ abstract contract TestSubEvents {
     event Burned(uint256 indexed tokenId);
 
     event SubCreated(uint256 indexed tokenId, uint256 indexed amount, uint24 indexed multiplier);
-    event AddedToEpochs(uint256 indexed amount, uint256 indexed shares, uint256 indexed rate);
+    event AddedToEpochs(uint256 depositedAt, uint256 indexed amount, uint256 shares, uint256 rate);
 
     event SubExtended(uint256 indexed tokenId, uint256 indexed amount);
-    event EpochsAdded(uint256 indexed amount, uint256 shares, uint256 rate);
     event EpochsExtended(
         uint256 indexed depositedAt,
         uint256 indexed oldDeposit,
@@ -58,7 +57,7 @@ abstract contract AbstractTestSub is
     Subscription
 {
     address private _owner;
-    uint64 private epochSize;
+    uint256 private epochSize;
     uint24 private lock;
 
     constructor(
@@ -110,8 +109,8 @@ abstract contract AbstractTestSub is
     }
 
     // TimeAware
-    function _now() internal pure override returns (uint256) {
-        revert("SUB: not implemented");
+    function _now() internal view override returns (uint256) {
+        return block.number;
     }
 
     // UserData
@@ -206,15 +205,15 @@ abstract contract AbstractTestSub is
     }
 
     // Epochs
-    function _epochSize() internal pure override returns (uint64) {
+    function _epochSize() internal pure override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _currentEpoch() internal pure virtual override returns (uint64) {
+    function _currentEpoch() internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _lastProcessedEpoch() internal pure virtual override returns (uint64) {
+    function _lastProcessedEpoch() internal pure virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
@@ -226,15 +225,15 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _scanEpochs(uint256, uint64) internal view virtual override returns (uint256, uint256, uint256) {
+    function _scanEpochs(uint256, uint256) internal view virtual override returns (uint256, uint256, uint256) {
         revert("SUB: not implemented");
     }
 
-    function _claimEpochs(uint256 rate, uint64 upToEpoch) internal virtual override returns (uint256) {
+    function _claimEpochs(uint256 rate, uint256 upToEpoch) internal virtual override returns (uint256) {
         revert("SUB: not implemented");
     }
 
-    function _addToEpochs(uint256, uint256, uint256) internal virtual override {
+    function _addToEpochs(uint256, uint256, uint256, uint256) internal virtual override {
         revert("SUB: not implemented");
     }
 

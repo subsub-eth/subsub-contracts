@@ -11,6 +11,7 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
  */
 library Lib {
     uint24 public constant MULTIPLIER_BASE = 100;
+    uint24 public constant MULTIPLIER_MAX = 10_000;
 
     uint24 public constant LOCK_BASE = 10_000; // == 100%
 
@@ -101,4 +102,16 @@ library Lib {
     function asLocked(uint256 amount, uint24 lock) internal pure returns (uint256) {
       return (amount * lock) / LOCK_BASE;
     }
+
+    /**
+     * @notice calculates the epoch of a given time unit and the size of epochs
+     * @param time the point in time
+     * @param epochSize the size of epochs
+     * @return the epoch
+     */
+    function epochOf(uint256 time, uint256 epochSize) internal pure returns (uint256) {
+        return time / epochSize;
+    }
+
+
 }

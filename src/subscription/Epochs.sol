@@ -38,19 +38,19 @@ abstract contract HasEpochs {
      * @notice Provides the size of an epoch as defined in the subscription plan settings
      * @return Size of an epoch in time units
      */
-    function _epochSize() internal view virtual returns (uint64);
+    function _epochSize() internal view virtual returns (uint256);
 
     /**
      * @notice Provides the sequential number of the current epoch
      * @return the sequential number of the current epoch
      */
-    function _currentEpoch() internal view virtual returns (uint64);
+    function _currentEpoch() internal view virtual returns (uint256);
 
     /**
      * @notice Provides the last epoch that was processed by a claim
      * @return the sequential number of the last claimed epoch
      */
-    function _lastProcessedEpoch() internal view virtual returns (uint64);
+    function _lastProcessedEpoch() internal view virtual returns (uint256);
 
     /**
      * @notice Provides the number of active shares
@@ -77,7 +77,7 @@ abstract contract HasEpochs {
      * @return starting the number of subscription shares that started in the epochs processed
      * @return expiring the number of subscription shares that expired in the epochs processed
      */
-    function _scanEpochs(uint256 rate, uint64 upToEpoch)
+    function _scanEpochs(uint256 rate, uint256 upToEpoch)
         internal
         view
         virtual
@@ -90,16 +90,17 @@ abstract contract HasEpochs {
      * @param upToEpoch the epoch to advance the state to (excluded). Has to be less or equal to current epoch
      * @return The amount of claimable funds
      */
-    function _claimEpochs(uint256 rate, uint64 upToEpoch) internal virtual returns (uint256);
+    function _claimEpochs(uint256 rate, uint256 upToEpoch) internal virtual returns (uint256);
 
     /**
      * @notice Adds a new subscription based on amount of funds and number of shares to the epochs
      * @dev the given rate and amount are used to calculate the duration of the subscription, the number of shares does not affect the rate or amount.
+     * @param depositedAt The time the new subscription is started
      * @param amount The amount of funds for this new subscription
      * @param shares The number of shares this new subscription contains
      * @param rate The rate that is applied to the amount, the contracts original rate
      */
-    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal virtual;
+    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal virtual;
 
     /**
      * @notice extends an active subscription in the epochs based on its coordinates
@@ -133,15 +134,15 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     using Lib for uint256;
 
     struct EpochsStorage {
-        uint64 _epochSize;
+        uint256 _epochSize;
         // the last claimed epoch
-        uint64 _lastProcessedEpoch;
+        uint256 _lastProcessedEpoch;
         // this value is set, after the initial claim.
         // It allows us to identify the meaning of epoch 0,
         // if this value is false, there was no claim at epoch 0,
         // otherwise epoch 0 is actually a valid last processed epoch
         bool _initialClaim;
-        mapping(uint64 => Epoch) _epochs;
+        mapping(uint256 => Epoch) _epochs;
         // number of active subscriptions with a multiplier represented as shares
         // base 100:
         // 1 Sub * 1x == 100 shares
@@ -161,14 +162,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         }
     }
 
-    function __Epochs_init(uint64 epochSize) internal onlyInitializing {
+    function __Epochs_init(uint256 epochSize) internal onlyInitializing {
         __Epochs_init_unchained(epochSize);
     }
 
-    function __Epochs_init_unchained(uint64 epochSize) internal onlyInitializing {
+    function __Epochs_init_unchained(uint256 epochSize) internal onlyInitializing {
         EpochsStorage storage $ = _getEpochsStorage();
         $._epochSize = epochSize;
-        $._lastProcessedEpoch = uint64((uint256(_currentEpoch())).max(1) - 1); // current epoch -1 or 0
+        $._lastProcessedEpoch = uint256(_currentEpoch()).max(1) - 1; // current epoch -1 or 0
     }
 
     /**
@@ -177,7 +178,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
      * @param epoch the epoch id to get
      * @return raw epoch data
      */
-    function _getEpoch(uint64 epoch) internal view virtual returns (Epoch memory) {
+    function _getEpoch(uint256 epoch) internal view virtual returns (Epoch memory) {
         EpochsStorage storage $ = _getEpochsStorage();
         return $._epochs[epoch];
     }
@@ -188,7 +189,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
      * @param epoch the epoch id
      * @param data the epoch data to set
      */
-    function _setEpoch(uint64 epoch, Epoch memory data) internal virtual {
+    function _setEpoch(uint256 epoch, Epoch memory data) internal virtual {
         EpochsStorage storage $ = _getEpochsStorage();
         $._epochs[epoch] = data;
     }
@@ -198,7 +199,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
      * @dev for testing and debugging
      * @param epoch the epoch id
      */
-    function _setLastProcessedEpoch(uint64 epoch) internal virtual {
+    function _setLastProcessedEpoch(uint256 epoch) internal virtual {
         EpochsStorage storage $ = _getEpochsStorage();
         $._lastProcessedEpoch = epoch;
     }
@@ -233,14 +234,14 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         $._claimed = claimed;
     }
 
-    function _epochSize() internal view override returns (uint64) {
+    function _epochSize() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
         return $._epochSize;
     }
 
-    function _currentEpoch() internal view override returns (uint64) {
+    function _currentEpoch() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
-        return uint64(_now() / $._epochSize);
+        return _now().epochOf($._epochSize);
     }
 
     function _claimed() internal view override returns (uint256) {
@@ -248,17 +249,17 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return $._claimed;
     }
 
-    function _lastProcessedEpoch() internal view override returns (uint64) {
+    function _lastProcessedEpoch() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
         return $._lastProcessedEpoch;
     }
 
     function _activeSubShares() internal view override returns (uint256) {
         EpochsStorage storage $ = _getEpochsStorage();
-        uint64 currentEpoch = _currentEpoch();
+        uint256 currentEpoch = _currentEpoch();
         uint256 _activeSubs = $._activeSubShares;
 
-        for (uint64 i = $._lastProcessedEpoch; i < currentEpoch; i++) {
+        for (uint256 i = $._lastProcessedEpoch; i < currentEpoch; i++) {
             // remove subs expiring in this epoch
             _activeSubs += $._epochs[i].starting;
             _activeSubs -= $._epochs[i].expiring;
@@ -275,7 +276,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
      * @param initialClaim was there an initial claim, thus was epoch 0 processed?
      * @return the epoch start from processing (inclusive)
      */
-    function _startProcessingEpoch(uint64 suggestedLastEpoch, bool initialClaim) internal pure returns (uint64) {
+    function _startProcessingEpoch(uint256 suggestedLastEpoch, bool initialClaim) internal pure returns (uint256) {
         if (suggestedLastEpoch > 0) {
             return suggestedLastEpoch + 1;
         }
@@ -287,7 +288,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return 0;
     }
 
-    function _scanEpochs(uint256 rate, uint64 upToEpoch)
+    function _scanEpochs(uint256 rate, uint256 upToEpoch)
         internal
         view
         override
@@ -305,15 +306,15 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
      * @return expiring the number of expiring shares
      * @return lastEpoch the last epoch being processed, 0 if there was no scanning
      */
-    function scanEpochs_(uint256 rate, uint64 upToEpoch)
+    function scanEpochs_(uint256 rate, uint256 upToEpoch)
         private
         view
-        returns (uint256 amount, uint256 starting, uint256 expiring, uint64 lastEpoch)
+        returns (uint256 amount, uint256 starting, uint256 expiring, uint256 lastEpoch)
     {
         EpochsStorage storage $ = _getEpochsStorage();
         uint256 _activeSubs = $._activeSubShares;
 
-        for (uint64 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i < upToEpoch; i++) {
+        for (uint256 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i < upToEpoch; i++) {
             // remove subs expiring in this epoch
             uint256 epochExpiring = $._epochs[i].expiring;
             uint256 epochStarting = $._epochs[i].starting;
@@ -344,7 +345,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         amount = amount / Lib.MULTIPLIER_BASE;
     }
 
-    function _claimEpochs(uint256 rate, uint64 upToEpoch) internal override returns (uint256) {
+    function _claimEpochs(uint256 rate, uint256 upToEpoch) internal override returns (uint256) {
         require(upToEpoch > 0, "SUB: cannot handle epoch 0");
         require(upToEpoch <= _currentEpoch(), "SUB: cannot claim current epoch");
 
@@ -352,10 +353,10 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
 
         require(upToEpoch > $._lastProcessedEpoch, "SUB: cannot claim claimed epoch");
 
-        (uint256 amount, uint256 starting, uint256 expiring, uint64 lastEpoch) = scanEpochs_(rate, upToEpoch);
+        (uint256 amount, uint256 starting, uint256 expiring, uint256 lastEpoch) = scanEpochs_(rate, upToEpoch);
 
         // delete epochs
-        for (uint64 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i <= lastEpoch; i++) {
+        for (uint256 i = _startProcessingEpoch($._lastProcessedEpoch, $._initialClaim); i <= lastEpoch; i++) {
             delete $._epochs[i];
         }
 
@@ -375,34 +376,33 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         return amount;
     }
 
-    function _addToEpochs(uint256 amount, uint256 shares, uint256 rate) internal override {
-        uint256 now_ = _now();
-
+    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
+      // TODO depositedAt not in the past
         // adjust internal rate to number of shares
         rate = rate * shares;
         // inflate by multiplier base to reduce rounding errors
         amount = amount * Lib.MULTIPLIER_BASE;
-        uint256 expiresAt_ = amount.expiresAt(now_, rate);
+        uint256 expiresAt_ = amount.expiresAt(depositedAt, rate);
 
         EpochsStorage storage $ = _getEpochsStorage();
 
         {
             // starting
-            uint64 currentEpoch = _currentEpoch();
-            $._epochs[currentEpoch].starting += shares;
+            uint256 startingEpoch = depositedAt.epochOf($._epochSize);
+            $._epochs[startingEpoch].starting += shares;
 
-            uint256 remainingTimeUnits = uint256($._epochSize - (now_ % $._epochSize)).min(
-                expiresAt_ - now_ // subscription ends within the current time slot
+            uint256 remainingTimeUnits = uint256($._epochSize - (depositedAt % $._epochSize)).min(
+                expiresAt_ - depositedAt // subscription ends within the current time slot
             );
             uint256 partialFunds = remainingTimeUnits * rate;
-            $._epochs[currentEpoch].partialFunds += partialFunds;
+            $._epochs[startingEpoch].partialFunds += partialFunds;
 
             // reduce amount by partial funds
             amount -= partialFunds;
         }
 
         // expiring
-        uint64 expiringEpoch = uint64(expiresAt_ / $._epochSize);
+        uint256 expiringEpoch = expiresAt_ / $._epochSize;
         $._epochs[expiringEpoch].expiring += shares;
 
         // add the rest as partial Funds, might just be some dust
@@ -421,13 +421,13 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         newDeposit = newDeposit * Lib.MULTIPLIER_BASE;
 
         EpochsStorage storage $ = _getEpochsStorage();
-        uint64 startEpoch = uint64(depositedAt / $._epochSize);
+        uint256 startEpoch = depositedAt / $._epochSize;
 
         uint256 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
         // TODO one off error?
         require(oldExpiresAt > _now(), "Subscription already expired"); // cannot be claimed or expired yet
 
-        uint64 oldExpireEpoch = uint64(oldExpiresAt / $._epochSize);
+        uint256 oldExpireEpoch = oldExpiresAt / $._epochSize;
         uint256 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
 
         if (startEpoch == oldExpireEpoch) {
@@ -454,7 +454,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             }
 
             // handle tail
-            uint64 expiringEpoch = uint64(newExpiresAt / $._epochSize);
+            uint256 expiringEpoch = newExpiresAt / $._epochSize;
             $._epochs[expiringEpoch].expiring += shares;
 
             // add the rest as partial Funds, might just be some dust
@@ -477,7 +477,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             $._epochs[oldExpireEpoch].expiring -= shares;
 
             // set new tail
-            uint64 newExpiringEpoch = uint64(newExpiresAt / $._epochSize);
+            uint256 newExpiringEpoch = newExpiresAt / $._epochSize;
             $._epochs[newExpiringEpoch].partialFunds += newDeposit % epochRate;
             $._epochs[newExpiringEpoch].expiring += shares;
         }
@@ -497,12 +497,12 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // sub cannot be expired
 
         EpochsStorage storage $ = _getEpochsStorage();
-        uint64 startEpoch = uint64(depositedAt / $._epochSize);
+        uint256 startEpoch = depositedAt / $._epochSize;
 
         uint256 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
         // require(oldExpiresAt >= _now()); // cannot be claimed or expired yet
 
-        uint64 oldExpireEpoch = uint64(oldExpiresAt / $._epochSize);
+        uint256 oldExpireEpoch = oldExpiresAt / $._epochSize;
 
         uint256 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
 
@@ -521,7 +521,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             $._epochs[oldExpireEpoch].partialFunds += newDeposit;
         } else {
             // the original sub spans across multiple epochs, we might only have to change the tail
-            uint64 newExpiringEpoch = uint64(newExpiresAt / $._epochSize);
+            uint256 newExpiringEpoch = newExpiresAt / $._epochSize;
 
             if (startEpoch == newExpiringEpoch) {
                 // the new sub starts and expires in the same epoch

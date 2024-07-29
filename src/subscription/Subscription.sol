@@ -187,7 +187,7 @@ abstract contract Subscription is
         // TODO do we need return values?
         _createSubscription(tokenId, internalAmount, multiplier);
 
-        _addToEpochs(internalAmount, multiplier, _rate());
+        _addToEpochs(_now(), internalAmount, multiplier, _rate());
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
@@ -215,7 +215,7 @@ abstract contract Subscription is
 
             if (reactived) {
                 // subscription was inactive, new streak was created, add "new" sub to epochs
-                _addToEpochs(newDeposit, multiplier_, rate);
+                _addToEpochs(_now(), newDeposit, multiplier_, rate);
             } else {
                 _extendInEpochs(depositedAt, oldDeposit, newDeposit, multiplier_, rate);
             }
@@ -227,6 +227,25 @@ abstract contract Subscription is
 
         emit SubscriptionRenewed(tokenId, amount, _msgSender(), _totalDeposited(tokenId), message);
         emit MetadataUpdate(tokenId);
+    }
+
+    function changeMultiplier(uint256 tokenId, uint24 newMultiplier) external requireExists(tokenId) {
+        require(
+            _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
+        );
+        // TODO check validity of multiplier
+
+        (bool isActive_, MultiplierChanged memory change) = _changeMultiplier(tokenId, newMultiplier);
+
+        if (isActive_) {
+            uint256 rate = _rate();
+            _reduceInEpochs(change.oldDepositAt, change.oldAmount, change.reducedAmount, change.oldMultiplier, rate);
+
+            _addToEpochs(change.newDepositAt, change.newAmount, newMultiplier, rate);
+        }
+        // else => inactive subs are effectively not tracked in Epochs, thus no further changes as necessary
+
+        // TODO emit some event
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external requireExists(tokenId) {
@@ -312,7 +331,7 @@ abstract contract Subscription is
         claim(to, _currentEpoch());
     }
 
-    function claim(address to, uint64 upToEpoch) public onlyOwner {
+    function claim(address to, uint256 upToEpoch) public onlyOwner {
         // epochs validity is checked in _claimEpochs
         uint256 amount = _claimEpochs(_rate(), upToEpoch);
 
