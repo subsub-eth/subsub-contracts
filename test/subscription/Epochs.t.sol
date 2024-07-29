@@ -868,30 +868,6 @@ contract EpochsTest is Test {
         assertEq(expiring, shares, "sub ext exp: sub expired");
     }
 
-    function testExtendEpoch_extendMultiEpoch_alreadyExpired() public {
-        uint256 shares = 100; // neutral
-
-        uint256 initDeposit = rate * epochSize; // 1 epoch
-        uint256 newDeposit = initDeposit + rate;
-        uint256 initDepositAt = epochSize / 10;
-
-        uint256 initExpiresAt = initDepositAt + ((initDeposit * 100) / (rate * shares));
-
-        vm.roll(initDepositAt);
-        // initialize sub
-        e.addNewSub(block.number, initDeposit, shares, rate);
-        assertEq(e.activeSubShares(), shares, "at initial deposit, sub is active");
-
-        (uint256 amount, uint256 starting, uint256 expiring) = e.scanEpochs(rate, 2);
-        assertEq(amount, initDeposit, "sub exp: all funds claimable");
-        assertEq(starting, shares, "sub exp: sub started");
-        assertEq(expiring, shares, "sub exp: sub expired");
-
-        vm.roll(initExpiresAt);
-        vm.expectRevert();
-        e.extendInEpochs(initDepositAt, initDeposit, newDeposit, shares, rate);
-    }
-
     function testExtendEpoch_extendMultiEpoch_byOneTimeUnit() public {
         uint256 shares = 100; // neutral
 

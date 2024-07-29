@@ -187,6 +187,7 @@ abstract contract Subscription is
         // TODO do we need return values?
         _createSubscription(tokenId, internalAmount, multiplier);
 
+        // addToEpochs is not allowed to add a new sub to the past
         _addToEpochs(_now(), internalAmount, multiplier, _rate());
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
@@ -217,6 +218,7 @@ abstract contract Subscription is
                 // subscription was inactive, new streak was created, add "new" sub to epochs
                 _addToEpochs(_now(), newDeposit, multiplier_, rate);
             } else {
+                // subscription is not expired
                 _extendInEpochs(depositedAt, oldDeposit, newDeposit, multiplier_, rate);
             }
         }
@@ -241,6 +243,7 @@ abstract contract Subscription is
             uint256 rate = _rate();
             _reduceInEpochs(change.oldDepositAt, change.oldAmount, change.reducedAmount, change.oldMultiplier, rate);
 
+            // newDepositAt is not allowed to be in the past
             _addToEpochs(change.newDepositAt, change.newAmount, newMultiplier, rate);
         }
         // else => inactive subs are effectively not tracked in Epochs, thus no further changes as necessary

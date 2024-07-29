@@ -95,7 +95,7 @@ abstract contract HasEpochs {
     /**
      * @notice Adds a new subscription based on amount of funds and number of shares to the epochs
      * @dev the given rate and amount are used to calculate the duration of the subscription, the number of shares does not affect the rate or amount.
-     * @param depositedAt The time the new subscription is started
+     * @param depositedAt The time the new subscription is started, it is not allowed to be in the past, specifically before the last processed epoch
      * @param amount The amount of funds for this new subscription
      * @param shares The number of shares this new subscription contains
      * @param rate The rate that is applied to the amount, the contracts original rate
@@ -377,7 +377,6 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     }
 
     function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
-      // TODO depositedAt not in the past
         // adjust internal rate to number of shares
         rate = rate * shares;
         // inflate by multiplier base to reduce rounding errors
@@ -423,11 +422,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         EpochsStorage storage $ = _getEpochsStorage();
         uint256 startEpoch = depositedAt / $._epochSize;
 
-        uint256 oldExpiresAt = oldDeposit.expiresAt(depositedAt, rate);
-        // TODO one off error?
-        require(oldExpiresAt > _now(), "Subscription already expired"); // cannot be claimed or expired yet
+        uint256 oldExpireEpoch = oldDeposit.expiresAt(depositedAt, rate).epochOf($._epochSize);
 
-        uint256 oldExpireEpoch = oldExpiresAt / $._epochSize;
         uint256 newExpiresAt = newDeposit.expiresAt(depositedAt, rate);
 
         if (startEpoch == oldExpireEpoch) {
