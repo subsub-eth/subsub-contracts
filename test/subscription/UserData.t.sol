@@ -78,7 +78,7 @@ contract TestUserData is UserData {
         return _withdrawFromSubscription(tokenId, amount);
     }
 
-    function changeMultiplier(uint256 tokenId, uint24 newMultiplier) public returns (bool, MultiplierChanged memory) {
+    function changeMultiplier(uint256 tokenId, uint24 newMultiplier) public returns (bool, MultiplierChange memory) {
         return _changeMultiplier(tokenId, newMultiplier);
     }
 
@@ -875,7 +875,7 @@ contract UserDataTest is Test {
 
         uint24 newMulti = 200;
 
-        (bool isActive, HasUserData.MultiplierChanged memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        (bool isActive, HasUserData.MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
         assertTrue(isActive, "sub not active");
         assertEq(changed.oldDepositAt, od.streakStartedAt, "changed: old deposit at");
         assertEq(changed.oldAmount, od.currentDeposit, "changed: old amount");
@@ -913,7 +913,7 @@ contract UserDataTest is Test {
 
         uint24 newMulti = 200;
 
-        (bool isActive, HasUserData.MultiplierChanged memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        (bool isActive, HasUserData.MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
         assertTrue(isActive, "sub not active");
         assertEq(changed.oldDepositAt, od.streakStartedAt, "changed: old deposit at");
         assertEq(changed.oldAmount, od.currentDeposit, "changed: old amount");
@@ -950,11 +950,11 @@ contract UserDataTest is Test {
 
         uint24 newMulti = 200;
 
-        (bool isActive, HasUserData.MultiplierChanged memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        (bool isActive, HasUserData.MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
         assertFalse(isActive, "sub not active");
         assertEq(changed.oldDepositAt, 0, "changed: old deposit at");
         assertEq(changed.oldAmount, 0, "changed: old amount");
-        assertEq(changed.oldMultiplier, 0, "changed: old multiplier");
+        assertEq(changed.oldMultiplier, od.multiplier, "changed: old multiplier");
         assertEq(changed.reducedAmount, 0, "changed: reducedAmount");
         assertEq(changed.newDepositAt, 0, "changed: new deposit at");
         assertEq(changed.newAmount, 0, "changed: new amount");

@@ -73,6 +73,18 @@ abstract contract Subscription is
         _;
     }
 
+    modifier requireValidMultiplier(uint24 multi) {
+        require(multi >= Lib.MULTIPLIER_BASE && multi <= Lib.MULTIPLIER_MAX, "SUB: multiplier invalid");
+        _;
+    }
+
+    modifier requireIsAuthorized(uint256 tokenId) {
+        require(
+            _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
+        );
+        _;
+    }
+
     function initialize(
         string calldata tokenName,
         string calldata tokenSymbol,
@@ -170,25 +182,24 @@ abstract contract Subscription is
     }
 
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, uint24 multiplier, string calldata message)
+    function mint(uint256 amount, uint24 _multiplier, string calldata message)
         external
         whenDisabled(MINTING_PAUSED)
+        requireValidMultiplier(_multiplier)
         returns (uint256)
     {
         // check max supply
         require(totalSupply() < _maxSupply(), "SUB: max supply reached");
-        // multiplier must be larger that 1x and less than 1000x
-        require(multiplier >= Lib.MULTIPLIER_BASE && multiplier <= 100_000, "SUB: multiplier invalid");
         // uint subscriptionEnd = amount / rate;
         uint256 tokenId = _nextTokenId();
 
         uint256 internalAmount = _asInternal(amount);
 
         // TODO do we need return values?
-        _createSubscription(tokenId, internalAmount, multiplier);
+        _createSubscription(tokenId, internalAmount, _multiplier);
 
         // addToEpochs is not allowed to add a new sub to the past
-        _addToEpochs(_now(), internalAmount, multiplier, _rate());
+        _addToEpochs(_now(), internalAmount, _multiplier, _rate());
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
         _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
@@ -231,13 +242,13 @@ abstract contract Subscription is
         emit MetadataUpdate(tokenId);
     }
 
-    function changeMultiplier(uint256 tokenId, uint24 newMultiplier) external requireExists(tokenId) {
-        require(
-            _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
-        );
-        // TODO check validity of multiplier
-
-        (bool isActive_, MultiplierChanged memory change) = _changeMultiplier(tokenId, newMultiplier);
+    function changeMultiplier(uint256 tokenId, uint24 newMultiplier)
+        external
+        requireExists(tokenId)
+        requireValidMultiplier(newMultiplier)
+        requireIsAuthorized(tokenId)
+    {
+        (bool isActive_, MultiplierChange memory change) = _changeMultiplier(tokenId, newMultiplier);
 
         if (isActive_) {
             uint256 rate = _rate();
@@ -248,7 +259,7 @@ abstract contract Subscription is
         }
         // else => inactive subs are effectively not tracked in Epochs, thus no further changes as necessary
 
-        // TODO emit some event
+        emit MultiplierChanged(tokenId, _msgSender(), change.oldMultiplier, newMultiplier);
     }
 
     function withdraw(uint256 tokenId, uint256 amount) external requireExists(tokenId) {
@@ -263,11 +274,7 @@ abstract contract Subscription is
      * @param amount internal representation (18 decimals) of amount to withdraw
      *
      */
-    function _withdraw(uint256 tokenId, uint256 amount) private {
-        require(
-            _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
-        );
-
+    function _withdraw(uint256 tokenId, uint256 amount) private requireIsAuthorized(tokenId) {
         // amount is checked in _withdrawFromSubscription
         (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit) = _withdrawFromSubscription(tokenId, amount);
 

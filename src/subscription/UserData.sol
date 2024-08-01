@@ -102,7 +102,7 @@ abstract contract HasUserData {
      * @notice Change data
      *
      */
-    struct MultiplierChanged {
+    struct MultiplierChange {
         uint256 oldDepositAt;
         uint256 oldAmount;
         uint24 oldMultiplier;
@@ -117,12 +117,12 @@ abstract contract HasUserData {
      * @param tokenId subscription identifier
      * @param newMultiplier the new multiplier value
      * @return isActive the active state of the subscription
-     * @return change data reflecting the change of an active subscription, all values are 0 if the sub is inactive
+     * @return change data reflecting the change of an active subscription, all values, except oldMultiplier, are 0 if the sub is inactive
      */
     function _changeMultiplier(uint256 tokenId, uint24 newMultiplier)
         internal
         virtual
-        returns (bool isActive, MultiplierChanged memory change);
+        returns (bool isActive, MultiplierChange memory change);
 
     /**
      * @notice returns the amount of total spent and yet unspent funds in the subscription, excluding tips
@@ -332,7 +332,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         internal
         virtual
         override
-        returns (bool isActive, MultiplierChanged memory change)
+        returns (bool isActive, MultiplierChange memory change)
     {
         isActive = _isActive(tokenId);
 
@@ -342,6 +342,8 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
             // +1 as the current timeunit is already paid for using the current multiplier, thus the streak has to start at the next time unit
             change = resetStreak(subData, now_ + 1);
         } else {
+            // export only old multiplier value
+            change.oldMultiplier = subData.multiplier;
             // create a new streak with 0 funds
             subData.streakStartedAt = now_;
             subData.lastDepositAt = now_;
@@ -359,7 +361,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
      * @param time time to reset to
      * @return change info about the applied changes
      */
-    function resetStreak(SubData storage subData, uint256 time) private returns (MultiplierChanged memory change) {
+    function resetStreak(SubData storage subData, uint256 time) private returns (MultiplierChange memory change) {
         // reset streakStartedAt
         // reset lastDepositAt
         // reduce currentDeposit according to spent

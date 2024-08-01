@@ -132,7 +132,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         sub.setFlags(flags);
     }
 
-    // TODO check that no payment tokens are being transferred
     function testBurn(uint256 tokenId) public {
         BurnSub _sub = new BurnSub();
 
@@ -179,7 +178,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testMint(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
-        multiplier = uint24(bound(multiplier, 100, 100_000));
+        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
 
         MintSub _sub = new MintSub(owner, settings);
 
@@ -201,7 +200,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testMint_maxSupply(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
-        multiplier = uint24(bound(multiplier, 100, 100_000));
+        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
 
         settings.maxSupply = 1;
         MintSub _sub = new MintSub(owner, settings);
@@ -216,7 +215,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testMint_maxSupply0(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
-        multiplier = uint24(bound(multiplier, 100, 100_000));
+        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
 
         settings.maxSupply = 0;
         MintSub _sub = new MintSub(owner, settings);
@@ -260,6 +259,84 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         vm.expectRevert("Flag: setting enabled");
         _sub.mint(amount, multiplier, message);
+    }
+
+    function testChangeMultiplier_active(uint256 tokenId, uint24 newMulti) public {
+        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+
+        ChangeMultiplierActiveSub _sub = new ChangeMultiplierActiveSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(alice);
+
+        vm.expectEmit();
+        emit MultiChange(tokenId, newMulti);
+        vm.expectEmit();
+        emit EpochsReduced(_sub.OLD_DEPOSITED_AT(), _sub.OLD_AMOUNT(), _sub.REDUCED_AMOUNT(), _sub.OLD_MULTI(), rate);
+        vm.expectEmit();
+        emit AddedToEpochs(_sub.NEW_DEPOSITED_AT(), _sub.NEW_AMOUNT(), newMulti, rate);
+        vm.expectEmit();
+        emit MultiplierChanged(tokenId, alice, _sub.OLD_MULTI(), newMulti);
+
+        _sub.changeMultiplier(tokenId, newMulti);
+    }
+
+    function testChangeMultiplier_inactive(uint256 tokenId, uint24 newMulti) public {
+        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+
+        ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(alice);
+
+        vm.expectEmit();
+        emit MultiChange(tokenId, newMulti);
+        vm.expectEmit();
+        emit MultiplierChanged(tokenId, alice, _sub.OLD_MULTI(), newMulti);
+
+        _sub.changeMultiplier(tokenId, newMulti);
+    }
+
+    function testChangeMultiplier_NoToken(uint256 tokenId, uint24 newMulti) public {
+        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+
+        ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
+
+        vm.expectRevert("SUB: subscription does not exist");
+        _sub.changeMultiplier(tokenId, newMulti);
+    }
+
+    function testChangeMultiplier_invalidMulti_lower(uint256 tokenId, uint24 newMulti) public {
+        newMulti = uint24(bound(newMulti, 0, Lib.MULTIPLIER_BASE - 1));
+
+        ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.expectRevert("SUB: multiplier invalid");
+        _sub.changeMultiplier(tokenId, newMulti);
+    }
+
+    function testChangeMultiplier_invalidMulti_higher(uint256 tokenId, uint24 newMulti) public {
+        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_MAX + 1, type(uint24).max));
+
+        ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.expectRevert("SUB: multiplier invalid");
+        _sub.changeMultiplier(tokenId, newMulti);
+    }
+
+    function testChangeMultiplier_unauthorized(uint256 tokenId, uint24 newMulti, address user) public {
+        vm.assume(user != alice);
+        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+
+        ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(user);
+
+        vm.expectRevert("ERC721: caller is not token owner or approved");
+        _sub.changeMultiplier(tokenId, newMulti);
     }
 
     function testRenew(uint256 tokenId, uint256 amount, string calldata message) public {
@@ -762,6 +839,74 @@ contract RenewReactivateSub is AbstractTestSub {
 
     function _asExternal(uint256 v) internal view virtual override returns (uint256) {
         return v / CONV;
+    }
+}
+
+contract ChangeMultiplierActiveSub is AbstractTestSub {
+    uint256 public constant CONV = 10;
+    uint24 public constant OLD_MULTI = 999;
+    uint24 public constant NEW_MULTI = 2222;
+
+    uint256 public constant OLD_DEPOSITED_AT = 1234;
+    uint256 public constant OLD_AMOUNT = 2345;
+    uint256 public constant REDUCED_AMOUNT = 55433;
+    uint256 public constant NEW_DEPOSITED_AT = 44444;
+    uint256 public constant NEW_AMOUNT = 55555;
+
+    uint256 public constant TOTAL_DEPOSITED = 9876;
+
+    constructor(address owner, SubSettings memory settings)
+        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
+    {}
+
+    function _changeMultiplier(uint256 tokenId, uint24 multi) internal virtual override returns (bool isActive_, MultiplierChange memory c) {
+        emit MultiChange(tokenId, multi);
+
+        isActive_ = true;
+        c.oldDepositAt = OLD_DEPOSITED_AT;
+        c.oldAmount = OLD_AMOUNT;
+        c.oldMultiplier = OLD_MULTI;
+        c.reducedAmount = REDUCED_AMOUNT;
+        c.newDepositAt = NEW_DEPOSITED_AT;
+        c.newAmount = NEW_AMOUNT;
+
+    }
+
+    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
+        emit AddedToEpochs(depositedAt, amount, shares, rate);
+    }
+
+    function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
+        internal
+        override
+    {
+        emit EpochsReduced(depositedAt, oldDeposit, newDeposit, shares, rate);
+    }
+}
+
+contract ChangeMultiplierInactiveSub is AbstractTestSub {
+    uint256 public constant CONV = 10;
+    uint24 public constant OLD_MULTI = 999;
+    uint24 public constant NEW_MULTI = 2222;
+
+    uint256 public constant OLD_DEPOSITED_AT = 1234;
+    uint256 public constant OLD_AMOUNT = 2345;
+    uint256 public constant REDUCED_AMOUNT = 55433;
+    uint256 public constant NEW_DEPOSITED_AT = 44444;
+    uint256 public constant NEW_AMOUNT = 55555;
+
+    uint256 public constant TOTAL_DEPOSITED = 9876;
+
+    constructor(address owner, SubSettings memory settings)
+        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
+    {}
+
+    function _changeMultiplier(uint256 tokenId, uint24 multi) internal virtual override returns (bool isActive_, MultiplierChange memory c) {
+        emit MultiChange(tokenId, multi);
+
+        isActive_ = false;
+        c.oldMultiplier = OLD_MULTI;
+
     }
 }
 

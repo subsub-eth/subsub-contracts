@@ -36,6 +36,13 @@ interface SubscriptionEvents {
     event Tipped(
         uint256 indexed tokenId, uint256 indexed amount, address indexed depositor, uint256 deposited, string message
     );
+
+    /**
+     * @notice MutliplierChanged event is emitted if the multiplier of a sub is changed
+     */
+    event MultiplierChanged(
+        uint256 indexed tokenId, address indexed executor, uint24 oldMultiplier, uint24 newMultiplier
+    );
 }
 
 /**

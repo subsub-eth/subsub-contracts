@@ -28,6 +28,8 @@ abstract contract TestSubEvents {
         uint256 rate
     );
 
+    event MultiChange(uint256 indexed tokenId, uint24 indexed multiplier);
+
     event TipAdded(uint256 indexed tokenId, uint256 indexed amount);
 }
 
@@ -156,7 +158,7 @@ abstract contract AbstractTestSub is
         revert("SUB: not implemented");
     }
 
-    function _changeMultiplier(uint256, uint24) internal virtual override returns (bool, MultiplierChanged memory) {
+    function _changeMultiplier(uint256, uint24) internal virtual override returns (bool, MultiplierChange memory) {
         revert("SUB: not implemented");
     }
 
