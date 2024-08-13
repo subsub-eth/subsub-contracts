@@ -6,17 +6,10 @@ default:
 
 # build
 build:
-  forge build --sizes --extra-output-files abi
+  forge build --sizes
 
 # build all
-build-all: build test typechain pnpm-pack
-
-# generate typechain types
-typechain:
-  find ./out -type f -name '*.abi.json' -execdir bash -c 'mv -- "$0" "${0%.abi.json}.abi"' {} \;
-  install -d abi
-  cd out && cp --parents **/*.abi ../abi
-  pnpm run generate-types
+build-all: build test pnpm-pack
 
 # pnpm pack
 pnpm-pack:

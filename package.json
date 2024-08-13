@@ -3,18 +3,22 @@
   "version": "0.2.0-alpha.14",
   "description": "CreateZ contracts",
   "scripts": {
-    "clean": "rimraf types dist abi",
+    "clean": "rimraf dist",
     "pack-unpack": "rimraf dist && pnpm pack && mkdir dist && tar --strip-components=1 -xvzf createz-contracts-*.tgz -C dist && rimraf createz-contracts-*.tgz",
-    "generate-types": "pnpm run generate-types-ethers-v6",
-    "generate-types-ethers-v6": "typechain --target=ethers-v6 --show-stack-traces --discriminate-types 'out/!(*.t.sol)/*.abi'",
     "deploy-local": "forge script script/Deploy.s.sol:DeployScript --fork-url http://localhost:8545 --broadcast"
   },
   "files": [
     "README.md",
     "LICENSE",
-    "abi/**",
-    "src/**",
-    "types/**"
+    "out/Subscription.sol/Subscription.json",
+    "out/SubscriptionHandle.sol/SubscriptionHandle.json",
+    "out/Profile.sol/Profile.json",
+    "out/Badge.sol/Badge.json",
+    "out/BadgeHandle.sol/BadgeHandle.json",
+    "out/ERC6551Registry.sol/IERC6551Registry.json",
+    "out/IERC6551Account.sol/IERC6551Account.json",
+    "out/IERC6551Executable.sol/IERC6551Executable.json",
+    "src/**"
   ],
   "repository": {
     "type": "git",
@@ -33,8 +37,7 @@
   },
   "homepage": "https://github.com/createz-eth/createz-contracts#readme",
   "devDependencies": {
-    "@typechain/ethers-v6": "^0.5.1",
     "rimraf": "^5.0.5",
-    "typechain": "^8.3.2"
+    "typescript": "^5.5.4"
   }
 }
