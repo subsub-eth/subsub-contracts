@@ -19,6 +19,7 @@
     "out/ERC6551Registry.sol/IERC6551Registry.json",
     "out/IERC6551Account.sol/IERC6551Account.json",
     "out/IERC6551Executable.sol/IERC6551Executable.json",
+    "out/AggregatorV3Interface.sol/AggregatorV3Interface.json",
     "src/**"
   ],
   "repository": {
