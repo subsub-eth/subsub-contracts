@@ -10,6 +10,9 @@ interface IProfile is
     IERC721Metadata,
     IERC721Enumerable
 {
+
+    event Minted(address indexed to, uint256 indexed tokenId);
+
     function mint(
         string memory name,
         string memory description,

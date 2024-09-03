@@ -24,8 +24,6 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 contract Profile is IProfile, ERC721EnumerableUpgradeable {
     using Strings for uint256;
 
-    event Minted(address indexed to, uint256 indexed tokenId);
-
     struct ProfileData {
         string name;
         string description;
