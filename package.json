@@ -10,6 +10,7 @@
   "files": [
     "README.md",
     "LICENSE",
+    "out/Subscription.sol/Subscription.json",
     "out/ISubscription.sol/ISubscription.json",
     "out/ISubscriptionHandle.sol/ISubscriptionHandle.json",
     "out/IProfile.sol/IProfile.json",
