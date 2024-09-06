@@ -284,13 +284,13 @@ interface Claimable is ClaimEvents {
      * @notice Claim tips
      * @param to address to send funds to
      */
-    // function claimTips(address to) external;
+    function claimTips(address to) external;
 
     /**
      * @notice Queries the amount of tipping funds that can be claimed by the owner
      * @return amount of currently claimable tips
      */
-    // function claimableTips() external view returns (uint256);
+    function claimableTips() external view returns (uint256);
 
     /**
      * @notice Queries the amount of tipping funds that were claimed up until now
