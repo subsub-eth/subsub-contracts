@@ -45,7 +45,7 @@ contract SubscriptionInitTest is Test {
         testToken = new ERC20DecimalsMock(decimals);
         handleContract = new ERC721Mock("handle", "HANDLE");
 
-        settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
+        settings = SubSettings(address(testToken), rate, lock, epochSize, maxSupply);
 
         createSub();
         sub.initialize(name, symbol, metadata, settings);
@@ -70,10 +70,10 @@ contract SubscriptionInitTest is Test {
         assertEq(sub.symbol(), symbol, "symbol");
 
         {
-            (IERC20Metadata _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) =
+            (address _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) =
                 sub.settings();
 
-            assertEq(address(_token), address(testToken), "token");
+            assertEq(_token, address(testToken), "token");
             assertEq(_rate, rate, "rate");
             assertEq(_lock, lock, "lock");
             assertEq(_epochSize, epochSize, "epochSize");
@@ -87,24 +87,15 @@ contract SubscriptionInitTest is Test {
             assertEq(_externalUrl, metadata.externalUrl, "externalUrl");
         }
         {
-            (IERC20Metadata _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) =
+            (address _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) =
                 sub.settings();
 
-            assertEq(address(_token), address(testToken), "token");
+            assertEq(_token, address(testToken), "token");
             assertEq(_rate, rate, "rate");
             assertEq(_lock, lock, "lock");
             assertEq(_epochSize, epochSize, "epochSize");
             assertEq(_maxSupply, maxSupply, "maxSupply");
         }
-    }
-
-    function testConstruct_not0token() public {
-        settings.token = ERC20DecimalsMock(address(0));
-
-        createSub();
-
-        vm.expectRevert("SUB: token cannot be 0 address");
-        sub.initialize(name, symbol, metadata, settings);
     }
 
     function testConstruct_not0rate() public {

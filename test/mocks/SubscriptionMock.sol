@@ -15,7 +15,7 @@ contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
 
     constructor() ERC721Mock("test", "test") {}
 
-    function renew(uint256 tokenId, uint256 amount, string calldata message) external {}
+    function renew(uint256 tokenId, uint256 amount, string calldata message) external payable {}
 
     function withdraw(uint256 tokenId, uint256 amount) external {}
 
@@ -49,12 +49,12 @@ contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
     function activeSubShares() external view returns (uint256) {}
 
     // adds funds to the subscription, but does not extend an active sub
-    function tip(uint256 tokenId, uint256 amount, string calldata message) external {}
+    function tip(uint256 tokenId, uint256 amount, string calldata message) external payable {}
 
     function tips(uint256 tokenId) external view returns (uint256) {}
 
     /// @notice "Mints" a new subscription token
-    function mint(uint256 amount, uint24 multiplier, string calldata message) external returns (uint256) {}
+    function mint(uint256 amount, uint24 multiplier, string calldata message) external payable returns (uint256) {}
 
     /// @notice "Burns" a subscription token, deletes all achieved subscription
     ///         data and does not withdraw any withdrawable funds

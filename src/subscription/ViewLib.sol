@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 import {Subscription} from "./Subscription.sol";
 
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
@@ -17,11 +15,11 @@ library ViewLib {
     function contractData(Subscription s) public view returns (string memory) {
         string memory output;
         {
-            (IERC20Metadata token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) = s.settings();
+            (address token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) = s.settings();
             output = string(
                 abi.encodePacked(
                     '{"trait_type":"token","value":"',
-                    address(token).toHexString(),
+                    token.toHexString(),
                     '"},{"trait_type":"rate","value":"',
                     rate.toString(),
                     '"},{"trait_type":"lock","value":',

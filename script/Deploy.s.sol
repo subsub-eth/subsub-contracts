@@ -66,7 +66,7 @@ contract DeployScript is Script {
     function setUp() public {
         metadata = MetadataStruct("You gain access to my heart", "https://picsum.photos/800/600", "https://example.com");
 
-        settings.token = IERC20Metadata(address(1));
+        settings.token = address(1);
 
         uint256 rate = 5 ether;
         settings.rate = rate / 2592000; // $5 per month
@@ -251,7 +251,7 @@ contract DeployScript is Script {
 
             testUsd = new ERC20DecimalsMock(18);
             console.log("TestUSD ERC20 Token Contract", address(testUsd));
-            settings.token = testUsd;
+            settings.token = address(testUsd);
 
             testUsd.mint(deployer, 100_000 ether);
             testUsd.mint(alice, 100_000 ether);

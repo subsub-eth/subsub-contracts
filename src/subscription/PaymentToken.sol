@@ -4,16 +4,28 @@ pragma solidity ^0.8.20;
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
 abstract contract HasPaymentToken {
-    function _paymentToken() internal view virtual returns (IERC20Metadata);
+    address constant NATIVE_TOKEN_ADDRESS = address(0);
+    uint8 constant NATIVE_TOKEN_DECIMALS = 18;
+
+    function _paymentTokenSend(address payable to, uint256 amount) internal virtual;
+
+    function _paymentTokenReceive(address from, uint256 amount) internal virtual;
+
+    function _paymentToken() internal view virtual returns (address);
 
     function _decimals() internal view virtual returns (uint8);
 }
 
 abstract contract PaymentToken is Initializable, HasPaymentToken {
+    using SafeERC20 for IERC20Metadata;
+    using Address for address payable;
+
     struct PaymentTokenStorage {
-        IERC20Metadata _paymentToken;
+        address _paymentToken;
         uint8 _decimals;
     }
 
@@ -27,17 +39,45 @@ abstract contract PaymentToken is Initializable, HasPaymentToken {
         }
     }
 
-    function __PaymentToken_init(IERC20Metadata token) internal onlyInitializing {
+    function __PaymentToken_init(address token) internal onlyInitializing {
         __PaymentToken_init_unchained(token);
     }
 
-    function __PaymentToken_init_unchained(IERC20Metadata token) internal onlyInitializing {
+    function __PaymentToken_init_unchained(address token) internal onlyInitializing {
         PaymentTokenStorage storage $ = _getPaymentTokenStorage();
         $._paymentToken = token;
-        $._decimals = token.decimals();
+
+        if (token != NATIVE_TOKEN_ADDRESS) {
+            // if it is not the native token, it has to be an ERC20
+            $._decimals = IERC20Metadata(token).decimals();
+        } else {
+            $._decimals = NATIVE_TOKEN_DECIMALS;
+        }
     }
 
-    function _paymentToken() internal view override returns (IERC20Metadata) {
+    function _paymentTokenSend(address payable to, uint256 amount) internal virtual override {
+        address token = _paymentToken();
+        if (token == NATIVE_TOKEN_ADDRESS) {
+            to.sendValue(amount);
+        } else {
+            // ERC20
+            IERC20Metadata(token).safeTransfer(to, amount);
+        }
+    }
+
+    function _paymentTokenReceive(address from, uint256 amount) internal virtual override {
+        address token = _paymentToken();
+        if (token == NATIVE_TOKEN_ADDRESS) {
+            // cannot actually send native tokens from some other address, thus we check that the received
+            // value checks out
+            require(amount == msg.value, "PT: invalid ETH value");
+        } else {
+            // ERC20
+            IERC20Metadata(token).safeTransferFrom(from, address(this), amount);
+        }
+    }
+
+    function _paymentToken() internal view override returns (address) {
         PaymentTokenStorage storage $ = _getPaymentTokenStorage();
         return $._paymentToken;
     }

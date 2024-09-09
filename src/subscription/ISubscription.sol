@@ -72,7 +72,7 @@ struct SubSettings {
     /**
      * @notice The payment ERC20 token to be used in a subscription
      */
-    IERC20Metadata token;
+    address token;
     /**
      * @notice The rate describes the amount of tokens to be paid per time unit
      * @dev The rate is based on 18 decimals and is to be paid per time unit
@@ -116,7 +116,7 @@ interface Subscribable is SubscriptionEvents {
      * @param amount amount of payment tokens to add
      * @param message message that is emitted on a successful renewal
      */
-    function renew(uint256 tokenId, uint256 amount, string calldata message) external;
+    function renew(uint256 tokenId, uint256 amount, string calldata message) external payable;
 
     /**
      * @notice Removes withdrawable funds from an active subscription and reduces the subscription time
@@ -209,7 +209,7 @@ interface Subscribable is SubscriptionEvents {
      * @param amount amount of payment tokens to add as a tip
      * @param message message that is emitted on a successful renewal
      */
-    function tip(uint256 tokenId, uint256 amount, string calldata message) external;
+    function tip(uint256 tokenId, uint256 amount, string calldata message) external payable;
 
     /**
      * @notice Queries the amount of tipped funds
@@ -255,7 +255,7 @@ interface Claimable is ClaimEvents {
      * @notice Claim spent subscription funds from completed epochs.
      * @param to address to send funds to
      */
-    function claim(address to) external;
+    function claim(address payable to) external;
 
     /**
      * @notice Queries the amount of funds that can be claimed by the owner
@@ -284,7 +284,7 @@ interface Claimable is ClaimEvents {
      * @notice Claim tips
      * @param to address to send funds to
      */
-    function claimTips(address to) external;
+    function claimTips(address payable to) external;
 
     /**
      * @notice Queries the amount of tipping funds that can be claimed by the owner
@@ -325,7 +325,7 @@ interface SubscriptionCreation {
      * @param message message that is emitted on a successful renewal
      * @return the token id of the new subscription
      */
-    function mint(uint256 amount, uint24 multiplier, string calldata message) external returns (uint256);
+    function mint(uint256 amount, uint24 multiplier, string calldata message) external payable returns (uint256);
 
     /**
      * @notice "Burns" a subscription token, deletes all achieved subscription data and does not withdraw any withdrawable funds

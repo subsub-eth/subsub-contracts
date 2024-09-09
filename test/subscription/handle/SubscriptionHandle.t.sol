@@ -8,8 +8,6 @@ import "../../../src/subscription/ISubscription.sol";
 
 import "../../mocks/TestSubscription.sol";
 
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract TestSubscriptionHandle is SubscriptionHandle {
@@ -79,7 +77,7 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
     function setUp() public {
         user = address(1000);
         metadata = MetadataStruct("test", "test", "test");
-        settings.token = IERC20Metadata(address(0));
+        settings.token = address(0);
         settings.rate = 1;
         settings.lock = 10;
         settings.epochSize = 100;

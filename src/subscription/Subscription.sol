@@ -20,7 +20,6 @@ import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
@@ -49,7 +48,6 @@ abstract contract Subscription is
     SubscriptionFlags,
     HasFlagSettings
 {
-    using SafeERC20 for IERC20Metadata;
     using Math for uint256;
     using Lib for uint256;
     using Strings for uint256;
@@ -115,7 +113,7 @@ abstract contract Subscription is
     function settings()
         external
         view
-        returns (IERC20Metadata token, uint256 rate, uint24 lock, uint256 epochSize, uint256 maxSupply_)
+        returns (address token, uint256 rate, uint24 lock, uint256 epochSize, uint256 maxSupply_)
     {
         token = _paymentToken();
         rate = _rate();
@@ -184,6 +182,7 @@ abstract contract Subscription is
     /// @notice "Mints" a new subscription token
     function mint(uint256 amount, uint24 _multiplier, string calldata message)
         external
+        payable
         whenDisabled(MINTING_PAUSED)
         requireValidMultiplier(_multiplier)
         returns (uint256)
@@ -202,7 +201,7 @@ abstract contract Subscription is
         _addToEpochs(_now(), internalAmount, _multiplier, _rate());
 
         // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
-        _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
+        _paymentTokenReceive(msg.sender, amount);
 
         _safeMint(msg.sender, tokenId);
 
@@ -214,6 +213,7 @@ abstract contract Subscription is
     /// @notice adds deposits to an existing subscription token
     function renew(uint256 tokenId, uint256 amount, string calldata message)
         external
+        payable
         whenDisabled(RENEWAL_PAUSED)
         requireExists(tokenId)
     {
@@ -236,7 +236,7 @@ abstract contract Subscription is
 
         // finally transfer tokens into this contract
         // we use the ORIGINAL amount here
-        _paymentToken().safeTransferFrom(msg.sender, address(this), amount);
+        _paymentTokenReceive(msg.sender, amount);
 
         emit SubscriptionRenewed(tokenId, amount, _msgSender(), _totalDeposited(tokenId), message);
         emit MetadataUpdate(tokenId);
@@ -281,7 +281,7 @@ abstract contract Subscription is
         _reduceInEpochs(depositedAt, oldDeposit, newDeposit, _multiplier(tokenId), _rate());
 
         uint256 externalAmount = _asExternal(amount);
-        _paymentToken().safeTransfer(_msgSender(), externalAmount);
+        _paymentTokenSend(payable(_msgSender()), externalAmount);
 
         emit SubscriptionWithdrawn(tokenId, externalAmount, _msgSender(), _totalDeposited(tokenId));
         emit MetadataUpdate(tokenId);
@@ -323,6 +323,7 @@ abstract contract Subscription is
 
     function tip(uint256 tokenId, uint256 amount, string calldata message)
         external
+        payable
         requireExists(tokenId)
         whenDisabled(TIPPING_PAUSED)
     {
@@ -330,25 +331,25 @@ abstract contract Subscription is
 
         _addTip(tokenId, amount);
 
-        _paymentToken().safeTransferFrom(_msgSender(), address(this), amount);
+        _paymentTokenReceive(_msgSender(), amount);
 
         emit Tipped(tokenId, amount, _msgSender(), _tips(tokenId), message);
         emit MetadataUpdate(tokenId);
     }
 
     /// @notice The owner claims their rewards
-    function claim(address to) external {
+    function claim(address payable to) external {
         claim(to, _currentEpoch());
     }
 
-    function claim(address to, uint256 upToEpoch) public onlyOwner {
+    function claim(address payable to, uint256 upToEpoch) public onlyOwner {
         // epochs validity is checked in _claimEpochs
         uint256 amount = _claimEpochs(_rate(), upToEpoch);
 
         // convert to external amount
         amount = _asExternal(amount);
 
-        _paymentToken().safeTransfer(to, amount);
+        _paymentTokenSend(to, amount);
 
         emit FundsClaimed(amount, _asExternal(_claimed()));
     }
@@ -363,10 +364,10 @@ abstract contract Subscription is
         return claimable(_lastProcessedEpoch(), _currentEpoch());
     }
 
-    function claimTips(address to) external onlyOwner {
+    function claimTips(address payable to) external onlyOwner {
         uint256 amount = _claimTips();
 
-        _paymentToken().safeTransfer(to, amount);
+        _paymentTokenSend(to, amount);
 
         emit TipsClaimed(amount, _claimedTips());
     }
@@ -400,7 +401,6 @@ abstract contract DefaultSubscription is
         SubSettings calldata _settings
     ) external override initializer {
         require(_settings.epochSize > 0, "SUB: invalid epochSize");
-        require(address(_settings.token) != address(0), "SUB: token cannot be 0 address");
         require(_settings.lock <= Lib.LOCK_BASE, "SUB: lock percentage out of range");
         require(_settings.rate > 0, "SUB: rate cannot be 0");
         // TODO FIXME

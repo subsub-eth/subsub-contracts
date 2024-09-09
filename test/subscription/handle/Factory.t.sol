@@ -6,8 +6,6 @@ import "../../../src/subscription/handle/Factory.sol";
 import "../../../src/subscription/Subscription.sol";
 import "../../../src/subscription/ISubscription.sol";
 
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
@@ -57,7 +55,7 @@ contract FactoryTest is Test {
         factory = new TestFactory(address(beacon));
 
         metadata = MetadataStruct("test", "test", "test");
-        settings.token = IERC20Metadata(address(1234));
+        settings.token = address(1234);
         settings.rate = 1;
         settings.lock = 10;
         settings.epochSize = 100;

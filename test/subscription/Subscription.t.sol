@@ -53,7 +53,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         testToken.mint(alice, 10_000_000_000 ether);
         // bob does not receive tokens
 
-        settings = SubSettings(testToken, rate, lock, epochSize, maxSupply);
+        settings = SubSettings(address(testToken), rate, lock, epochSize, maxSupply);
 
         sub = new SimpleTestSub(owner, "name", "symbol", metadata, settings);
     }
@@ -546,7 +546,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(_sub.claimable(), claimable / _sub.CONV(), "Claimable as external");
     }
 
-    function testClaim(address to, uint256 claimable) public {
+    function testClaim(address payable to, uint256 claimable) public {
         vm.assume(to != address(0) && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -562,7 +562,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
     }
 
-    function testClaimBatch(address to, uint256 claimable, uint256 upToEpoch) public {
+    function testClaimBatch(address payable to, uint256 claimable, uint256 upToEpoch) public {
         vm.assume(to != address(0) && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -578,7 +578,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
     }
 
-    function testClaimBatch_notOwner(address user, address to, uint256 claimable, uint256 upToEpoch) public {
+    function testClaimBatch_notOwner(address user, address payable to, uint256 claimable, uint256 upToEpoch) public {
         vm.assume(user != owner);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -589,7 +589,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         _sub.claim(to, upToEpoch);
     }
 
-    function testClaim_notOwner(address user, address to, uint256 claimable) public {
+    function testClaim_notOwner(address user, address payable to, uint256 claimable) public {
         vm.assume(user != owner);
         claimable = bound(claimable, 0, type(uint192).max);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -672,7 +672,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         _sub.tip(tokenId, amount, message);
     }
 
-    function testClaimTips(address to, uint256 claimable) public {
+    function testClaimTips(address payable to, uint256 claimable) public {
         vm.assume(to != address(0) && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         TipSub _sub = new TipSub(owner, settings, claimable);
@@ -688,7 +688,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(to)), claimable, "amount transferred");
     }
 
-    function testClaimTips_notOwner(address user, address to, uint256 claimable) public {
+    function testClaimTips_notOwner(address user, address payable to, uint256 claimable) public {
         vm.assume(user != owner);
         TipSub _sub = new TipSub(owner, settings, claimable);
 
@@ -705,7 +705,7 @@ contract BurnSub is AbstractTestSub {
             "name",
             "symbol",
             MetadataStruct("description", "image", "externalUrl"),
-            SubSettings(new ERC20DecimalsMock(18), 0, 0, 0, 100)
+            SubSettings(address(new ERC20DecimalsMock(18)), 0, 0, 0, 100)
         )
     {}
 
