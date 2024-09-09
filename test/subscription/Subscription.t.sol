@@ -198,6 +198,29 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
     }
 
+    function testMint_native(uint256 amount, uint24 multiplier, string calldata message) public {
+        deal(alice, 100 ether);
+        amount = bound(amount, 0, alice.balance);
+        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+
+        settings.token = address(0);
+        MintSub _sub = new MintSub(owner, settings);
+
+        vm.startPrank(alice);
+
+        vm.expectEmit();
+        emit SubCreated(1, amount * _sub.CONV(), multiplier);
+        vm.expectEmit();
+        emit AddedToEpochs(block.number, amount * _sub.CONV(), multiplier, rate);
+        vm.expectEmit();
+        emit SubscriptionRenewed(1, amount, alice, _sub.TOTAL_DEPOSITED(), message);
+
+        _sub.mint{value: amount}(amount, multiplier, message);
+
+        assertEq(_sub.balanceOf(alice), 1, "Token created");
+        assertEq(address(_sub).balance, amount, "amount transferred");
+    }
+
     function testMint_maxSupply(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
         multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
@@ -363,6 +386,31 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
     }
 
+    function testRenew_native(uint256 tokenId, uint256 amount, string calldata message) public {
+        deal(alice, 100 ether);
+        amount = bound(amount, 0, alice.balance);
+
+        settings.token = address(0);
+        RenewExtendSub _sub = new RenewExtendSub(owner, settings);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(alice);
+        assertEq(address(_sub).balance, 0, "no eth in contract");
+
+        vm.expectEmit();
+        emit SubExtended(tokenId, amount * _sub.CONV());
+        vm.expectEmit();
+        emit EpochsExtended(_sub.DEPOSITED_AT(), _sub.OLD_DEPOSIT(), _sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        vm.expectEmit();
+        emit SubscriptionRenewed(tokenId, amount, alice, _sub.TOTAL_DEPOSITED(), message);
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.renew{value: amount}(tokenId, amount, message);
+
+        assertEq(address(_sub).balance, amount, "amount transferred");
+    }
+
     function testRenew_reactivate(uint256 tokenId, uint256 amount, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
 
@@ -461,6 +509,32 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(bob)), amount, "amount transferred");
     }
 
+    function testWithdraw_native(uint256 tokenId, uint256 amount, uint256 withdrawable) public {
+        withdrawable = bound(withdrawable, 0, type(uint192).max);
+        settings.token = address(0);
+        WithdrawSub _sub = new WithdrawSub(owner, settings, withdrawable);
+
+        uint256 exWithdrawable = withdrawable / _sub.CONV();
+        amount = bound(amount, 0, exWithdrawable);
+        deal(address(_sub), type(uint192).max);
+        _sub.simpleMint(bob, tokenId);
+
+        vm.startPrank(bob);
+        vm.expectEmit();
+        emit SubWithdrawn(tokenId, amount * _sub.CONV());
+        vm.expectEmit();
+        emit EpochsReduced(_sub.DEPOSITED_AT(), _sub.OLD_DEPOSIT(), _sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        vm.expectEmit();
+        emit SubscriptionWithdrawn(tokenId, amount, bob, _sub.TOTAL_DEPOSITED());
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.withdraw(tokenId, amount);
+
+        assertEq(address(bob).balance, amount, "amount transferred");
+        assertEq(address(_sub).balance, type(uint192).max - amount, "amount transferred from contract");
+    }
+
     function testWithdraw_tokenNotExist(uint256 tokenId, uint256 amount, uint256 withdrawable) public {
         withdrawable = bound(withdrawable, 0, type(uint192).max);
         WithdrawSub _sub = new WithdrawSub(owner, settings, withdrawable);
@@ -512,6 +586,31 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         assertEq(testToken.balanceOf(address(bob)), exWithdrawable, "amount transferred");
     }
 
+    function testCancel_native(uint256 tokenId, uint256 withdrawable) public {
+        withdrawable = bound(withdrawable, 0, type(uint192).max);
+        settings.token = address(0);
+        WithdrawSub _sub = new WithdrawSub(owner, settings, withdrawable);
+
+        uint256 exWithdrawable = withdrawable / _sub.CONV();
+        deal(address(_sub), type(uint192).max);
+        _sub.simpleMint(bob, tokenId);
+
+        vm.startPrank(bob);
+        vm.expectEmit();
+        emit SubWithdrawn(tokenId, withdrawable);
+        vm.expectEmit();
+        emit EpochsReduced(_sub.DEPOSITED_AT(), _sub.OLD_DEPOSIT(), _sub.NEW_DEPOSIT(), _sub.MULTI(), settings.rate);
+        vm.expectEmit();
+        emit SubscriptionWithdrawn(tokenId, exWithdrawable, bob, _sub.TOTAL_DEPOSITED());
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.cancel(tokenId);
+
+        assertEq(address(bob).balance, exWithdrawable, "amount transferred");
+        assertEq(address(_sub).balance, type(uint192).max - exWithdrawable, "amount transferred from contract");
+    }
+
     function testCancel_notOwner(address user, uint256 tokenId, uint256 withdrawable) public {
         vm.assume(user != address(this) && user != bob);
         withdrawable = bound(withdrawable, 0, type(uint192).max);
@@ -560,6 +659,25 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         _sub.claim(to);
 
         assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
+    }
+
+    function testClaim_native(address payable to, uint256 claimable) public {
+        assumePayable(to);
+        vm.assume(to != address(0) && to != alice);
+        claimable = bound(claimable, 0, type(uint192).max);
+        settings.token = address(0);
+        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
+        uint256 exClaimable = claimable / _sub.CONV();
+        deal(address(_sub), type(uint192).max);
+
+        vm.startPrank(owner);
+        vm.expectEmit();
+        emit FundsClaimed(exClaimable, _sub.TOTAL_CLAIMED() / _sub.CONV());
+
+        _sub.claim(to);
+
+        assertEq(to.balance, exClaimable, "claimable funds transferred");
+        assertEq(address(_sub).balance, type(uint192).max - exClaimable, "claimable funds transferred from contract");
     }
 
     function testClaimBatch(address payable to, uint256 claimable, uint256 upToEpoch) public {
@@ -620,6 +738,29 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         _sub.tip(tokenId, amount, message);
 
         assertEq(testToken.balanceOf(address(_sub)), amount, "amount transferred");
+    }
+
+    function testTip_native(uint256 tokenId, uint256 amount, string calldata message) public {
+        deal(alice, 100 ether);
+        amount = bound(amount, 1, alice.balance);
+
+        settings.token = address(0);
+        TipSub _sub = new TipSub(owner, settings, 0);
+        _sub.simpleMint(alice, tokenId);
+
+        vm.startPrank(alice);
+        assertEq(address(_sub).balance, 0, "no eth in contract");
+
+        vm.expectEmit();
+        emit TipAdded(tokenId, amount);
+        vm.expectEmit();
+        emit Tipped(tokenId, amount, alice, _sub.TIPS(), message);
+        vm.expectEmit();
+        emit MetadataUpdate(tokenId);
+
+        _sub.tip{value: amount}(tokenId, amount, message);
+
+        assertEq(address(_sub).balance, amount, "amount transferred");
     }
 
     function testTip_anyUser(address user, uint256 tokenId, uint256 amount, string calldata message) public {
@@ -686,6 +827,25 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         _sub.claimTips(to);
 
         assertEq(testToken.balanceOf(address(to)), claimable, "amount transferred");
+    }
+
+    function testClaimTips_native(address payable to, uint256 claimable) public {
+        assumePayable(to);
+        vm.assume(to != address(0) && to != alice);
+        claimable = bound(claimable, 0, type(uint192).max);
+        settings.token = address(0);
+        TipSub _sub = new TipSub(owner, settings, claimable);
+        deal(address(_sub), type(uint192).max);
+
+        vm.startPrank(owner);
+
+        vm.expectEmit();
+        emit TipsClaimed(claimable, _sub.CLAIMED_TIPS());
+
+        _sub.claimTips(to);
+
+        assertEq(to.balance, claimable, "claimable funds transferred");
+        assertEq(address(_sub).balance, type(uint192).max - claimable, "claimable funds transferred from contract");
     }
 
     function testClaimTips_notOwner(address user, address payable to, uint256 claimable) public {
@@ -859,7 +1019,12 @@ contract ChangeMultiplierActiveSub is AbstractTestSub {
         AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
     {}
 
-    function _changeMultiplier(uint256 tokenId, uint24 multi) internal virtual override returns (bool isActive_, MultiplierChange memory c) {
+    function _changeMultiplier(uint256 tokenId, uint24 multi)
+        internal
+        virtual
+        override
+        returns (bool isActive_, MultiplierChange memory c)
+    {
         emit MultiChange(tokenId, multi);
 
         isActive_ = true;
@@ -869,7 +1034,6 @@ contract ChangeMultiplierActiveSub is AbstractTestSub {
         c.reducedAmount = REDUCED_AMOUNT;
         c.newDepositAt = NEW_DEPOSITED_AT;
         c.newAmount = NEW_AMOUNT;
-
     }
 
     function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
@@ -901,12 +1065,16 @@ contract ChangeMultiplierInactiveSub is AbstractTestSub {
         AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
     {}
 
-    function _changeMultiplier(uint256 tokenId, uint24 multi) internal virtual override returns (bool isActive_, MultiplierChange memory c) {
+    function _changeMultiplier(uint256 tokenId, uint24 multi)
+        internal
+        virtual
+        override
+        returns (bool isActive_, MultiplierChange memory c)
+    {
         emit MultiChange(tokenId, multi);
 
         isActive_ = false;
         c.oldMultiplier = OLD_MULTI;
-
     }
 }
 
