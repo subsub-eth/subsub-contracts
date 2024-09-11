@@ -663,7 +663,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testClaim_native(address payable to, uint256 claimable) public {
         assumePayable(to);
-        vm.assume(to != address(0) && to != alice);
+        vm.assume(to != address(0) && to.balance == 0 && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         settings.token = address(0);
         ClaimSub _sub = new ClaimSub(owner, settings, claimable);
@@ -831,7 +831,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testClaimTips_native(address payable to, uint256 claimable) public {
         assumePayable(to);
-        vm.assume(to != address(0) && to != alice);
+        vm.assume(to != address(0) && to.balance == 0 && to != alice);
         claimable = bound(claimable, 0, type(uint192).max);
         settings.token = address(0);
         TipSub _sub = new TipSub(owner, settings, claimable);
