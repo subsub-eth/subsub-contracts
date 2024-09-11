@@ -7,6 +7,8 @@ import "forge-std/console.sol";
 
 import {ERC6551Registry} from "erc6551/ERC6551Registry.sol";
 import {IERC6551Executable} from "erc6551/interfaces/IERC6551Executable.sol";
+import {ERC6551Proxy} from "solady/accounts/ERC6551Proxy.sol";
+import {SimpleErc6551} from "../src/account/SimpleErc6551.sol";
 
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -232,14 +234,9 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
             vm.startBroadcast(deployer);
 
-            // TODO FIXME
-            erc6551AccountImplementation =
-                deployCode("lib-precompiled/erc6551/0.3.1/ERC6551AccountUpgradeable.sol/ERC6551AccountUpgradeable.json");
+            erc6551AccountImplementation = address(new SimpleErc6551());
             console.log("ERC6551 Account Implementation", erc6551AccountImplementation);
-            erc6551AccountProxy = deployCode(
-                "lib-precompiled/erc6551/0.3.1/ERC6551AccountProxy.sol/ERC6551AccountProxy.json",
-                abi.encode(erc6551AccountImplementation)
-            );
+            erc6551AccountProxy = address(new ERC6551Proxy(erc6551AccountImplementation));
             console.log("ERC6551 Account Proxy", erc6551AccountProxy);
 
             vm.stopBroadcast();
