@@ -72,11 +72,10 @@ contract PaymentTokenTest is Test {
     function testPaymentTokenSend_native(address payable to, uint256 mint, uint256 amount) public {
         assumePayable(to);
         assumeNotPrecompile(to);
+        vm.assume(to.balance == 0);
         mint = bound(mint, 1 ether, type(uint256).max);
         amount = bound(amount, 0, mint);
         pt = new TestPaymentToken(address(0));
-
-        assertEq(0, to.balance, "to does not have any eth");
 
         deal(address(pt), mint);
         pt.paymentTokenSend(to, amount);
