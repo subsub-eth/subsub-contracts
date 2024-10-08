@@ -7,22 +7,12 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
-abstract contract HasPaymentToken {
-    address constant NATIVE_TOKEN_ADDRESS = address(0);
-    uint8 constant NATIVE_TOKEN_DECIMALS = 18;
-
-    function _paymentTokenSend(address payable to, uint256 amount) internal virtual;
-
-    function _paymentTokenReceive(address from, uint256 amount) internal virtual;
-
-    function _paymentToken() internal view virtual returns (address);
-
-    function _decimals() internal view virtual returns (uint8);
-}
-
-abstract contract PaymentToken is Initializable, HasPaymentToken {
+library PaymentTokenLib {
     using SafeERC20 for IERC20Metadata;
     using Address for address payable;
+
+    address constant NATIVE_TOKEN_ADDRESS = address(0);
+    uint8 constant NATIVE_TOKEN_DECIMALS = 18;
 
     struct PaymentTokenStorage {
         address _paymentToken;
@@ -39,11 +29,7 @@ abstract contract PaymentToken is Initializable, HasPaymentToken {
         }
     }
 
-    function __PaymentToken_init(address token) internal onlyInitializing {
-        __PaymentToken_init_unchained(token);
-    }
-
-    function __PaymentToken_init_unchained(address token) internal onlyInitializing {
+    function init(address token) internal {
         PaymentTokenStorage storage $ = _getPaymentTokenStorage();
         $._paymentToken = token;
 
@@ -55,8 +41,8 @@ abstract contract PaymentToken is Initializable, HasPaymentToken {
         }
     }
 
-    function _paymentTokenSend(address payable to, uint256 amount) internal virtual override {
-        address token = _paymentToken();
+    function paymentTokenSend(address payable to, uint256 amount) internal {
+        address token = paymentToken();
         if (token == NATIVE_TOKEN_ADDRESS) {
             to.sendValue(amount);
         } else {
@@ -65,8 +51,8 @@ abstract contract PaymentToken is Initializable, HasPaymentToken {
         }
     }
 
-    function _paymentTokenReceive(address from, uint256 amount) internal virtual override {
-        address token = _paymentToken();
+    function paymentTokenReceive(address from, uint256 amount) internal {
+        address token = paymentToken();
         if (token == NATIVE_TOKEN_ADDRESS) {
             // cannot actually send native tokens from some other address, thus we check that the received
             // value checks out
@@ -77,13 +63,49 @@ abstract contract PaymentToken is Initializable, HasPaymentToken {
         }
     }
 
-    function _paymentToken() internal view override returns (address) {
+    function paymentToken() internal view returns (address) {
         PaymentTokenStorage storage $ = _getPaymentTokenStorage();
         return $._paymentToken;
     }
 
-    function _decimals() internal view override returns (uint8) {
+    function decimals() internal view returns (uint8) {
         PaymentTokenStorage storage $ = _getPaymentTokenStorage();
         return $._decimals;
+    }
+}
+
+abstract contract HasPaymentToken {
+    function _paymentTokenSend(address payable to, uint256 amount) internal virtual;
+
+    function _paymentTokenReceive(address from, uint256 amount) internal virtual;
+
+    function _paymentToken() internal view virtual returns (address);
+
+    function _decimals() internal view virtual returns (uint8);
+}
+
+abstract contract PaymentToken is Initializable, HasPaymentToken {
+    function __PaymentToken_init(address token) internal {
+        __PaymentToken_init_unchained(token);
+    }
+
+    function __PaymentToken_init_unchained(address token) internal onlyInitializing {
+        PaymentTokenLib.init(token);
+    }
+
+    function _paymentTokenSend(address payable to, uint256 amount) internal virtual override {
+        PaymentTokenLib.paymentTokenSend(to, amount);
+    }
+
+    function _paymentTokenReceive(address from, uint256 amount) internal virtual override {
+        PaymentTokenLib.paymentTokenReceive(from, amount);
+    }
+
+    function _paymentToken() internal view override returns (address) {
+        return PaymentTokenLib.paymentToken();
+    }
+
+    function _decimals() internal view override returns (uint8) {
+        return PaymentTokenLib.decimals();
     }
 }

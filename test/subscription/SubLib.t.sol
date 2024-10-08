@@ -5,18 +5,18 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../../src/subscription/Subscription.sol";
 
-import {Lib} from "../../src/subscription/Lib.sol";
+import {SubLib} from "../../src/subscription/SubLib.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 
-contract LibTest is Test {
-    using Lib for uint256;
+contract SubLibTest is Test {
+    using SubLib for uint256;
 
     function setUp() public {}
 
     function testToInternal_18() public pure {
         uint256 externalAmount = 10_000;
-        uint256 internalAmount = externalAmount.toInternal(Lib.INTERNAL_DECIMALS);
+        uint256 internalAmount = externalAmount.toInternal(SubLib.INTERNAL_DECIMALS);
 
         assertEq(externalAmount, internalAmount, "amount does not change for 18 decimals");
     }
@@ -44,7 +44,7 @@ contract LibTest is Test {
 
     function testToExternal_18() public pure {
         uint256 internalAmount = 10_000;
-        uint256 externalAmount = internalAmount.toExternal(Lib.INTERNAL_DECIMALS);
+        uint256 externalAmount = internalAmount.toExternal(SubLib.INTERNAL_DECIMALS);
 
         assertEq(internalAmount, externalAmount, "amount does not change for 18 decimals");
     }
@@ -74,7 +74,7 @@ contract LibTest is Test {
         uint256 amount = 1_000_000;
 
         assertEq(0, amount.asLocked(0), "0% locked");
-        assertEq(amount, amount.asLocked(Lib.LOCK_BASE), "100% locked");
+        assertEq(amount, amount.asLocked(SubLib.LOCK_BASE), "100% locked");
 
         assertEq(500_000, amount.asLocked(5_000), "50% locked");
         assertEq(100_000, amount.asLocked(1_000), "10% locked");
@@ -97,28 +97,28 @@ contract LibTest is Test {
         uint256 amount = 1_000_000;
         uint256 rate = 100;
 
-        assertEq(1, amount.validFor(amount, Lib.MULTIPLIER_BASE), "single timeunit rate");
-        assertEq(0, (amount - 1).validFor(amount, Lib.MULTIPLIER_BASE), "less than 1 timeunit");
-        assertEq(0, uint256(1).validFor(amount, Lib.MULTIPLIER_BASE), "1 amount");
-        assertEq(0, uint256(0).validFor(amount, Lib.MULTIPLIER_BASE), "0 amount");
+        assertEq(1, amount.validFor(amount, SubLib.MULTIPLIER_BASE), "single timeunit rate");
+        assertEq(0, (amount - 1).validFor(amount, SubLib.MULTIPLIER_BASE), "less than 1 timeunit");
+        assertEq(0, uint256(1).validFor(amount, SubLib.MULTIPLIER_BASE), "1 amount");
+        assertEq(0, uint256(0).validFor(amount, SubLib.MULTIPLIER_BASE), "0 amount");
 
-        assertEq(10, (amount * 10).validFor(amount, Lib.MULTIPLIER_BASE), "10 times the rate");
-        assertEq(10_000, amount.validFor(rate, Lib.MULTIPLIER_BASE), "10k times the rate");
-        assertEq(10_000, (amount + 10).validFor(rate, Lib.MULTIPLIER_BASE), "10k times the rate + dust");
-        assertEq(10_000, (amount + 99).validFor(rate, Lib.MULTIPLIER_BASE), "10k times the rate + dust, 99");
-        assertEq(10_000, (amount + 1).validFor(rate, Lib.MULTIPLIER_BASE), "10k times the rate + dust, 1");
-        assertEq(10_001, (amount + rate).validFor(rate, Lib.MULTIPLIER_BASE), "10k + 1 times the rate");
+        assertEq(10, (amount * 10).validFor(amount, SubLib.MULTIPLIER_BASE), "10 times the rate");
+        assertEq(10_000, amount.validFor(rate, SubLib.MULTIPLIER_BASE), "10k times the rate");
+        assertEq(10_000, (amount + 10).validFor(rate, SubLib.MULTIPLIER_BASE), "10k times the rate + dust");
+        assertEq(10_000, (amount + 99).validFor(rate, SubLib.MULTIPLIER_BASE), "10k times the rate + dust, 99");
+        assertEq(10_000, (amount + 1).validFor(rate, SubLib.MULTIPLIER_BASE), "10k times the rate + dust, 1");
+        assertEq(10_001, (amount + rate).validFor(rate, SubLib.MULTIPLIER_BASE), "10k + 1 times the rate");
 
-        assertEq(5_000, amount.validFor(rate, 2 * Lib.MULTIPLIER_BASE), "2x multi");
-        assertEq(2_500, amount.validFor(rate, 4 * Lib.MULTIPLIER_BASE), "4x multi");
-        assertEq(1_250, amount.validFor(rate, 8 * Lib.MULTIPLIER_BASE), "8x multi");
-        assertEq(312, amount.validFor(rate, 32 * Lib.MULTIPLIER_BASE), "32x multi");
-        assertEq(156, amount.validFor(rate, 64 * Lib.MULTIPLIER_BASE), "64x multi");
-        assertEq(78, amount.validFor(rate, 128 * Lib.MULTIPLIER_BASE), "128x multi");
-        assertEq(39, amount.validFor(rate, 256 * Lib.MULTIPLIER_BASE), "256x multi");
-        assertEq(19, amount.validFor(rate, 512 * Lib.MULTIPLIER_BASE), "512x multi");
-        assertEq(9, amount.validFor(rate, 1024 * Lib.MULTIPLIER_BASE), "1024x multi");
-        assertEq(4, amount.validFor(rate, 2048 * Lib.MULTIPLIER_BASE), "2048x multi");
+        assertEq(5_000, amount.validFor(rate, 2 * SubLib.MULTIPLIER_BASE), "2x multi");
+        assertEq(2_500, amount.validFor(rate, 4 * SubLib.MULTIPLIER_BASE), "4x multi");
+        assertEq(1_250, amount.validFor(rate, 8 * SubLib.MULTIPLIER_BASE), "8x multi");
+        assertEq(312, amount.validFor(rate, 32 * SubLib.MULTIPLIER_BASE), "32x multi");
+        assertEq(156, amount.validFor(rate, 64 * SubLib.MULTIPLIER_BASE), "64x multi");
+        assertEq(78, amount.validFor(rate, 128 * SubLib.MULTIPLIER_BASE), "128x multi");
+        assertEq(39, amount.validFor(rate, 256 * SubLib.MULTIPLIER_BASE), "256x multi");
+        assertEq(19, amount.validFor(rate, 512 * SubLib.MULTIPLIER_BASE), "512x multi");
+        assertEq(9, amount.validFor(rate, 1024 * SubLib.MULTIPLIER_BASE), "1024x multi");
+        assertEq(4, amount.validFor(rate, 2048 * SubLib.MULTIPLIER_BASE), "2048x multi");
 
         assertEq(8130, amount.validFor(rate, 123), "1.23x multi");
     }
@@ -128,13 +128,13 @@ contract LibTest is Test {
         uint256 rate = 100;
         uint256 t = 25;
 
-        assertEq(10_025, amount.expiresAt(t, rate, Lib.MULTIPLIER_BASE), "10k time units");
-        assertEq(5_025, amount.expiresAt(t, rate, 2 * Lib.MULTIPLIER_BASE), "2x multi");
+        assertEq(10_025, amount.expiresAt(t, rate, SubLib.MULTIPLIER_BASE), "10k time units");
+        assertEq(5_025, amount.expiresAt(t, rate, 2 * SubLib.MULTIPLIER_BASE), "2x multi");
 
-        assertEq(26, amount.expiresAt(t, amount, Lib.MULTIPLIER_BASE), "1 time unit");
-        assertEq(t, amount.expiresAt(t, amount + 1, Lib.MULTIPLIER_BASE), "rate = amount + 1, 0 time units");
-        assertEq(t, (amount - 1).expiresAt(t, amount, Lib.MULTIPLIER_BASE), "amount - 1, 0 time units");
-        assertEq(t, uint256(0).expiresAt(t, amount, Lib.MULTIPLIER_BASE), "0 amount, 0 time units");
+        assertEq(26, amount.expiresAt(t, amount, SubLib.MULTIPLIER_BASE), "1 time unit");
+        assertEq(t, amount.expiresAt(t, amount + 1, SubLib.MULTIPLIER_BASE), "rate = amount + 1, 0 time units");
+        assertEq(t, (amount - 1).expiresAt(t, amount, SubLib.MULTIPLIER_BASE), "amount - 1, 0 time units");
+        assertEq(t, uint256(0).expiresAt(t, amount, SubLib.MULTIPLIER_BASE), "0 amount, 0 time units");
     }
 
 

@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Lib} from "./Lib.sol";
+import {SubLib} from "./SubLib.sol";
 import {TimeAware} from "./TimeAware.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-abstract contract HasRate {
-    function _rate() internal view virtual returns (uint256);
-}
-
-abstract contract Rate is Initializable, HasRate {
-    using Lib for uint256;
+library RateLib {
+    using SubLib for uint256;
 
     struct RateStorage {
         uint256 _rate;
@@ -28,17 +24,31 @@ abstract contract Rate is Initializable, HasRate {
         }
     }
 
-    function __Rate_init(uint256 rate) internal onlyInitializing {
+    function init(uint256 rate_) internal {
+        RateStorage storage $ = _getRateStorage();
+        $._rate = rate_;
+    }
+
+    function rate() internal view returns (uint256) {
+        RateStorage storage $ = _getRateStorage();
+        return $._rate;
+    }
+}
+
+abstract contract HasRate {
+    function _rate() internal view virtual returns (uint256);
+}
+
+abstract contract Rate is Initializable, HasRate {
+    function __Rate_init(uint256 rate) internal {
         __Rate_init_unchained(rate);
     }
 
     function __Rate_init_unchained(uint256 rate) internal onlyInitializing {
-        RateStorage storage $ = _getRateStorage();
-        $._rate = rate;
+        RateLib.init(rate);
     }
 
     function _rate() internal view override returns (uint256) {
-        RateStorage storage $ = _getRateStorage();
-        return $._rate;
+        return RateLib.rate();
     }
 }

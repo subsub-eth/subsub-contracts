@@ -9,13 +9,13 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
  * @notice Subscription Function library
  * @dev Various functions to help conversions etc. associated with subscriptions
  */
-library Lib {
-    uint24 public constant MULTIPLIER_BASE = 100;
-    uint24 public constant MULTIPLIER_MAX = 10_000;
+library SubLib {
+    uint24 internal constant MULTIPLIER_BASE = 100;
+    uint24 internal constant MULTIPLIER_MAX = 10_000;
 
-    uint24 public constant LOCK_BASE = 10_000; // == 100%
+    uint24 internal constant LOCK_BASE = 10_000; // == 100%
 
-    uint8 public constant INTERNAL_DECIMALS = 18;
+    uint8 internal constant INTERNAL_DECIMALS = 18;
 
     function toInternal(uint256 externalAmount, uint8 tokenDecimals)
         internal

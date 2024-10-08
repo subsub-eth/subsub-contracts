@@ -378,20 +378,20 @@ contract EpochsTest is Test {
 
     function testAddToEpochs(uint24 shares, uint256 amount, uint256 depositedAt, uint256 _epochSize) public {
         // sub spans multiple epochs
-        shares = uint24(bound(shares, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        shares = uint24(bound(shares, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
         epochSize = (bound(_epochSize, 1, type(uint32).max));
-        amount = bound(amount, ((epochSize * shares * rate) / Lib.MULTIPLIER_BASE) + 1, type(uint192).max);
+        amount = bound(amount, ((epochSize * shares * rate) / SubLib.MULTIPLIER_BASE) + 1, type(uint192).max);
         depositedAt = bound(depositedAt, 0, type(uint32).max);
         e = new TestEpochs(epochSize);
 
         // addToEpochs
         e.addNewSub(depositedAt, amount, shares, rate);
 
-        Epoch memory startingEpoch = e.getEpoch(Lib.epochOf(depositedAt, epochSize));
-        uint256 expiresAt = Lib.expiresAt(amount, depositedAt, rate, shares);
-        Epoch memory expiringEpoch = e.getEpoch(Lib.epochOf(expiresAt, epochSize));
+        Epoch memory startingEpoch = e.getEpoch(SubLib.epochOf(depositedAt, epochSize));
+        uint256 expiresAt = SubLib.expiresAt(amount, depositedAt, rate, shares);
+        Epoch memory expiringEpoch = e.getEpoch(SubLib.epochOf(expiresAt, epochSize));
 
-        assertLt(Lib.epochOf(depositedAt, epochSize), Lib.epochOf(expiresAt, epochSize), "multiple epochs");
+        assertLt(SubLib.epochOf(depositedAt, epochSize), SubLib.epochOf(expiresAt, epochSize), "multiple epochs");
 
         assertEq(startingEpoch.starting, shares, "shares started");
         assertEq(
@@ -403,13 +403,13 @@ contract EpochsTest is Test {
         assertEq(expiringEpoch.expiring, shares, "shares expiring");
         assertEq(
             expiringEpoch.partialFunds,
-            ((expiresAt % epochSize) * rate * shares) + ((amount * Lib.MULTIPLIER_BASE) % (rate * shares)),
+            ((expiresAt % epochSize) * rate * shares) + ((amount * SubLib.MULTIPLIER_BASE) % (rate * shares)),
             "expiring partial funds, including dust"
         );
 
         // sanity
         assertGe(
-            amount * Lib.MULTIPLIER_BASE,
+            amount * SubLib.MULTIPLIER_BASE,
             startingEpoch.partialFunds + expiringEpoch.partialFunds,
             "amount less than partial amounts"
         );
@@ -423,28 +423,28 @@ contract EpochsTest is Test {
         uint256 _epochSize
     ) public {
         // sub spans multiple epochs
-        shares = uint24(bound(shares, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        shares = uint24(bound(shares, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
         epoch = (bound(epoch, 0, type(uint64).max));
         epochSize = (bound(_epochSize, 1, type(uint32).max));
         depositedAt = bound(depositedAt, 0, epochSize - 1) + (epoch * epochSize);
-        amount = bound(amount, 1, (((epochSize - (depositedAt % epochSize)) * shares * rate) / Lib.MULTIPLIER_BASE) - 1);
+        amount = bound(amount, 1, (((epochSize - (depositedAt % epochSize)) * shares * rate) / SubLib.MULTIPLIER_BASE) - 1);
         e = new TestEpochs(epochSize);
 
         // addToEpochs
         e.addNewSub(depositedAt, amount, shares, rate);
-        uint256 expiresAt = Lib.expiresAt(amount, depositedAt, rate, shares);
+        uint256 expiresAt = SubLib.expiresAt(amount, depositedAt, rate, shares);
 
         console.log("start and end", depositedAt, expiresAt);
         assertEq(
-            Lib.epochOf(depositedAt, epochSize),
-            Lib.epochOf(expiresAt, epochSize),
+            SubLib.epochOf(depositedAt, epochSize),
+            SubLib.epochOf(expiresAt, epochSize),
             "starting and expiring in same epoch"
         );
 
-        Epoch memory ep = e.getEpoch(Lib.epochOf(depositedAt, epochSize));
+        Epoch memory ep = e.getEpoch(SubLib.epochOf(depositedAt, epochSize));
         assertEq(ep.starting, shares, "shares started");
         assertEq(ep.expiring, shares, "shares expiring");
-        assertEq(ep.partialFunds, amount * Lib.MULTIPLIER_BASE, "partial funds contains all funds");
+        assertEq(ep.partialFunds, amount * SubLib.MULTIPLIER_BASE, "partial funds contains all funds");
     }
 
     ////////////////////////////

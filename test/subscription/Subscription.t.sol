@@ -178,7 +178,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testMint(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
-        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        multiplier = uint24(bound(multiplier, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         MintSub _sub = new MintSub(owner, settings);
 
@@ -201,7 +201,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     function testMint_native(uint256 amount, uint24 multiplier, string calldata message) public {
         deal(alice, 100 ether);
         amount = bound(amount, 0, alice.balance);
-        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        multiplier = uint24(bound(multiplier, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         settings.token = address(0);
         MintSub _sub = new MintSub(owner, settings);
@@ -223,7 +223,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testMint_maxSupply(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
-        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        multiplier = uint24(bound(multiplier, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         settings.maxSupply = 1;
         MintSub _sub = new MintSub(owner, settings);
@@ -238,7 +238,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testMint_maxSupply0(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
-        multiplier = uint24(bound(multiplier, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        multiplier = uint24(bound(multiplier, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         settings.maxSupply = 0;
         MintSub _sub = new MintSub(owner, settings);
@@ -285,7 +285,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testChangeMultiplier_active(uint256 tokenId, uint24 newMulti) public {
-        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        newMulti = uint24(bound(newMulti, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         ChangeMultiplierActiveSub _sub = new ChangeMultiplierActiveSub(owner, settings);
         _sub.simpleMint(alice, tokenId);
@@ -305,7 +305,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testChangeMultiplier_inactive(uint256 tokenId, uint24 newMulti) public {
-        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        newMulti = uint24(bound(newMulti, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
         _sub.simpleMint(alice, tokenId);
@@ -321,7 +321,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testChangeMultiplier_NoToken(uint256 tokenId, uint24 newMulti) public {
-        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        newMulti = uint24(bound(newMulti, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
 
@@ -330,7 +330,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testChangeMultiplier_invalidMulti_lower(uint256 tokenId, uint24 newMulti) public {
-        newMulti = uint24(bound(newMulti, 0, Lib.MULTIPLIER_BASE - 1));
+        newMulti = uint24(bound(newMulti, 0, SubLib.MULTIPLIER_BASE - 1));
 
         ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
         _sub.simpleMint(alice, tokenId);
@@ -340,7 +340,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
     }
 
     function testChangeMultiplier_invalidMulti_higher(uint256 tokenId, uint24 newMulti) public {
-        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_MAX + 1, type(uint24).max));
+        newMulti = uint24(bound(newMulti, SubLib.MULTIPLIER_MAX + 1, type(uint24).max));
 
         ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
         _sub.simpleMint(alice, tokenId);
@@ -351,7 +351,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
     function testChangeMultiplier_unauthorized(uint256 tokenId, uint24 newMulti, address user) public {
         vm.assume(user != alice);
-        newMulti = uint24(bound(newMulti, Lib.MULTIPLIER_BASE, Lib.MULTIPLIER_MAX));
+        newMulti = uint24(bound(newMulti, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));
 
         ChangeMultiplierInactiveSub _sub = new ChangeMultiplierInactiveSub(owner, settings);
         _sub.simpleMint(alice, tokenId);

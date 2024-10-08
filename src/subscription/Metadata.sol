@@ -5,21 +5,7 @@ import {MetadataStruct} from "./ISubscription.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-abstract contract HasMetadata {
-    function metadata()
-        external
-        view
-        virtual
-        returns (string memory description, string memory image, string memory externalUrl);
-
-    function _setDescription(string calldata _description) internal virtual;
-
-    function _setImage(string calldata _image) internal virtual;
-
-    function _setExternalUrl(string calldata _externalUrl) internal virtual;
-}
-
-abstract contract Metadata is Initializable, HasMetadata {
+library MetadataLib {
     struct MetadataStorage {
         string _description;
         string _image;
@@ -36,6 +22,55 @@ abstract contract Metadata is Initializable, HasMetadata {
         }
     }
 
+    function init(string memory description, string memory image, string memory externalUrl) internal {
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._description = description;
+        $._image = image;
+        $._externalUrl = externalUrl;
+    }
+
+    function metadata()
+        internal
+        view
+        returns (string memory description, string memory image, string memory externalUrl)
+    {
+        MetadataStorage storage $ = _getMetadataStorage();
+        description = $._description;
+        image = $._image;
+        externalUrl = $._externalUrl;
+    }
+
+    function setDescription(string calldata _description) internal {
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._description = _description;
+    }
+
+    function setImage(string calldata _image) internal {
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._image = _image;
+    }
+
+    function setExternalUrl(string calldata _externalUrl) internal {
+        MetadataStorage storage $ = _getMetadataStorage();
+        $._externalUrl = _externalUrl;
+    }
+}
+
+abstract contract HasMetadata {
+    function metadata()
+        external
+        view
+        virtual
+        returns (string memory description, string memory image, string memory externalUrl);
+
+    function _setDescription(string calldata _description) internal virtual;
+
+    function _setImage(string calldata _image) internal virtual;
+
+    function _setExternalUrl(string calldata _externalUrl) internal virtual;
+}
+
+abstract contract Metadata is Initializable, HasMetadata {
     function __Metadata_init(string memory description, string memory image, string memory externalUrl)
         internal
         onlyInitializing
@@ -47,10 +82,7 @@ abstract contract Metadata is Initializable, HasMetadata {
         internal
         onlyInitializing
     {
-        MetadataStorage storage $ = _getMetadataStorage();
-        $._description = description;
-        $._image = image;
-        $._externalUrl = externalUrl;
+        MetadataLib.init(description, image, externalUrl);
     }
 
     function metadata()
@@ -59,24 +91,18 @@ abstract contract Metadata is Initializable, HasMetadata {
         override
         returns (string memory description, string memory image, string memory externalUrl)
     {
-        MetadataStorage storage $ = _getMetadataStorage();
-        description = $._description;
-        image = $._image;
-        externalUrl = $._externalUrl;
+        (description, image, externalUrl) = MetadataLib.metadata();
     }
 
     function _setDescription(string calldata _description) internal override {
-        MetadataStorage storage $ = _getMetadataStorage();
-        $._description = _description;
+        MetadataLib.setDescription(_description);
     }
 
     function _setImage(string calldata _image) internal override {
-        MetadataStorage storage $ = _getMetadataStorage();
-        $._image = _image;
+        MetadataLib.setImage(_image);
     }
 
     function _setExternalUrl(string calldata _externalUrl) internal override {
-        MetadataStorage storage $ = _getMetadataStorage();
-        $._externalUrl = _externalUrl;
+        MetadataLib.setExternalUrl(_externalUrl);
     }
 }

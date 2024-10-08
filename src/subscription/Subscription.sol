@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ISubscription, MetadataStruct, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
-import {Lib} from "./Lib.sol";
+import {SubLib} from "./SubLib.sol";
 import {ViewLib} from "./ViewLib.sol";
 
 import {TimeAware} from "./TimeAware.sol";
@@ -49,7 +49,7 @@ abstract contract Subscription is
     HasFlagSettings
 {
     using Math for uint256;
-    using Lib for uint256;
+    using SubLib for uint256;
     using Strings for uint256;
     using Strings for address;
 
@@ -72,7 +72,7 @@ abstract contract Subscription is
     }
 
     modifier requireValidMultiplier(uint24 multi) {
-        require(multi >= Lib.MULTIPLIER_BASE && multi <= Lib.MULTIPLIER_MAX, "SUB: multiplier invalid");
+        require(multi >= SubLib.MULTIPLIER_BASE && multi <= SubLib.MULTIPLIER_MAX, "SUB: multiplier invalid");
         _;
     }
 
@@ -401,7 +401,7 @@ abstract contract DefaultSubscription is
         SubSettings calldata _settings
     ) external override initializer {
         require(_settings.epochSize > 0, "SUB: invalid epochSize");
-        require(_settings.lock <= Lib.LOCK_BASE, "SUB: lock percentage out of range");
+        require(_settings.lock <= SubLib.LOCK_BASE, "SUB: lock percentage out of range");
         require(_settings.rate > 0, "SUB: rate cannot be 0");
         // TODO FIXME
         // require(_settings.epochSize >= 1 days, "SUB: epoch size has to be at least 1 day");

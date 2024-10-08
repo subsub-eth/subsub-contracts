@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Lib} from "./Lib.sol";
+import {SubLib} from "./SubLib.sol";
 import {HasRate} from "./Rate.sol";
 import {TimeAware} from "./TimeAware.sol";
 
@@ -167,7 +167,7 @@ abstract contract HasUserData {
 }
 
 abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
-    using Lib for uint256;
+    using SubLib for uint256;
     using Math for uint256;
 
     struct UserDataStorage {
@@ -267,10 +267,10 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         } else {
             // extending active subscription
             uint256 remainingDeposit = (
-                (oldDeposit * Lib.MULTIPLIER_BASE)
+                (oldDeposit * SubLib.MULTIPLIER_BASE)
                 // spent amount
                 - (((now_ - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier)))
-            ) / Lib.MULTIPLIER_BASE;
+            ) / SubLib.MULTIPLIER_BASE;
 
             // deposit is counted from streakStartedAt
             newDeposit = oldDeposit + amount;
@@ -294,10 +294,10 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         UserDataStorage storage $ = _getUserDataStorage();
 
         uint256 lastDepositAt = $._subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit * Lib.MULTIPLIER_BASE;
+        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit * SubLib.MULTIPLIER_BASE;
 
         // locked + spent up until last deposit
-        uint256 lockedAmount = ($._subData[tokenId].lockedAmount * Lib.MULTIPLIER_BASE)
+        uint256 lockedAmount = ($._subData[tokenId].lockedAmount * SubLib.MULTIPLIER_BASE)
             + ((lastDepositAt - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier));
 
         // the current block is spent, thus +1
@@ -306,7 +306,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
 
         // postpone rebasing to the last moment
         return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (spentFunds).min(currentDeposit_))
-            / Lib.MULTIPLIER_BASE;
+            / SubLib.MULTIPLIER_BASE;
     }
 
     /// @notice reduces the deposit amount of the existing subscription without changing the deposit time
@@ -414,7 +414,7 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
      */
     function currentStreakSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
         // postponed rebasing
-        return multipliedCurrentStreakSpent(subData, time, rate) / Lib.MULTIPLIER_BASE;
+        return multipliedCurrentStreakSpent(subData, time, rate) / SubLib.MULTIPLIER_BASE;
     }
 
     /**
@@ -440,12 +440,12 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
      * @return amount of funds spent in the subscription
      */
     function totalSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
-        uint256 currentDeposit = subData.currentDeposit * Lib.MULTIPLIER_BASE;
-        uint256 spentAmount = ((subData.totalDeposited * Lib.MULTIPLIER_BASE) - currentDeposit)
+        uint256 currentDeposit = subData.currentDeposit * SubLib.MULTIPLIER_BASE;
+        uint256 spentAmount = ((subData.totalDeposited * SubLib.MULTIPLIER_BASE) - currentDeposit)
         + multipliedCurrentStreakSpent(subData, time, rate);
 
         // postponed rebasing
-        return spentAmount / Lib.MULTIPLIER_BASE;
+        return spentAmount / SubLib.MULTIPLIER_BASE;
     }
 
     function _totalDeposited(uint256 tokenId) internal view override returns (uint256) {

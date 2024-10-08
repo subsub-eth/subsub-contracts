@@ -3,15 +3,7 @@ pragma solidity ^0.8.20;
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-abstract contract HasTokenIdProvider {
-    /**
-     * @notice creates and returns the next token id
-     * @return a new token id to use
-     */
-    function _nextTokenId() internal virtual returns (uint256);
-}
-
-abstract contract TokenIdProvider is Initializable, HasTokenIdProvider {
+library TokenIdProviderLib {
     struct TokenIdProviderStorage {
         uint256 _tokenId;
     }
@@ -26,18 +18,36 @@ abstract contract TokenIdProvider is Initializable, HasTokenIdProvider {
         }
     }
 
+    function init(uint256 tokenId) internal {
+        TokenIdProviderStorage storage $ = _getTokenIdProviderStorage();
+        $._tokenId = tokenId;
+    }
+
+    function nextTokenId() internal returns (uint256) {
+        TokenIdProviderStorage storage $ = _getTokenIdProviderStorage();
+        $._tokenId++;
+        return $._tokenId;
+    }
+}
+
+abstract contract HasTokenIdProvider {
+    /**
+     * @notice creates and returns the next token id
+     * @return a new token id to use
+     */
+    function _nextTokenId() internal virtual returns (uint256);
+}
+
+abstract contract TokenIdProvider is Initializable, HasTokenIdProvider {
     function __TokenIdProvider_init(uint256 tokenId) internal onlyInitializing {
         __TokenIdProvider_init_unchained(tokenId);
     }
 
     function __TokenIdProvider_init_unchained(uint256 tokenId) internal onlyInitializing {
-        TokenIdProviderStorage storage $ = _getTokenIdProviderStorage();
-        $._tokenId = tokenId;
+        TokenIdProviderLib.init(tokenId);
     }
 
     function _nextTokenId() internal override returns (uint256) {
-        TokenIdProviderStorage storage $ = _getTokenIdProviderStorage();
-        $._tokenId++;
-        return $._tokenId;
+        return TokenIdProviderLib.nextTokenId();
     }
 }

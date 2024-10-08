@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Lib} from "./Lib.sol";
+import {SubLib} from "./SubLib.sol";
 import {TimeAware} from "./TimeAware.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -131,7 +131,7 @@ abstract contract HasEpochs {
 
 abstract contract Epochs is Initializable, TimeAware, HasEpochs {
     using Math for uint256;
-    using Lib for uint256;
+    using SubLib for uint256;
 
     struct EpochsStorage {
         uint256 _epochSize;
@@ -342,7 +342,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
             lastEpoch = i;
         }
         // the amount is mutliplied by the shares and has to be returned to its base
-        amount = amount / Lib.MULTIPLIER_BASE;
+        amount = amount / SubLib.MULTIPLIER_BASE;
     }
 
     function _claimEpochs(uint256 rate, uint256 upToEpoch) internal override returns (uint256) {
@@ -380,7 +380,7 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         // adjust internal rate to number of shares
         rate = rate * shares;
         // inflate by multiplier base to reduce rounding errors
-        amount = amount * Lib.MULTIPLIER_BASE;
+        amount = amount * SubLib.MULTIPLIER_BASE;
         uint256 expiresAt_ = amount.expiresAt(depositedAt, rate);
 
         EpochsStorage storage $ = _getEpochsStorage();
@@ -416,8 +416,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         rate = rate * shares;
 
         //inflate
-        oldDeposit = oldDeposit * Lib.MULTIPLIER_BASE;
-        newDeposit = newDeposit * Lib.MULTIPLIER_BASE;
+        oldDeposit = oldDeposit * SubLib.MULTIPLIER_BASE;
+        newDeposit = newDeposit * SubLib.MULTIPLIER_BASE;
 
         EpochsStorage storage $ = _getEpochsStorage();
         uint256 startEpoch = depositedAt / $._epochSize;
@@ -486,8 +486,8 @@ abstract contract Epochs is Initializable, TimeAware, HasEpochs {
         require(oldDeposit >= newDeposit, "Not reduce"); // sanity check
         rate = rate * shares;
         //inflate
-        oldDeposit = oldDeposit * Lib.MULTIPLIER_BASE;
-        newDeposit = newDeposit * Lib.MULTIPLIER_BASE;
+        oldDeposit = oldDeposit * SubLib.MULTIPLIER_BASE;
+        newDeposit = newDeposit * SubLib.MULTIPLIER_BASE;
 
         // require(newExpiresAt >= now, "Deposit too small");
         // sub cannot be expired

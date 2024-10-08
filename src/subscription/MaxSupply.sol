@@ -3,11 +3,7 @@ pragma solidity ^0.8.20;
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-abstract contract HasMaxSupply {
-    function _maxSupply() internal view virtual returns (uint256);
-}
-
-abstract contract MaxSupply is Initializable, HasMaxSupply {
+library MaxSupplyLib {
     struct MaxSupplyStorage {
         uint256 _maxSupply;
     }
@@ -22,17 +18,31 @@ abstract contract MaxSupply is Initializable, HasMaxSupply {
         }
     }
 
-    function __MaxSupply_init(uint256 maxSupply) internal onlyInitializing {
+    function init(uint256 maxSupply_) internal {
+        MaxSupplyStorage storage $ = _getMaxSupplyStorage();
+        $._maxSupply = maxSupply_;
+    }
+
+    function maxSupply() internal view returns (uint256) {
+        MaxSupplyStorage storage $ = _getMaxSupplyStorage();
+        return $._maxSupply;
+    }
+}
+
+abstract contract HasMaxSupply {
+    function _maxSupply() internal view virtual returns (uint256);
+}
+
+abstract contract MaxSupply is Initializable, HasMaxSupply {
+    function __MaxSupply_init(uint256 maxSupply) internal {
         __MaxSupply_init_unchained(maxSupply);
     }
 
     function __MaxSupply_init_unchained(uint256 maxSupply) internal onlyInitializing {
-        MaxSupplyStorage storage $ = _getMaxSupplyStorage();
-        $._maxSupply = maxSupply;
+        MaxSupplyLib.init(maxSupply);
     }
 
     function _maxSupply() internal view override returns (uint256) {
-        MaxSupplyStorage storage $ = _getMaxSupplyStorage();
-        return $._maxSupply;
+        return MaxSupplyLib.maxSupply();
     }
 }

@@ -1,21 +1,71 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Lib} from "./Lib.sol";
-import {HasRate} from "./Rate.sol";
-import {TimeAware} from "./TimeAware.sol";
+import {SubLib} from "./SubLib.sol";
 
 import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-import "forge-std/console.sol";
+library TipsLib {
+    using SubLib for uint256;
 
-abstract contract HasTips {
     struct UserTips {
         uint256 tips; // amount of tips sent to this subscription
     }
 
+    struct TipsStorage {
+        mapping(uint256 => UserTips) _userTips;
+        // amount of tips EVER sent to the contract, the value only increments
+        uint256 _allTips;
+        // amount of tips EVER claimed from the contract, the value only increments
+        uint256 _claimedTips;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.TipStorage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant TipsStorageLocation = 0xbf05d80824a4e35d926e60b1ca462d80f6b77fb9e9c7140da7f7231d82f47f00;
+
+    function _getTipsStorage() private pure returns (TipsStorage storage $) {
+        assembly {
+            $.slot := TipsStorageLocation
+        }
+    }
+
+    function addTip(uint256 tokenId, uint256 amount) internal {
+        TipsStorage storage $ = _getTipsStorage();
+        // TODO change me
+        $._userTips[tokenId].tips += amount;
+        $._allTips += amount;
+    }
+
+    function tips(uint256 tokenId) internal view returns (uint256) {
+        TipsStorage storage $ = _getTipsStorage();
+        return $._userTips[tokenId].tips;
+    }
+
+    function allTips() internal view returns (uint256) {
+        TipsStorage storage $ = _getTipsStorage();
+        return $._allTips;
+    }
+
+    function claimedTips() internal view returns (uint256) {
+        TipsStorage storage $ = _getTipsStorage();
+        return $._claimedTips;
+    }
+
+    function claimableTips() internal view returns (uint256) {
+        TipsStorage storage $ = _getTipsStorage();
+        return $._allTips - $._claimedTips;
+    }
+
+    function claimTips() internal returns (uint256 claimable) {
+        TipsStorage storage $ = _getTipsStorage();
+        claimable = $._allTips - $._claimedTips;
+        $._claimedTips = $._allTips;
+    }
+}
+
+abstract contract HasTips {
     /**
      * @notice adds the given amount of funds to the tips of a subscription
      * @param tokenId subscription identifier
@@ -57,64 +107,33 @@ abstract contract HasTips {
 }
 
 abstract contract Tips is Initializable, HasTips {
-    using Lib for uint256;
-
-    struct TipsStorage {
-        mapping(uint256 => UserTips) _userTips;
-        // amount of tips EVER sent to the contract, the value only increments
-        uint256 _allTips;
-        // amount of tips EVER claimed from the contract, the value only increments
-        uint256 _claimedTips;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.TipStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant TipsStorageLocation =
-        0xbf05d80824a4e35d926e60b1ca462d80f6b77fb9e9c7140da7f7231d82f47f00;
-
-    function _getTipsStorage() private pure returns (TipsStorage storage $) {
-        assembly {
-            $.slot := TipsStorageLocation
-        }
-    }
-
-    function __Tips_init() internal onlyInitializing {
+    function __Tips_init() internal {
         __Tips_init_unchained();
     }
 
-    function __Tips_init_unchained() internal onlyInitializing {
-    }
-
+    function __Tips_init_unchained() internal onlyInitializing {}
 
     function _addTip(uint256 tokenId, uint256 amount) internal override {
-        TipsStorage storage $ = _getTipsStorage();
-        // TODO change me
-        $._userTips[tokenId].tips += amount;
-        $._allTips += amount;
+        TipsLib.addTip(tokenId, amount);
     }
 
     function _tips(uint256 tokenId) internal view override returns (uint256) {
-        TipsStorage storage $ = _getTipsStorage();
-        return $._userTips[tokenId].tips;
+        return TipsLib.tips(tokenId);
     }
 
     function _allTips() internal view override returns (uint256) {
-        TipsStorage storage $ = _getTipsStorage();
-        return $._allTips;
+        return TipsLib.allTips();
     }
 
     function _claimedTips() internal view override returns (uint256) {
-        TipsStorage storage $ = _getTipsStorage();
-        return $._claimedTips;
+        return TipsLib.claimedTips();
     }
 
     function _claimableTips() internal view override returns (uint256) {
-        TipsStorage storage $ = _getTipsStorage();
-        return $._allTips - $._claimedTips;
+        return TipsLib.claimableTips();
     }
 
     function _claimTips() internal override returns (uint256 claimable) {
-        TipsStorage storage $ = _getTipsStorage();
-        claimable = $._allTips - $._claimedTips;
-        $._claimedTips = $._allTips;
+        return TipsLib.claimTips();
     }
 }
