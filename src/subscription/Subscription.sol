@@ -9,7 +9,7 @@ import {TimeAware} from "./TimeAware.sol";
 import {TokenIdProvider, HasTokenIdProvider} from "./TokenIdProvider.sol";
 import {Epochs, HasEpochs} from "./Epochs.sol";
 import {Rate, HasRate} from "./Rate.sol";
-import {UserData, HasUserData} from "./UserData.sol";
+import {UserData, HasUserData, MultiplierChange} from "./UserData.sol";
 import {Tips, HasTips} from "./Tips.sol";
 import {PaymentToken, HasPaymentToken} from "./PaymentToken.sol";
 import {MaxSupply, HasMaxSupply} from "./MaxSupply.sol";

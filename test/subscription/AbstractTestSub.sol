@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "../../src/subscription/Subscription.sol";
 import "../../src/subscription/Epochs.sol";
+import {SubData} from "../../src/subscription/UserData.sol";
 
 abstract contract TestSubEvents {
     event Burned(uint256 indexed tokenId);

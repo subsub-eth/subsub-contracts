@@ -9,20 +9,332 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
-import "forge-std/console.sol";
+/**
+ * @notice Change data
+ */
+struct MultiplierChange {
+    uint256 oldDepositAt;
+    uint256 oldAmount;
+    uint24 oldMultiplier;
+    uint256 reducedAmount;
+    uint256 newDepositAt;
+    uint256 newAmount;
+}
 
-abstract contract HasUserData {
-    struct SubData {
-        uint256 mintedAt; // mint date
-        uint256 streakStartedAt; // start of a new subscription streak (on mint / on renewal after expired)
-        uint256 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
-        // it remains untouched on withdrawals and tips
-        uint256 totalDeposited; // amount of tokens ever deposited
-        uint256 currentDeposit; // deposit since streakStartedAt, resets with streakStartedAt
-        uint256 lockedAmount; // amount of locked funds as of lastDepositAt
-        uint24 multiplier;
+struct SubData {
+    uint256 mintedAt; // mint date
+    uint256 streakStartedAt; // start of a new subscription streak (on mint / on renewal after expired)
+    uint256 lastDepositAt; // date of last deposit, counting only renewals of subscriptions
+    // it remains untouched on withdrawals and tips
+    uint256 totalDeposited; // amount of tokens ever deposited
+    uint256 currentDeposit; // deposit since streakStartedAt, resets with streakStartedAt
+    uint256 lockedAmount; // amount of locked funds as of lastDepositAt
+    uint24 multiplier;
+}
+
+library UserDataLib {
+    using SubLib for uint256;
+    using Math for uint256;
+
+    struct UserDataStorage {
+        // locked % of deposited amount
+        // 0 - 10000
+        uint24 _lock;
+        mapping(uint256 => SubData) _subData;
+        // amount of tips EVER sent to the contract, the value only increments
+        uint256 _allTips;
+        // amount of tips EVER claimed from the contract, the value only increments
+        uint256 _claimedTips;
     }
 
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.UserData")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant UserDataStorageLocation =
+        0x759c70339345f5b3443b65fe6ae2d943782a2a023089a4692e3f21ca7befef00;
+
+    function _getUserDataStorage() private pure returns (UserDataStorage storage $) {
+        assembly {
+            $.slot := UserDataStorageLocation
+        }
+    }
+
+    function init(uint24 lock_) internal {
+        UserDataStorage storage $ = _getUserDataStorage();
+        $._lock = lock_;
+    }
+
+    function lock() internal view returns (uint24) {
+        UserDataStorage storage $ = _getUserDataStorage();
+        return $._lock;
+    }
+
+    function isActive(uint256 tokenId, uint256 time, uint256 rate) internal view returns (bool) {
+        return time < expiresAt(tokenId, rate);
+    }
+
+    function expiresAt(uint256 tokenId, uint256 rate) internal view returns (uint256) {
+        // a subscription is active form the starting time slot (including)
+        // to the calculated ending time slot (excluding)
+        // active = [start, + deposit / (rate * multiplier))
+        UserDataStorage storage $ = _getUserDataStorage();
+        uint256 depositAt = $._subData[tokenId].streakStartedAt;
+        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
+
+        return depositAt + currentDeposit_.validFor(rate, $._subData[tokenId].multiplier);
+    }
+
+    function deleteSubscription(uint256 tokenId) internal {
+        UserDataStorage storage $ = _getUserDataStorage();
+        delete $._subData[tokenId];
+    }
+
+    function createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier_, uint256 time) internal {
+        UserDataStorage storage $ = _getUserDataStorage();
+        require($._subData[tokenId].mintedAt == 0, "Subscription already exists");
+
+        // set initially and never change
+        $._subData[tokenId].multiplier = multiplier_;
+        $._subData[tokenId].mintedAt = time;
+
+        // init new subscription streak
+        $._subData[tokenId].streakStartedAt = time;
+        $._subData[tokenId].lastDepositAt = time;
+        $._subData[tokenId].totalDeposited = amount;
+        $._subData[tokenId].currentDeposit = amount;
+
+        // set lockedAmount
+        // the locked amount is rounded down, it is in favor of the subscriber
+        $._subData[tokenId].lockedAmount = amount.asLocked($._lock);
+    }
+
+    function extendSubscription(uint256 tokenId, uint256 amount, uint256 time, uint256 rate)
+        internal
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
+    {
+        UserDataStorage storage $ = _getUserDataStorage();
+
+        oldDeposit = $._subData[tokenId].currentDeposit;
+
+        // TODO direct access
+        reactivated = time > expiresAt(tokenId, rate);
+        if (reactivated) {
+            // subscrption was expired and is being reactivated
+            newDeposit = amount;
+            // start new subscription streak
+            $._subData[tokenId].streakStartedAt = time;
+            $._subData[tokenId].lockedAmount = newDeposit.asLocked($._lock);
+        } else {
+            // extending active subscription
+            uint256 remainingDeposit = (
+                (oldDeposit * SubLib.MULTIPLIER_BASE)
+                // spent amount
+                - (((time - $._subData[tokenId].streakStartedAt) * (rate * $._subData[tokenId].multiplier)))
+            ) / SubLib.MULTIPLIER_BASE;
+
+            // deposit is counted from streakStartedAt
+            newDeposit = oldDeposit + amount;
+
+            // locked amount is counted from lastDepositAt
+            $._subData[tokenId].lockedAmount = (remainingDeposit + amount).asLocked($._lock);
+        }
+
+        $._subData[tokenId].currentDeposit = newDeposit;
+        $._subData[tokenId].lastDepositAt = time;
+        $._subData[tokenId].totalDeposited += amount;
+
+        depositedAt = $._subData[tokenId].streakStartedAt;
+    }
+
+    function withdrawableFromSubscription(uint256 tokenId, uint256 time, uint256 rate)
+        internal
+        view
+        returns (uint256)
+    {
+        if (!isActive(tokenId, time, rate)) {
+            return 0;
+        }
+
+        UserDataStorage storage $ = _getUserDataStorage();
+
+        uint256 lastDepositAt = $._subData[tokenId].lastDepositAt;
+        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit * SubLib.MULTIPLIER_BASE;
+
+        // locked + spent up until last deposit
+        uint256 lockedAmount = ($._subData[tokenId].lockedAmount * SubLib.MULTIPLIER_BASE)
+            + ((lastDepositAt - $._subData[tokenId].streakStartedAt) * (rate * $._subData[tokenId].multiplier));
+
+        // the current block is spent, thus +1
+        uint256 spentFunds = (1 + time - $._subData[tokenId].streakStartedAt) * (rate * $._subData[tokenId].multiplier);
+
+        // postpone rebasing to the last moment
+        return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (spentFunds).min(currentDeposit_))
+            / SubLib.MULTIPLIER_BASE;
+    }
+
+    /// @notice reduces the deposit amount of the existing subscription without changing the deposit time
+    function withdrawFromSubscription(uint256 tokenId, uint256 amount, uint256 time, uint256 rate)
+        internal
+        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit)
+    {
+        require(amount <= withdrawableFromSubscription(tokenId, time, rate), "Withdraw amount too large");
+
+        UserDataStorage storage $ = _getUserDataStorage();
+        oldDeposit = $._subData[tokenId].currentDeposit;
+        newDeposit = oldDeposit - amount;
+        $._subData[tokenId].currentDeposit = newDeposit;
+        $._subData[tokenId].totalDeposited -= amount;
+
+        // locked amount and last depositedAt remain unchanged
+
+        depositedAt = $._subData[tokenId].streakStartedAt;
+    }
+
+    function changeMultiplier(uint256 tokenId, uint24 newMultiplier, uint256 time, uint256 rate)
+        internal
+        returns (bool isActive_, MultiplierChange memory change)
+    {
+        isActive_ = isActive(tokenId, time, rate);
+
+        SubData storage subData = _getUserDataStorage()._subData[tokenId];
+        if (isActive_) {
+            // +1 as the current timeunit is already paid for using the current multiplier, thus the streak has to start at the next time unit
+            change = resetStreak(subData, time + 1, rate);
+        } else {
+            // export only old multiplier value
+            change.oldMultiplier = subData.multiplier;
+            // create a new streak with 0 funds
+            subData.streakStartedAt = time;
+            subData.lastDepositAt = time;
+            subData.currentDeposit = 0;
+            subData.lockedAmount = 0;
+        }
+
+        subData.multiplier = newMultiplier;
+    }
+
+    /**
+     * @notice ends the current streak of a given active subscription at the given time and starts a new streak. Unspent funds are moved to the new streak and the locked amount is reduced accordingly
+     * @dev the new streak starts at the following time unit after the given time. The amount of funds to transfer to the new streak is calculated based on the rate and the multiplier in the given sub data.
+     * @param subData sub to reset
+     * @param time time to reset to
+     * @return change info about the applied changes
+     */
+    function resetStreak(SubData storage subData, uint256 time, uint256 rate)
+        private
+        returns (MultiplierChange memory change)
+    {
+        // reset streakStartedAt
+        // reset lastDepositAt
+        // reduce currentDeposit according to spent
+        // reduce locked amount according to spent
+        uint256 spent_ = currentStreakSpent(subData, time, rate);
+
+        change.oldDepositAt = subData.streakStartedAt;
+        change.oldAmount = subData.currentDeposit;
+        change.oldMultiplier = subData.multiplier;
+
+        subData.streakStartedAt = time;
+        subData.lastDepositAt = time;
+        subData.currentDeposit -= spent_;
+        if (subData.lockedAmount < spent_) {
+            subData.lockedAmount = 0;
+        } else {
+            subData.lockedAmount -= spent_;
+        }
+
+        change.reducedAmount = spent_;
+        change.newDepositAt = time;
+        change.newAmount = subData.currentDeposit;
+    }
+
+    function spent(uint256 tokenId, uint256 time, uint256 rate) internal view returns (uint256, uint256) {
+        UserDataStorage storage $ = _getUserDataStorage();
+        uint256 totalDeposited_ = $._subData[tokenId].totalDeposited;
+
+        uint256 spentAmount;
+
+        if (!isActive(tokenId, time, rate)) {
+            spentAmount = totalDeposited_;
+        } else {
+            // +1 as we want to include the current timeunit
+            spentAmount = totalSpent($._subData[tokenId], time + 1, rate);
+        }
+
+        uint256 unspentAmount = totalDeposited_ - spentAmount;
+
+        return (spentAmount, unspentAmount);
+    }
+
+    /**
+     * @notice calculates the amount of funds spent in a currently active streak until the given time (excluding)
+     * @dev the active state of the sub is not tested
+     * @param subData active subscription
+     * @param time up until to calculate the spent amount
+     * @param rate the rate to apply
+     * @return amount of funds spent
+     */
+    function currentStreakSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
+        // postponed rebasing
+        return multipliedCurrentStreakSpent(subData, time, rate) / SubLib.MULTIPLIER_BASE;
+    }
+
+    /**
+     * @notice calculates the multiplied amount of funds spent in a currently active streak until the given time (excluding)
+     * @param subData active subscription
+     * @param time up until to calculate the spent amount
+     * @param rate the rate to apply
+     * @return amount of funds spent in an inflated, multiplied state
+     */
+    function multipliedCurrentStreakSpent(SubData storage subData, uint256 time, uint256 rate)
+        private
+        view
+        returns (uint256)
+    {
+        return ((time - subData.streakStartedAt) * rate * subData.multiplier);
+    }
+
+    /**
+     * @notice calculates the amount of funds spent in total in the given subscription
+     * @param subData subscription
+     * @param time up until to calculate the spent amount
+     * @param rate the rate to apply
+     * @return amount of funds spent in the subscription
+     */
+    function totalSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
+        uint256 currentDeposit = subData.currentDeposit * SubLib.MULTIPLIER_BASE;
+        uint256 spentAmount = ((subData.totalDeposited * SubLib.MULTIPLIER_BASE) - currentDeposit)
+            + multipliedCurrentStreakSpent(subData, time, rate);
+
+        // postponed rebasing
+        return spentAmount / SubLib.MULTIPLIER_BASE;
+    }
+
+    function totalDeposited(uint256 tokenId) internal view returns (uint256) {
+        UserDataStorage storage $ = _getUserDataStorage();
+        return $._subData[tokenId].totalDeposited;
+    }
+
+    function multiplier(uint256 tokenId) internal view returns (uint24) {
+        UserDataStorage storage $ = _getUserDataStorage();
+        return $._subData[tokenId].multiplier;
+    }
+
+    function lastDepositedAt(uint256 tokenId) internal view returns (uint256) {
+        UserDataStorage storage $ = _getUserDataStorage();
+        return $._subData[tokenId].lastDepositAt;
+    }
+
+    function getSubData(uint256 tokenId) internal view returns (SubData memory) {
+        UserDataStorage storage $ = _getUserDataStorage();
+        return $._subData[tokenId];
+    }
+
+    function setSubData(uint256 tokenId, SubData memory data) internal {
+        UserDataStorage storage $ = _getUserDataStorage();
+        $._subData[tokenId] = data;
+    }
+}
+
+abstract contract HasUserData {
     /**
      * @notice the percentage of unspent funds that are locked on a subscriber deposit
      * @return the percentage of unspent funds being locked on subscriber deposit
@@ -99,19 +411,6 @@ abstract contract HasUserData {
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit);
 
     /**
-     * @notice Change data
-     *
-     */
-    struct MultiplierChange {
-        uint256 oldDepositAt;
-        uint256 oldAmount;
-        uint24 oldMultiplier;
-        uint256 reducedAmount;
-        uint256 newDepositAt;
-        uint256 newAmount;
-    }
-
-    /**
      * @notice changes the multiplier of a subscription by ending the current streak, if any, and starting a new one with the new multiplier
      * @dev the subscription may be expired
      * @param tokenId subscription identifier
@@ -167,83 +466,32 @@ abstract contract HasUserData {
 }
 
 abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
-    using SubLib for uint256;
-    using Math for uint256;
-
-    struct UserDataStorage {
-        // locked % of deposited amount
-        // 0 - 10000
-        uint24 _lock;
-        mapping(uint256 => SubData) _subData;
-        // amount of tips EVER sent to the contract, the value only increments
-        uint256 _allTips;
-        // amount of tips EVER claimed from the contract, the value only increments
-        uint256 _claimedTips;
-    }
-
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.UserData")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant UserDataStorageLocation =
-        0x759c70339345f5b3443b65fe6ae2d943782a2a023089a4692e3f21ca7befef00;
-
-    function _getUserDataStorage() private pure returns (UserDataStorage storage $) {
-        assembly {
-            $.slot := UserDataStorageLocation
-        }
-    }
-
-    function __UserData_init(uint24 lock) internal onlyInitializing {
+    function __UserData_init(uint24 lock) internal {
         __UserData_init_unchained(lock);
     }
 
     function __UserData_init_unchained(uint24 lock) internal onlyInitializing {
-        UserDataStorage storage $ = _getUserDataStorage();
-        $._lock = lock;
+        UserDataLib.init(lock);
     }
 
     function _lock() internal view override returns (uint24) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._lock;
+        return UserDataLib.lock();
     }
 
     function _isActive(uint256 tokenId) internal view override returns (bool) {
-        return _now() < _expiresAt(tokenId);
+        return UserDataLib.isActive(tokenId, _now(), _rate());
     }
 
     function _expiresAt(uint256 tokenId) internal view override returns (uint256) {
-        // a subscription is active form the starting time slot (including)
-        // to the calculated ending time slot (excluding)
-        // active = [start, + deposit / (rate * multiplier))
-        UserDataStorage storage $ = _getUserDataStorage();
-        uint256 depositAt = $._subData[tokenId].streakStartedAt;
-        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit;
-
-        return depositAt + currentDeposit_.validFor(_rate(), $._subData[tokenId].multiplier);
+        return UserDataLib.expiresAt(tokenId, _rate());
     }
 
     function _deleteSubscription(uint256 tokenId) internal override {
-        UserDataStorage storage $ = _getUserDataStorage();
-        delete $._subData[tokenId];
+        return UserDataLib.deleteSubscription(tokenId);
     }
 
     function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal override {
-        uint256 now_ = _now();
-
-        UserDataStorage storage $ = _getUserDataStorage();
-        require($._subData[tokenId].mintedAt == 0, "Subscription already exists");
-
-        // set initially and never change
-        $._subData[tokenId].multiplier = multiplier;
-        $._subData[tokenId].mintedAt = now_;
-
-        // init new subscription streak
-        $._subData[tokenId].streakStartedAt = now_;
-        $._subData[tokenId].lastDepositAt = now_;
-        $._subData[tokenId].totalDeposited = amount;
-        $._subData[tokenId].currentDeposit = amount;
-
-        // set lockedAmount
-        // the locked amount is rounded down, it is in favor of the subscriber
-        $._subData[tokenId].lockedAmount = amount.asLocked($._lock);
+        UserDataLib.createSubscription(tokenId, amount, multiplier, _now());
     }
 
     function _extendSubscription(uint256 tokenId, uint256 amount)
@@ -251,81 +499,20 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         override
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
     {
-        uint256 now_ = _now();
-        UserDataStorage storage $ = _getUserDataStorage();
-
-        oldDeposit = $._subData[tokenId].currentDeposit;
-
-        // TODO direct access
-        reactivated = now_ > _expiresAt(tokenId);
-        if (reactivated) {
-            // subscrption was expired and is being reactivated
-            newDeposit = amount;
-            // start new subscription streak
-            $._subData[tokenId].streakStartedAt = now_;
-            $._subData[tokenId].lockedAmount = newDeposit.asLocked($._lock);
-        } else {
-            // extending active subscription
-            uint256 remainingDeposit = (
-                (oldDeposit * SubLib.MULTIPLIER_BASE)
-                // spent amount
-                - (((now_ - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier)))
-            ) / SubLib.MULTIPLIER_BASE;
-
-            // deposit is counted from streakStartedAt
-            newDeposit = oldDeposit + amount;
-
-            // locked amount is counted from lastDepositAt
-            $._subData[tokenId].lockedAmount = (remainingDeposit + amount).asLocked($._lock);
-        }
-
-        $._subData[tokenId].currentDeposit = newDeposit;
-        $._subData[tokenId].lastDepositAt = now_;
-        $._subData[tokenId].totalDeposited += amount;
-
-        depositedAt = $._subData[tokenId].streakStartedAt;
+        (depositedAt, oldDeposit, newDeposit, reactivated) =
+            UserDataLib.extendSubscription(tokenId, amount, _now(), _rate());
     }
 
     function _withdrawableFromSubscription(uint256 tokenId) internal view override returns (uint256) {
-        if (!_isActive(tokenId)) {
-            return 0;
-        }
-
-        UserDataStorage storage $ = _getUserDataStorage();
-
-        uint256 lastDepositAt = $._subData[tokenId].lastDepositAt;
-        uint256 currentDeposit_ = $._subData[tokenId].currentDeposit * SubLib.MULTIPLIER_BASE;
-
-        // locked + spent up until last deposit
-        uint256 lockedAmount = ($._subData[tokenId].lockedAmount * SubLib.MULTIPLIER_BASE)
-            + ((lastDepositAt - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier));
-
-        // the current block is spent, thus +1
-        uint256 spentFunds =
-            (1 + _now() - $._subData[tokenId].streakStartedAt) * (_rate() * $._subData[tokenId].multiplier);
-
-        // postpone rebasing to the last moment
-        return (currentDeposit_ - lockedAmount).min(currentDeposit_ - (spentFunds).min(currentDeposit_))
-            / SubLib.MULTIPLIER_BASE;
+        return UserDataLib.withdrawableFromSubscription(tokenId, _now(), _rate());
     }
 
-    /// @notice reduces the deposit amount of the existing subscription without changing the deposit time
     function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
         internal
         override
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit)
     {
-        require(amount <= _withdrawableFromSubscription(tokenId), "Withdraw amount too large");
-
-        UserDataStorage storage $ = _getUserDataStorage();
-        oldDeposit = $._subData[tokenId].currentDeposit;
-        newDeposit = oldDeposit - amount;
-        $._subData[tokenId].currentDeposit = newDeposit;
-        $._subData[tokenId].totalDeposited -= amount;
-
-        // locked amount and last depositedAt remain unchanged
-
-        depositedAt = $._subData[tokenId].streakStartedAt;
+        (depositedAt, oldDeposit, newDeposit) = UserDataLib.withdrawFromSubscription(tokenId, amount, _now(), _rate());
     }
 
     function _changeMultiplier(uint256 tokenId, uint24 newMultiplier)
@@ -334,142 +521,30 @@ abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
         override
         returns (bool isActive, MultiplierChange memory change)
     {
-        isActive = _isActive(tokenId);
-
-        SubData storage subData = _getUserDataStorage()._subData[tokenId];
-        uint256 now_ = _now();
-        if (isActive) {
-            // +1 as the current timeunit is already paid for using the current multiplier, thus the streak has to start at the next time unit
-            change = resetStreak(subData, now_ + 1);
-        } else {
-            // export only old multiplier value
-            change.oldMultiplier = subData.multiplier;
-            // create a new streak with 0 funds
-            subData.streakStartedAt = now_;
-            subData.lastDepositAt = now_;
-            subData.currentDeposit = 0;
-            subData.lockedAmount = 0;
-        }
-
-        subData.multiplier = newMultiplier;
+        (isActive, change) = UserDataLib.changeMultiplier(tokenId, newMultiplier, _now(), _rate());
     }
 
-    /**
-     * @notice ends the current streak of a given active subscription at the given time and starts a new streak. Unspent funds are moved to the new streak and the locked amount is reduced accordingly
-     * @dev the new streak starts at the following time unit after the given time. The amount of funds to transfer to the new streak is calculated based on the rate and the multiplier in the given sub data.
-     * @param subData sub to reset
-     * @param time time to reset to
-     * @return change info about the applied changes
-     */
-    function resetStreak(SubData storage subData, uint256 time) private returns (MultiplierChange memory change) {
-        // reset streakStartedAt
-        // reset lastDepositAt
-        // reduce currentDeposit according to spent
-        // reduce locked amount according to spent
-        uint256 spent = currentStreakSpent(subData, time, _rate());
-
-        change.oldDepositAt = subData.streakStartedAt;
-        change.oldAmount = subData.currentDeposit;
-        change.oldMultiplier = subData.multiplier;
-
-        subData.streakStartedAt = time;
-        subData.lastDepositAt = time;
-        subData.currentDeposit -= spent;
-        if (subData.lockedAmount < spent) {
-            subData.lockedAmount = 0;
-        } else {
-            subData.lockedAmount -= spent;
-        }
-
-        change.reducedAmount = spent;
-        change.newDepositAt = time;
-        change.newAmount = subData.currentDeposit;
-    }
-
-    function _spent(uint256 tokenId) internal view override returns (uint256, uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        uint256 totalDeposited = $._subData[tokenId].totalDeposited;
-
-        uint256 spentAmount;
-
-        if (!_isActive(tokenId)) {
-            spentAmount = totalDeposited;
-        } else {
-            // +1 as we want to include the current timeunit
-            spentAmount = totalSpent($._subData[tokenId], _now() + 1, _rate());
-        }
-
-        uint256 unspentAmount = totalDeposited - spentAmount;
-
-        return (spentAmount, unspentAmount);
-    }
-
-    /**
-     * @notice calculates the amount of funds spent in a currently active streak until the given time (excluding)
-     * @dev the active state of the sub is not tested
-     * @param subData active subscription
-     * @param time up until to calculate the spent amount
-     * @param rate the rate to apply
-     * @return amount of funds spent
-     */
-    function currentStreakSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
-        // postponed rebasing
-        return multipliedCurrentStreakSpent(subData, time, rate) / SubLib.MULTIPLIER_BASE;
-    }
-
-    /**
-     * @notice calculates the multiplied amount of funds spent in a currently active streak until the given time (excluding)
-     * @param subData active subscription
-     * @param time up until to calculate the spent amount
-     * @param rate the rate to apply
-     * @return amount of funds spent in an inflated, multiplied state
-     */
-    function multipliedCurrentStreakSpent(SubData storage subData, uint256 time, uint256 rate)
-        private
-        view
-        returns (uint256)
-    {
-        return ((time - subData.streakStartedAt) * rate * subData.multiplier);
-    }
-
-    /**
-     * @notice calculates the amount of funds spent in total in the given subscription
-     * @param subData subscription
-     * @param time up until to calculate the spent amount
-     * @param rate the rate to apply
-     * @return amount of funds spent in the subscription
-     */
-    function totalSpent(SubData storage subData, uint256 time, uint256 rate) private view returns (uint256) {
-        uint256 currentDeposit = subData.currentDeposit * SubLib.MULTIPLIER_BASE;
-        uint256 spentAmount = ((subData.totalDeposited * SubLib.MULTIPLIER_BASE) - currentDeposit)
-        + multipliedCurrentStreakSpent(subData, time, rate);
-
-        // postponed rebasing
-        return spentAmount / SubLib.MULTIPLIER_BASE;
+    function _spent(uint256 tokenId) internal view override returns (uint256 spentAmount, uint256 unspentAmount) {
+        (spentAmount, unspentAmount) = UserDataLib.spent(tokenId, _now(), _rate());
     }
 
     function _totalDeposited(uint256 tokenId) internal view override returns (uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._subData[tokenId].totalDeposited;
+        return UserDataLib.totalDeposited(tokenId);
     }
 
     function _multiplier(uint256 tokenId) internal view override returns (uint24) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._subData[tokenId].multiplier;
+        return UserDataLib.multiplier(tokenId);
     }
 
     function _lastDepositedAt(uint256 tokenId) internal view override returns (uint256) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._subData[tokenId].lastDepositAt;
+        return UserDataLib.lastDepositedAt(tokenId);
     }
 
     function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {
-        UserDataStorage storage $ = _getUserDataStorage();
-        return $._subData[tokenId];
+        return UserDataLib.getSubData(tokenId);
     }
 
     function _setSubData(uint256 tokenId, SubData memory data) internal {
-        UserDataStorage storage $ = _getUserDataStorage();
-        $._subData[tokenId] = data;
+        UserDataLib.setSubData(tokenId, data);
     }
 }

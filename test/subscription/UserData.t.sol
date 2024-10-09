@@ -857,7 +857,7 @@ contract UserDataTest is Test {
     }
 
     function testChangeMultiplier(uint256 t) public {
-        HasUserData.SubData memory od = HasUserData.SubData({
+        SubData memory od = SubData({
             mintedAt: 10,
             streakStartedAt: 100,
             lastDepositAt: 100,
@@ -875,7 +875,7 @@ contract UserDataTest is Test {
 
         uint24 newMulti = 200;
 
-        (bool isActive, HasUserData.MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        (bool isActive, MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
         assertTrue(isActive, "sub not active");
         assertEq(changed.oldDepositAt, od.streakStartedAt, "changed: old deposit at");
         assertEq(changed.oldAmount, od.currentDeposit, "changed: old amount");
@@ -884,7 +884,7 @@ contract UserDataTest is Test {
         assertEq(changed.newDepositAt, t1, "changed: new deposit at");
         assertEq(changed.newAmount, od.currentDeposit - (tt * rate), "changed: new amount");
 
-        HasUserData.SubData memory subData = sd.getSubData(tokenId);
+        SubData memory subData = sd.getSubData(tokenId);
 
         assertEq(subData.multiplier, newMulti, "multiplier changed");
         assertEq(subData.mintedAt, od.mintedAt, "mintedAd unchanged");
@@ -896,7 +896,7 @@ contract UserDataTest is Test {
     }
 
     function testChangeMultiplier_expiringBlock() public {
-        HasUserData.SubData memory od = HasUserData.SubData({
+        SubData memory od = SubData({
             mintedAt: 10,
             streakStartedAt: 100,
             lastDepositAt: 100,
@@ -913,7 +913,7 @@ contract UserDataTest is Test {
 
         uint24 newMulti = 200;
 
-        (bool isActive, HasUserData.MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        (bool isActive, MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
         assertTrue(isActive, "sub not active");
         assertEq(changed.oldDepositAt, od.streakStartedAt, "changed: old deposit at");
         assertEq(changed.oldAmount, od.currentDeposit, "changed: old amount");
@@ -922,7 +922,7 @@ contract UserDataTest is Test {
         assertEq(changed.newDepositAt, t1, "changed: new deposit at");
         assertEq(changed.newAmount, 3, "changed: new amount");
 
-        HasUserData.SubData memory subData = sd.getSubData(tokenId);
+        SubData memory subData = sd.getSubData(tokenId);
 
         assertEq(subData.multiplier, newMulti, "multiplier changed");
         assertEq(subData.mintedAt, od.mintedAt, "mintedAd unchanged");
@@ -934,7 +934,7 @@ contract UserDataTest is Test {
     }
 
     function testChangeMultiplier_inactive() public {
-        HasUserData.SubData memory od = HasUserData.SubData({
+        SubData memory od = SubData({
             mintedAt: 10,
             streakStartedAt: 100,
             lastDepositAt: 100,
@@ -950,7 +950,7 @@ contract UserDataTest is Test {
 
         uint24 newMulti = 200;
 
-        (bool isActive, HasUserData.MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
+        (bool isActive, MultiplierChange memory changed) = sd.changeMultiplier(tokenId, newMulti);
         assertFalse(isActive, "sub not active");
         assertEq(changed.oldDepositAt, 0, "changed: old deposit at");
         assertEq(changed.oldAmount, 0, "changed: old amount");
@@ -959,7 +959,7 @@ contract UserDataTest is Test {
         assertEq(changed.newDepositAt, 0, "changed: new deposit at");
         assertEq(changed.newAmount, 0, "changed: new amount");
 
-        HasUserData.SubData memory subData = sd.getSubData(tokenId);
+        SubData memory subData = sd.getSubData(tokenId);
 
         assertEq(subData.multiplier, newMulti, "multiplier changed");
         assertEq(subData.mintedAt, od.mintedAt, "mintedAd unchanged");
