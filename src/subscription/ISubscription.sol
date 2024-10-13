@@ -106,10 +106,20 @@ interface SubscriptionMetadata {
 }
 
 /**
- * @title Subscription subscribable view
- * @notice provides methods for subscribers to manage their subscriptions
+ * @title Subscription depositable view
+ * @notice provides methods for subscribers to deposit funds into their subscription
  */
-interface Subscribable is SubscriptionEvents {
+interface Depositable is SubscriptionEvents, IERC4906 {
+    /**
+     * @notice Mints a new subscription and adds funds to it. The multiplier cannot be changed after this point
+     * @dev the multiplier is set on creation and cannot be changed
+     * @param amount amount of payment tokens to add
+     * @param multiplier multiplier to set for this subscription. The multiplier is applied to the rate. Value can range from 100 (1x) to 10_000 (10x)
+     * @param message message that is emitted on a successful renewal
+     * @return the token id of the new subscription
+     */
+    function mint(uint256 amount, uint24 multiplier, string calldata message) external payable returns (uint256);
+
     /**
      * @notice Adds funds to an existing subscription and extends it
      * @param tokenId id of the subscription token
@@ -119,27 +129,21 @@ interface Subscribable is SubscriptionEvents {
     function renew(uint256 tokenId, uint256 amount, string calldata message) external payable;
 
     /**
-     * @notice Removes withdrawable funds from an active subscription and reduces the subscription time
-     * @dev amount is based on the payment token decimals
-     * @param tokenId id of the subscription token
-     * @param amount amount of payment tokens to remove
-     */
-    function withdraw(uint256 tokenId, uint256 amount) external;
-
-    /**
-     * @notice Removes all withdrawable funds from an active subscription and reduces the subscription time to a minimum
-     * @notice this method should be used to remove all possible funds as the withdrawable amount shrinks with each time unit and can cause reverts
-     * @param tokenId id of the subscription token
-     */
-    function cancel(uint256 tokenId) external;
-
-    /**
      * @notice changes the mutliplier of a given subscription
      * @notice the current subscription streak, if any, is ended and a new streak with the new multiplier is started
      * @param tokenId id of the subscription token
      * @param multiplier the new multiplier to apply
      */
     function changeMultiplier(uint256 tokenId, uint24 multiplier) external;
+
+    /**
+     * @notice Adds a tip to the given subscription, the sent amount does not extend the subscription, but increases the tip counter
+     * @dev amount is based on the payment token decimals
+     * @param tokenId id of the subscription token
+     * @param amount amount of payment tokens to add as a tip
+     * @param message message that is emitted on a successful renewal
+     */
+    function tip(uint256 tokenId, uint256 amount, string calldata message) external payable;
 
     /**
      * @notice Checks if a subscription is still valid
@@ -189,27 +193,10 @@ interface Subscribable is SubscriptionEvents {
 
     /**
      * @notice Queries the amount of deposited funds that can be withdrawn from an active subscription
-     * @dev The amount of unspent fund that are not locked
-     * @param tokenId id of the subscription token
-     * @return the amount of funds that can be withdrawn
-     */
-    function withdrawable(uint256 tokenId) external view returns (uint256);
-
-    /**
-     * @notice Queries the amount of deposited funds that can be withdrawn from an active subscription
      * @dev The amount of unspent funds that are not locked
      *  @return the amount of funds that can be withdrawn
      */
     function activeSubShares() external view returns (uint256);
-
-    /**
-     * @notice Adds a tip to the given subscription, the sent amount does not extend the subscription, but increases the tip counter
-     * @dev amount is based on the payment token decimals
-     * @param tokenId id of the subscription token
-     * @param amount amount of payment tokens to add as a tip
-     * @param message message that is emitted on a successful renewal
-     */
-    function tip(uint256 tokenId, uint256 amount, string calldata message) external payable;
 
     /**
      * @notice Queries the amount of tipped funds
@@ -217,6 +204,41 @@ interface Subscribable is SubscriptionEvents {
      *  @return the amount of tipped funds
      */
     function tips(uint256 tokenId) external view returns (uint256);
+}
+
+/**
+ * @title Subscription withdrawable view
+ * @notice provides methods for subscribers to withdraw funds from their subscription
+ */
+interface Withdrawable is SubscriptionEvents, IERC4906 {
+    /**
+     * @notice Removes withdrawable funds from an active subscription and reduces the subscription time
+     * @dev amount is based on the payment token decimals
+     * @param tokenId id of the subscription token
+     * @param amount amount of payment tokens to remove
+     */
+    function withdraw(uint256 tokenId, uint256 amount) external;
+
+    /**
+     * @notice Removes all withdrawable funds from an active subscription and reduces the subscription time to a minimum
+     * @notice this method should be used to remove all possible funds as the withdrawable amount shrinks with each time unit and can cause reverts
+     * @param tokenId id of the subscription token
+     */
+    function cancel(uint256 tokenId) external;
+
+    /**
+     * @notice Queries the amount of deposited funds that can be withdrawn from an active subscription
+     * @dev The amount of unspent fund that are not locked
+     * @param tokenId id of the subscription token
+     * @return the amount of funds that can be withdrawn
+     */
+    function withdrawable(uint256 tokenId) external view returns (uint256);
+
+    /**
+     * @notice "Burns" a subscription token, deletes all achieved subscription data and does not withdraw any withdrawable funds
+     * @param tokenId token to burn
+     */
+    function burn(uint256 tokenId) external;
 }
 
 /**
@@ -300,6 +322,23 @@ interface Claimable is ClaimEvents {
     function claimedTips() external view returns (uint256);
 }
 
+interface SubscriptionProperties {
+    function settings()
+        external
+        view
+        returns (address token, uint256 rate, uint24 lock, uint256 epochSize, uint256 maxSupply_);
+
+    function epochState() external view returns (uint256 currentEpoch, uint256 lastProcessedEpoch);
+
+    function setFlags(uint256 flags) external;
+
+    function setDescription(string calldata _description) external;
+
+    function setImage(string calldata _image) external;
+
+    function setExternalUrl(string calldata _externalUrl) external;
+}
+
 /**
  * @title Flag settings
  * @notice constants relating to flags
@@ -310,28 +349,6 @@ abstract contract SubscriptionFlags {
     uint256 public constant TIPPING_PAUSED = 0x4;
 
     uint256 public constant ALL_FLAGS = 0x7;
-}
-
-/**
- * @title Subscription Creation
- * @notice contains methods related to minting and burning
- */
-interface SubscriptionCreation {
-    /**
-     * @notice Mints a new subscription and adds funds to it. The multiplier cannot be changed after this point
-     * @dev the multiplier is set on creation and cannot be changed
-     * @param amount amount of payment tokens to add
-     * @param multiplier multiplier to set for this subscription. The multiplier is applied to the rate. Value can range from 100 (1x) to 10_000 (10x)
-     * @param message message that is emitted on a successful renewal
-     * @return the token id of the new subscription
-     */
-    function mint(uint256 amount, uint24 multiplier, string calldata message) external payable returns (uint256);
-
-    /**
-     * @notice "Burns" a subscription token, deletes all achieved subscription data and does not withdraw any withdrawable funds
-     * @param tokenId token to burn
-     */
-    function burn(uint256 tokenId) external;
 }
 
 /**
@@ -355,9 +372,9 @@ interface ISubscription is
     IERC721Metadata,
     IERC721Enumerable,
     IERC4906,
-    Subscribable,
+    Depositable,
     Claimable,
-    SubscriptionCreation,
+    Withdrawable,
     SubscriptionMetadata,
     SubscriptionInitialize
 {}

@@ -10,7 +10,7 @@ import {ERC721Mock} from "./ERC721Mock.sol";
  * @notice THIS IS A WORK IN PROGRESS, MAKE CHANGES AND ADDITIONS AS NEEDED
  *
  */
-contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
+contract SubscriptionMock is Depositable, Withdrawable, ERC721Mock {
     mapping(uint256 => uint256) private _spentAmounts;
 
     constructor() ERC721Mock("test", "test") {}
@@ -58,7 +58,7 @@ contract SubscriptionMock is Subscribable, SubscriptionCreation, ERC721Mock {
 
     /// @notice "Burns" a subscription token, deletes all achieved subscription
     ///         data and does not withdraw any withdrawable funds
-    function burn(uint256 tokenId) public override(SubscriptionCreation, ERC721Mock) {
+    function burn(uint256 tokenId) public override(Withdrawable, ERC721Mock) {
         super.burn(tokenId);
     }
 }

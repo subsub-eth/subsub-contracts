@@ -39,7 +39,7 @@ abstract contract HasTokenIdProvider {
 }
 
 abstract contract TokenIdProvider is Initializable, HasTokenIdProvider {
-    function __TokenIdProvider_init(uint256 tokenId) internal onlyInitializing {
+    function __TokenIdProvider_init(uint256 tokenId) internal {
         __TokenIdProvider_init_unchained(tokenId);
     }
 
