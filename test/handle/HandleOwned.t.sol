@@ -4,7 +4,11 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/handle/HandleOwned.sol";
 
+import {OzContext} from "../../src/dependency/OzContext.sol";
+
 import {ERC721Mock} from "../mocks/ERC721Mock.sol";
+
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
 
 contract ValidSigner {
     bool private isSigner;
@@ -25,7 +29,7 @@ contract ValidSigner {
 
 contract TestDummy {}
 
-contract TestHandleOwned is HandleOwned {
+contract TestHandleOwned is ContextUpgradeable, HandleOwned {
     constructor(address handleContract) HandleOwned(handleContract) {}
 
     function checkOwner() public view {
@@ -37,6 +41,13 @@ contract TestHandleOwned is HandleOwned {
     }
 
     function protected() public view onlyOwner {}
+
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
+    }
 }
 
 contract HandleOwnedTest is Test, HandleOwnedErrors {

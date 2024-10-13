@@ -6,13 +6,24 @@ import "./IBadge.sol";
 import {MintAllowedUpgradeable} from "../MintAllowedUpgradeable.sol";
 import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
 
+import {OzContext} from "../dependency/OzContext.sol";
+
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+
 import {ERC1155Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/ERC1155Upgradeable.sol";
 import {ERC1155BurnableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155BurnableUpgradeable.sol";
 import {ERC1155SupplyUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
-contract Badge is IBadge, ERC1155SupplyUpgradeable, ERC1155BurnableUpgradeable, HandleOwned, MintAllowedUpgradeable {
+contract Badge is
+    ContextUpgradeable,
+    IBadge,
+    ERC1155SupplyUpgradeable,
+    ERC1155BurnableUpgradeable,
+    HandleOwned,
+    MintAllowedUpgradeable
+{
     struct BadgeStorage {
         mapping(uint256 => TokenData) _tokenData;
         uint256 _nextId;
@@ -127,5 +138,13 @@ contract Badge is IBadge, ERC1155SupplyUpgradeable, ERC1155BurnableUpgradeable, 
         override(ERC1155SupplyUpgradeable, ERC1155Upgradeable)
     {
         super._update(from, to, ids, values);
+    }
+
+
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
     }
 }

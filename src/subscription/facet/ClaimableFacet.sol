@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+
 import {SubLib} from "../SubLib.sol";
+
+import {OzContext} from "../../dependency/OzContext.sol";
 
 import {Claimable, SubscriptionFlags} from "../ISubscription.sol";
 
@@ -73,6 +77,7 @@ abstract contract AbstractClaimableFacet is
 }
 
 contract ClaimableFacet is
+    ContextUpgradeable,
     TimestampTimeAware,
     Rate,
     PaymentToken,
@@ -85,5 +90,12 @@ contract ClaimableFacet is
 
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
+    }
+
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
     }
 }

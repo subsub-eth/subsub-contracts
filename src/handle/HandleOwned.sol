@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
-import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
-
 import {IERC6551Account} from "erc6551/interfaces/IERC6551Account.sol";
+
+import {OzContext} from "../dependency/OzContext.sol";
 
 interface HandleOwnedErrors {
     error UnauthorizedAccount(address account);
@@ -23,7 +23,7 @@ abstract contract HasHandleOwned is HandleOwnedErrors {
     function owner() public view virtual returns (address);
 }
 
-abstract contract HandleOwned is ContextUpgradeable, HasHandleOwned {
+abstract contract HandleOwned is OzContext, HasHandleOwned {
     address private immutable _handleContract;
 
     constructor(address handleContract) {

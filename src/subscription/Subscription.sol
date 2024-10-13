@@ -18,7 +18,10 @@ import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
 
 import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 
+import {OzContext} from "../dependency/OzContext.sol";
+
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
@@ -378,6 +381,7 @@ abstract contract Subscription is
 }
 
 abstract contract DefaultSubscription is
+    ContextUpgradeable,
     MaxSupply,
     TokenIdProvider,
     Metadata,
@@ -417,5 +421,12 @@ abstract contract DefaultSubscription is
         __MaxSupply_init_unchained(_settings.maxSupply);
         __TokenIdProvider_init_unchained(0);
         __Metadata_init_unchained(_metadata.description, _metadata.image, _metadata.externalUrl);
+    }
+
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
     }
 }

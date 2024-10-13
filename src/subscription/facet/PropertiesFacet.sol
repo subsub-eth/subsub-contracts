@@ -20,6 +20,8 @@ import {MaxSupply, HasMaxSupply} from "../MaxSupply.sol";
 import {TimestampTimeAware} from "../TimeAware.sol";
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 
+import {OzContext} from "../../dependency/OzContext.sol";
+
 abstract contract AbstractPropertiesFacet is
 // Initializable,
     HasMaxSupply,
@@ -72,7 +74,7 @@ abstract contract PropertiesFacet is
     // Validation,
     // Initializable,
     // Validation,
-    // ContextUpgradeable,
+    ContextUpgradeable,
     // Validation,
     // ERC721EnumerableUpgradeable,
     ERC721Upgradeable,
@@ -91,5 +93,12 @@ abstract contract PropertiesFacet is
 
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
+    }
+
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
     }
 }
