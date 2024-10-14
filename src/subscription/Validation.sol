@@ -8,6 +8,9 @@ import {ERC721EnumerableUpgradeable} from
 
 import {SubLib} from "./SubLib.sol";
 
+import {OzContext} from "../dependency/OzContext.sol";
+import {OzERC721Enumerable} from "../dependency/OzERC721Enumerable.sol";
+
 import {SubscriptionFlags} from "./ISubscription.sol";
 
 library BaseSubscriptionLib {}
@@ -24,9 +27,9 @@ abstract contract HasValidation {
 }
 
 abstract contract Validation is
-    Initializable,
+    OzContext,
+    OzERC721Enumerable,
     HasValidation,
-    ERC721EnumerableUpgradeable,
     SubscriptionFlags
 {
     modifier requireExists(uint256 tokenId) virtual override {

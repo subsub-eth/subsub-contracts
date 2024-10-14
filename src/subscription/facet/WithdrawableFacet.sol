@@ -3,6 +3,9 @@ pragma solidity ^0.8.20;
 
 import {SubLib} from "../SubLib.sol";
 
+import {OzContext} from "../../dependency/OzContext.sol";
+import {OzERC721Enumerable} from "../../dependency/OzERC721Enumerable.sol";
+
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 import {Withdrawable, SubscriptionFlags} from "../ISubscription.sol";
 
@@ -16,6 +19,10 @@ import {HasBaseSubscription, BaseSubscription} from "../BaseSubscription.sol";
 import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+
+import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
@@ -83,4 +90,49 @@ contract WithdrawableFacet is
     Validation,
     BaseSubscription,
     AbstractWithdrawableFacet
-{}
+{
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
+    }
+
+    function _safeMint(address to, uint256 tokenId, bytes memory data)
+        internal
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+    {
+        ERC721Upgradeable._safeMint(to, tokenId, data);
+    }
+
+    function totalSupply()
+        public
+        view
+        virtual
+        override(ERC721EnumerableUpgradeable, OzERC721Enumerable)
+        returns (uint256)
+    {
+        return ERC721EnumerableUpgradeable.totalSupply();
+    }
+
+    function _ownerOf(uint256 tokenId)
+        internal
+        view
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+        returns (address)
+    {
+        return ERC721Upgradeable._ownerOf(tokenId);
+    }
+
+    function _isAuthorized(address owner, address spender, uint256 tokenId)
+        internal
+        view
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+        returns (bool)
+    {
+        return ERC721Upgradeable._isAuthorized(owner, spender, tokenId);
+    }
+}

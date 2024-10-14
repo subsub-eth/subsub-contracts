@@ -17,12 +17,21 @@ import {HasValidation, Validation} from "../Validation.sol";
 import {HasBaseSubscription, BaseSubscription} from "../BaseSubscription.sol";
 import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
 
+import {OzContext} from "../../dependency/OzContext.sol";
+import {OzERC721Enumerable} from "../../dependency/OzERC721Enumerable.sol";
+
+
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 abstract contract AbstractDepositableFacet is
     Initializable,
+    OzContext,
+    OzERC721Enumerable,
     HasValidation,
     HasBaseSubscription,
     HasMaxSupply,
@@ -33,7 +42,6 @@ abstract contract AbstractDepositableFacet is
     HasRate,
     HasUserData,
     HasEpochs,
-    ERC721EnumerableUpgradeable,
     HasFlagSettings,
     SubscriptionFlags,
     Depositable
@@ -63,7 +71,7 @@ abstract contract AbstractDepositableFacet is
         // we transfer the ORIGINAL amount into the contract, claiming any overflows / dust
         _paymentTokenReceive(msg.sender, amount);
 
-        _safeMint(msg.sender, tokenId);
+        _safeMint(msg.sender, tokenId, "");
 
         emit SubscriptionRenewed(tokenId, amount, _msgSender(), _totalDeposited(tokenId), message);
 
@@ -184,5 +192,51 @@ contract DepositableFacet is
     FlagSettings,
     Validation,
     BaseSubscription,
+    ERC721EnumerableUpgradeable,
     AbstractDepositableFacet
-{}
+{
+    /**
+     * Interface late bindings
+     */
+    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
+        return ContextUpgradeable._msgSender();
+    }
+
+    function _safeMint(address to, uint256 tokenId, bytes memory data)
+        internal
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+    {
+        ERC721Upgradeable._safeMint(to, tokenId, data);
+    }
+
+    function totalSupply()
+        public
+        view
+        virtual
+        override(ERC721EnumerableUpgradeable, OzERC721Enumerable)
+        returns (uint256)
+    {
+        return ERC721EnumerableUpgradeable.totalSupply();
+    }
+
+    function _ownerOf(uint256 tokenId)
+        internal
+        view
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+        returns (address)
+    {
+        return ERC721Upgradeable._ownerOf(tokenId);
+    }
+
+    function _isAuthorized(address owner, address spender, uint256 tokenId)
+        internal
+        view
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+        returns (bool)
+    {
+        return ERC721Upgradeable._isAuthorized(owner, spender, tokenId);
+    }
+}
