@@ -17,19 +17,15 @@ library SubLib {
 
     uint8 internal constant INTERNAL_DECIMALS = 18;
 
-    function toInternal(uint256 externalAmount, uint8 tokenDecimals)
-        internal
-        pure
-        returns (uint256)
-    {
+    function toInternal(uint256 externalAmount, uint8 tokenDecimals) internal pure returns (uint256) {
         uint256 internalAmount;
 
         if (tokenDecimals < INTERNAL_DECIMALS) {
             uint8 x = INTERNAL_DECIMALS - tokenDecimals;
-            internalAmount = externalAmount * (10**x);
+            internalAmount = externalAmount * (10 ** x);
         } else if (tokenDecimals > INTERNAL_DECIMALS) {
             uint8 x = tokenDecimals - INTERNAL_DECIMALS;
-            internalAmount = externalAmount / (10**x);
+            internalAmount = externalAmount / (10 ** x);
         } else {
             // token has 18 decimals
             internalAmount = externalAmount;
@@ -37,26 +33,21 @@ library SubLib {
         return internalAmount;
     }
 
-    function toExternal(uint256 internalAmount, uint8 tokenDecimals)
-        internal
-        pure
-        returns (uint256)
-    {
+    function toExternal(uint256 internalAmount, uint8 tokenDecimals) internal pure returns (uint256) {
         uint256 externalAmount;
 
         if (tokenDecimals < INTERNAL_DECIMALS) {
             uint8 x = INTERNAL_DECIMALS - tokenDecimals;
-            externalAmount = internalAmount / (10**x);
+            externalAmount = internalAmount / (10 ** x);
         } else if (tokenDecimals > INTERNAL_DECIMALS) {
             uint8 x = tokenDecimals - INTERNAL_DECIMALS;
-            externalAmount = internalAmount * (10**x);
+            externalAmount = internalAmount * (10 ** x);
         } else {
             // token has 18 decimals
             externalAmount = internalAmount;
         }
         return externalAmount;
     }
-
 
     /**
      * @notice calculates the expiration date of a multiplied amount of funds based on the deposit date and the multiplied rate
@@ -77,7 +68,11 @@ library SubLib {
      * @param multiplier the multiplier of a sub
      * @return the date the subscription expires (excluding)
      */
-    function expiresAt(uint256 amount, uint256 depositedAt, uint256 rate, uint24 multiplier) internal pure returns (uint256) {
+    function expiresAt(uint256 amount, uint256 depositedAt, uint256 rate, uint24 multiplier)
+        internal
+        pure
+        returns (uint256)
+    {
         return depositedAt + validFor(amount, rate, multiplier);
     }
 
@@ -90,7 +85,7 @@ library SubLib {
      * @return the amount of time unit the amount is valid for
      */
     function validFor(uint256 amount, uint256 rate, uint24 multiplier) internal pure returns (uint256) {
-      return (amount * MULTIPLIER_BASE) / (rate * multiplier);
+        return (amount * MULTIPLIER_BASE) / (rate * multiplier);
     }
 
     /**
@@ -100,7 +95,7 @@ library SubLib {
      * @return the amount of locked funds
      */
     function asLocked(uint256 amount, uint24 lock) internal pure returns (uint256) {
-      return (amount * lock) / LOCK_BASE;
+        return (amount * lock) / LOCK_BASE;
     }
 
     /**
@@ -112,6 +107,4 @@ library SubLib {
     function epochOf(uint256 time, uint256 epochSize) internal pure returns (uint256) {
         return time / epochSize;
     }
-
-
 }

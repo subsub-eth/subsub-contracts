@@ -28,10 +28,7 @@ abstract contract HasBaseSubscription {
     function _asExternal(uint256 amount) internal view virtual returns (uint256);
 }
 
-abstract contract BaseSubscription is
-    HasBaseSubscription,
-    HasPaymentToken
-{
+abstract contract BaseSubscription is HasBaseSubscription, HasPaymentToken {
     using SubLib for uint256;
 
     function _asInternal(uint256 amount) internal view virtual override returns (uint256) {

@@ -4,9 +4,15 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/subscription/TokenIdProvider.sol";
 
-contract TestTokenIdProvider is TokenIdProvider {
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+
+contract TestTokenIdProvider is Initializable, TokenIdProvider {
     constructor(uint256 _tokenId) initializer {
         __TokenIdProvider_init(_tokenId);
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 
     function nextTokenId() public returns (uint256) {
@@ -15,7 +21,6 @@ contract TestTokenIdProvider is TokenIdProvider {
 }
 
 contract TokenIdProviderTest is Test {
-
     TestTokenIdProvider private provider;
     uint256 initId;
 

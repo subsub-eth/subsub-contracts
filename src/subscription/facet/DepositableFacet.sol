@@ -19,7 +19,7 @@ import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
 
 import {OzContext} from "../../dependency/OzContext.sol";
 import {OzERC721Enumerable} from "../../dependency/OzERC721Enumerable.sol";
-
+import {OzInitializable} from "../../dependency/OzInitializable.sol";
 
 import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
 
@@ -238,5 +238,9 @@ contract DepositableFacet is
         returns (bool)
     {
         return ERC721Upgradeable._isAuthorized(owner, spender, tokenId);
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 }

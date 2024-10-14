@@ -23,15 +23,9 @@ abstract contract HasValidation {
     modifier requireValidFlags(uint256 flags) virtual;
     modifier requireValidMultiplier(uint24 multi) virtual;
     modifier requireIsAuthorized(uint256 tokenId) virtual;
-
 }
 
-abstract contract Validation is
-    OzContext,
-    OzERC721Enumerable,
-    HasValidation,
-    SubscriptionFlags
-{
+abstract contract Validation is OzContext, OzERC721Enumerable, HasValidation, SubscriptionFlags {
     modifier requireExists(uint256 tokenId) virtual override {
         require(_ownerOf(tokenId) != address(0), "SUB: subscription does not exist");
         _;

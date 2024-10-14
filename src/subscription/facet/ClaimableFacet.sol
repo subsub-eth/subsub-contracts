@@ -2,10 +2,12 @@
 pragma solidity ^0.8.20;
 
 import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
 import {SubLib} from "../SubLib.sol";
 
 import {OzContext} from "../../dependency/OzContext.sol";
+import {OzInitializable} from "../../dependency/OzInitializable.sol";
 
 import {Claimable, SubscriptionFlags} from "../ISubscription.sol";
 
@@ -17,7 +19,6 @@ import {HasEpochs, Epochs} from "../Epochs.sol";
 import {HasTips, Tips} from "../Tips.sol";
 import {HasBaseSubscription, BaseSubscription} from "../BaseSubscription.sol";
 import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
-
 
 abstract contract AbstractClaimableFacet is
     Claimable,
@@ -71,6 +72,7 @@ abstract contract AbstractClaimableFacet is
     function claimedTips() external view returns (uint256) {
         return _asExternal(_claimedTips());
     }
+
     function claimableTips() external view returns (uint256) {
         return _claimableTips();
     }
@@ -87,7 +89,6 @@ contract ClaimableFacet is
     BaseSubscription,
     AbstractClaimableFacet
 {
-
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
     }
@@ -97,5 +98,9 @@ contract ClaimableFacet is
      */
     function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
         return ContextUpgradeable._msgSender();
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 }

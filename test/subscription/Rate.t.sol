@@ -4,9 +4,15 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/subscription/Rate.sol";
 
-contract TestRate is Rate {
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+
+contract TestRate is Initializable, Rate {
     constructor(uint256 _rate) initializer {
         __Rate_init(_rate);
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 
     function rate() public view returns (uint256) {
@@ -17,8 +23,7 @@ contract TestRate is Rate {
 contract RateTest is Test {
     TestRate private rr;
 
-    function setUp() public {
-    }
+    function setUp() public {}
 
     function testSetRate(uint256 _rate) public {
         rr = new TestRate(_rate);

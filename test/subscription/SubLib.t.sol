@@ -137,7 +137,6 @@ contract SubLibTest is Test {
         assertEq(t, uint256(0).expiresAt(t, amount, SubLib.MULTIPLIER_BASE), "0 amount, 0 time units");
     }
 
-
     function testExpiresAt_multiplied() public pure {
         uint256 amount = 1_000_000;
         uint256 rate = 100;

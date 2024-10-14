@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {SubLib} from "./SubLib.sol";
 import {TimeAware} from "./TimeAware.sol";
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
@@ -39,12 +39,13 @@ abstract contract HasRate {
     function _rate() internal view virtual returns (uint256);
 }
 
-abstract contract Rate is Initializable, HasRate {
+abstract contract Rate is OzInitializable, HasRate {
     function __Rate_init(uint256 rate) internal {
         __Rate_init_unchained(rate);
     }
 
-    function __Rate_init_unchained(uint256 rate) internal onlyInitializing {
+    function __Rate_init_unchained(uint256 rate) internal {
+        _checkInitializing();
         RateLib.init(rate);
     }
 

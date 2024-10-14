@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 library TokenIdProviderLib {
     struct TokenIdProviderStorage {
@@ -38,12 +38,13 @@ abstract contract HasTokenIdProvider {
     function _nextTokenId() internal virtual returns (uint256);
 }
 
-abstract contract TokenIdProvider is Initializable, HasTokenIdProvider {
+abstract contract TokenIdProvider is OzInitializable, HasTokenIdProvider {
     function __TokenIdProvider_init(uint256 tokenId) internal {
         __TokenIdProvider_init_unchained(tokenId);
     }
 
-    function __TokenIdProvider_init_unchained(uint256 tokenId) internal onlyInitializing {
+    function __TokenIdProvider_init_unchained(uint256 tokenId) internal {
+        _checkInitializing();
         TokenIdProviderLib.init(tokenId);
     }
 

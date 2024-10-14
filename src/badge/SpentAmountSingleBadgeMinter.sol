@@ -27,8 +27,8 @@ contract SpentAmountSingleBadgeMinter is IBadgeMinter, Context {
     }
 
     function mintableBadges() external view returns (address, uint256) {
-      // TODO FIXME
-      revert("Not Implemented");
+        // TODO FIXME
+        revert("Not Implemented");
     }
 
     function mint(address to, address subscription, uint256 subscriptionId, uint256 amount, bytes memory data)

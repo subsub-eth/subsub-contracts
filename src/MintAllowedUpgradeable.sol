@@ -45,7 +45,7 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
     }
 
     function getMinters(uint256 id) external view returns (address[] memory) {
-      revert("Not Implemented");
+        revert("Not Implemented");
     }
 
     function freezeMintAllowed(uint256 id) external {

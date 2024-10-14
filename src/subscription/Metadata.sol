@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {MetadataStruct} from "./ISubscription.sol";
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 library MetadataLib {
     struct MetadataStorage {
@@ -70,18 +70,15 @@ abstract contract HasMetadata {
     function _setExternalUrl(string calldata _externalUrl) internal virtual;
 }
 
-abstract contract Metadata is Initializable, HasMetadata {
-    function __Metadata_init(string memory description, string memory image, string memory externalUrl)
-        internal
-        onlyInitializing
-    {
+abstract contract Metadata is OzInitializable, HasMetadata {
+    function __Metadata_init(string memory description, string memory image, string memory externalUrl) internal {
         __Metadata_init_unchained(description, image, externalUrl);
     }
 
     function __Metadata_init_unchained(string memory description, string memory image, string memory externalUrl)
         internal
-        onlyInitializing
     {
+        _checkInitializing();
         MetadataLib.init(description, image, externalUrl);
     }
 

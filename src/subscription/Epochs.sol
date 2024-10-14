@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {SubLib} from "./SubLib.sol";
 import {TimeAware} from "./TimeAware.sol";
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
@@ -559,12 +559,13 @@ abstract contract HasEpochs {
         virtual;
 }
 
-abstract contract Epochs is Initializable, TimeAware, HasEpochs {
+abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
     function __Epochs_init(uint256 epochSize) internal {
         __Epochs_init_unchained(epochSize);
     }
 
-    function __Epochs_init_unchained(uint256 epochSize) internal onlyInitializing {
+    function __Epochs_init_unchained(uint256 epochSize) internal {
+        _checkInitializing();
         EpochsLib.init(epochSize, _now());
     }
 

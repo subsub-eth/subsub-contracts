@@ -37,7 +37,7 @@ interface IBadgeCreation {
 }
 
 interface IBadgeInitialize {
-  function initialize() external;
+    function initialize() external;
 }
 
 interface IBadge is

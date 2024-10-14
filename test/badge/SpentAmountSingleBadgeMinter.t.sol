@@ -149,5 +149,4 @@ contract SpentAmountSingleBadgeMinterTest is Test {
         vm.expectRevert("BadgeMinter: already minted");
         minter.mint(bob, address(subscription), tokenId, 1, "");
     }
-
 }

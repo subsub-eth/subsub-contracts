@@ -5,10 +5,15 @@ import "forge-std/Test.sol";
 import "../../src/subscription/Epochs.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-contract TestEpochs is Epochs {
+contract TestEpochs is Initializable, Epochs {
     constructor(uint256 epochSize_) initializer {
         __Epochs_init(epochSize_);
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 
     function getEpoch(uint256 epoch) external view virtual returns (Epoch memory) {
@@ -427,7 +432,8 @@ contract EpochsTest is Test {
         epoch = (bound(epoch, 0, type(uint64).max));
         epochSize = (bound(_epochSize, 1, type(uint32).max));
         depositedAt = bound(depositedAt, 0, epochSize - 1) + (epoch * epochSize);
-        amount = bound(amount, 1, (((epochSize - (depositedAt % epochSize)) * shares * rate) / SubLib.MULTIPLIER_BASE) - 1);
+        amount =
+            bound(amount, 1, (((epochSize - (depositedAt % epochSize)) * shares * rate) / SubLib.MULTIPLIER_BASE) - 1);
         e = new TestEpochs(epochSize);
 
         // addToEpochs

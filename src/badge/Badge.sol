@@ -140,7 +140,6 @@ contract Badge is
         super._update(from, to, ids, values);
     }
 
-
     /**
      * Interface late bindings
      */

@@ -6,12 +6,18 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/UserData.sol";
 import {MathFunctions} from "../../src/MathFunctions.sol";
 
-contract TestUserData is UserData {
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+
+contract TestUserData is Initializable, UserData {
     uint256 private rate;
 
     constructor(uint24 lock_, uint256 rate_) initializer {
         __UserData_init(lock_);
         rate = rate_;
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 
     function _now() internal view override returns (uint256) {
@@ -246,8 +252,10 @@ contract UserDataTest is Test {
         assertEq(sd.multiplier(tokenId), multi, "half: multiplier set");
         assertEq(
             sd.withdrawableFromSubscription(tokenId),
-            (((amount * SubLib.MULTIPLIER_BASE) - ((1 + ((expiresAt - _block) / 2)) * rate * multi)) / SubLib.MULTIPLIER_BASE)
-                .min(amount - ((amount * lock) / BASE_LOCK)),
+            (
+                ((amount * SubLib.MULTIPLIER_BASE) - ((1 + ((expiresAt - _block) / 2)) * rate * multi))
+                    / SubLib.MULTIPLIER_BASE
+            ).min(amount - ((amount * lock) / BASE_LOCK)),
             "half: half withdrawable, minus current block"
         );
         assertTrue(sd.isActive(tokenId), "half: token active");
@@ -454,8 +462,8 @@ contract UserDataTest is Test {
             uint256 spentFunds = (1 + extendedAt - _block) * (rate * multi);
             uint256 usedFunds = ((extendedAt - _block) * (rate * multi));
             // this is fucked, because the locked amount is actually precomputed and based
-            uint256 lockedFunds =
-                ((((total - usedFunds) / SubLib.MULTIPLIER_BASE) * lock) / BASE_LOCK) * SubLib.MULTIPLIER_BASE + usedFunds;
+            uint256 lockedFunds = ((((total - usedFunds) / SubLib.MULTIPLIER_BASE) * lock) / BASE_LOCK)
+                * SubLib.MULTIPLIER_BASE + usedFunds;
 
             console.log("spent", (total - spentFunds) / SubLib.MULTIPLIER_BASE);
             console.log("unlocked", (total - lockedFunds) / SubLib.MULTIPLIER_BASE);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -84,12 +84,13 @@ abstract contract HasPaymentToken {
     function _decimals() internal view virtual returns (uint8);
 }
 
-abstract contract PaymentToken is Initializable, HasPaymentToken {
+abstract contract PaymentToken is OzInitializable, HasPaymentToken {
     function __PaymentToken_init(address token) internal {
         __PaymentToken_init_unchained(token);
     }
 
-    function __PaymentToken_init_unchained(address token) internal onlyInitializing {
+    function __PaymentToken_init_unchained(address token) internal {
+        _checkInitializing();
         PaymentTokenLib.init(token);
     }
 

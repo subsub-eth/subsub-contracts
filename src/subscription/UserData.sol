@@ -5,7 +5,7 @@ import {SubLib} from "./SubLib.sol";
 import {HasRate} from "./Rate.sol";
 import {TimeAware} from "./TimeAware.sol";
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
@@ -465,12 +465,13 @@ abstract contract HasUserData {
     function _getSubData(uint256 tokenId) internal view virtual returns (SubData memory);
 }
 
-abstract contract UserData is Initializable, TimeAware, HasRate, HasUserData {
+abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
     function __UserData_init(uint24 lock) internal {
         __UserData_init_unchained(lock);
     }
 
-    function __UserData_init_unchained(uint24 lock) internal onlyInitializing {
+    function __UserData_init_unchained(uint24 lock) internal {
+        _checkInitializing();
         UserDataLib.init(lock);
     }
 

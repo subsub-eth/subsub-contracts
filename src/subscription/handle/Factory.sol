@@ -41,14 +41,7 @@ abstract contract Factory is Initializable, HasFactory {
 
         // TODO use create2 to prevent users re-using contract addresses on other chains
         BeaconProxy proxy = new BeaconProxy(
-            _beacon,
-            abi.encodeWithSelector(
-                implementation.initialize.selector,
-                _name,
-                _symbol,
-                _metadata,
-                _settings
-            )
+            _beacon, abi.encodeWithSelector(implementation.initialize.selector, _name, _symbol, _metadata, _settings)
         );
 
         return address(proxy);

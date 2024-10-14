@@ -3,8 +3,6 @@ pragma solidity ^0.8.20;
 
 import {SubLib} from "./SubLib.sol";
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
-
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 library TipsLib {
@@ -106,13 +104,7 @@ abstract contract HasTips {
     function _claimTips() internal virtual returns (uint256);
 }
 
-abstract contract Tips is Initializable, HasTips {
-    function __Tips_init() internal {
-        __Tips_init_unchained();
-    }
-
-    function __Tips_init_unchained() internal onlyInitializing {}
-
+abstract contract Tips is HasTips {
     function _addTip(uint256 tokenId, uint256 amount) internal override {
         TipsLib.addTip(tokenId, amount);
     }

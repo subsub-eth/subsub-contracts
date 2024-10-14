@@ -19,6 +19,7 @@ import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
 import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 
 import {OzContext} from "../dependency/OzContext.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
@@ -416,7 +417,6 @@ abstract contract DefaultSubscription is
         __Rate_init_unchained(_settings.rate);
         __Epochs_init_unchained(_settings.epochSize);
         __UserData_init_unchained(_settings.lock);
-        __Tips_init_unchained();
         __PaymentToken_init_unchained(_settings.token);
         __MaxSupply_init_unchained(_settings.maxSupply);
         __TokenIdProvider_init_unchained(0);
@@ -428,5 +428,9 @@ abstract contract DefaultSubscription is
      */
     function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
         return ContextUpgradeable._msgSender();
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 }

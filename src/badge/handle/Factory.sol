@@ -26,15 +26,10 @@ abstract contract Factory is Initializable, HasFactory {
     function __Factory_init_unchained() internal onlyInitializing {}
 
     // deploy a new badge
-    function _deployBadge(
-    ) internal virtual override returns (address) {
+    function _deployBadge() internal virtual override returns (address) {
         IBadgeInitialize implementation = IBadgeInitialize(IBeacon(_beacon).implementation());
 
-        BeaconProxy proxy = new BeaconProxy(
-            _beacon,
-            abi.encodeWithSelector(
-                implementation.initialize.selector)
-        );
+        BeaconProxy proxy = new BeaconProxy(_beacon, abi.encodeWithSelector(implementation.initialize.selector));
 
         return address(proxy);
     }

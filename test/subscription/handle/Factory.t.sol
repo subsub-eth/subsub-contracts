@@ -30,7 +30,8 @@ contract TestSubscriptionInitialize is SubscriptionInitialize {
     using Strings for string;
 
     function initialize(string calldata tokenName, string calldata, MetadataStruct calldata, SubSettings calldata)
-        external pure
+        external
+        pure
     {
         require(!tokenName.equal("fail"), "failing");
     }

@@ -6,7 +6,6 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/Tips.sol";
 
 contract TestTips is Tips {
-
     function addTip(uint256 tokenId, uint256 amount) public {
         _addTip(tokenId, amount);
     }

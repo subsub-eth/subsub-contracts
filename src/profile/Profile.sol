@@ -7,7 +7,8 @@ import {ERC721} from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721EnumerableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {ERC721EnumerableUpgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
@@ -44,21 +45,14 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         nextTokenId = 1;
     }
 
-    function mint(
-        string memory _name,
-        string memory _description,
-        string memory _image,
-        string memory _externalUrl
-    ) external returns (uint256) {
+    function mint(string memory _name, string memory _description, string memory _image, string memory _externalUrl)
+        external
+        returns (uint256)
+    {
         require(bytes(_name).length > 2, "crzP: name too short");
         uint256 tokenId = nextTokenId++;
 
-        profileData[tokenId] = ProfileData(
-            _name,
-            _description,
-            _image,
-            _externalUrl
-        );
+        profileData[tokenId] = ProfileData(_name, _description, _image, _externalUrl);
         _safeMint(_msgSender(), tokenId);
 
         emit Minted(_msgSender(), tokenId);

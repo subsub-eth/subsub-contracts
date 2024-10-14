@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 library MaxSupplyLib {
     struct MaxSupplyStorage {
@@ -33,12 +33,13 @@ abstract contract HasMaxSupply {
     function _maxSupply() internal view virtual returns (uint256);
 }
 
-abstract contract MaxSupply is Initializable, HasMaxSupply {
+abstract contract MaxSupply is OzInitializable, HasMaxSupply {
     function __MaxSupply_init(uint256 maxSupply) internal {
         __MaxSupply_init_unchained(maxSupply);
     }
 
-    function __MaxSupply_init_unchained(uint256 maxSupply) internal onlyInitializing {
+    function __MaxSupply_init_unchained(uint256 maxSupply) internal {
+        _checkInitializing();
         MaxSupplyLib.init(maxSupply);
     }
 

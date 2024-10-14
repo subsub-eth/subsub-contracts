@@ -5,8 +5,7 @@ import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.s
 import "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {ERC721Upgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 
 import {SubscriptionProperties} from "../ISubscription.sol";
 import {HasHandleOwned, HandleOwned} from "../../handle/HandleOwned.sol";
@@ -21,9 +20,10 @@ import {TimestampTimeAware} from "../TimeAware.sol";
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 
 import {OzContext} from "../../dependency/OzContext.sol";
+import {OzInitializable} from "../../dependency/OzInitializable.sol";
 
 abstract contract AbstractPropertiesFacet is
-// Initializable,
+    // Initializable,
     HasMaxSupply,
     HasMetadata,
     HasRate,
@@ -90,7 +90,6 @@ abstract contract PropertiesFacet is
     // Validation,
     AbstractPropertiesFacet
 {
-
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
     }
@@ -100,5 +99,9 @@ abstract contract PropertiesFacet is
      */
     function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
         return ContextUpgradeable._msgSender();
+    }
+
+    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
+        Initializable._checkInitializing();
     }
 }

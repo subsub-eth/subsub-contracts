@@ -70,8 +70,7 @@ contract SubscriptionInitTest is Test {
         assertEq(sub.symbol(), symbol, "symbol");
 
         {
-            (address _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) =
-                sub.settings();
+            (address _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) = sub.settings();
 
             assertEq(_token, address(testToken), "token");
             assertEq(_rate, rate, "rate");
@@ -87,8 +86,7 @@ contract SubscriptionInitTest is Test {
             assertEq(_externalUrl, metadata.externalUrl, "externalUrl");
         }
         {
-            (address _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) =
-                sub.settings();
+            (address _token, uint256 _rate, uint24 _lock, uint256 _epochSize, uint256 _maxSupply) = sub.settings();
 
             assertEq(_token, address(testToken), "token");
             assertEq(_rate, rate, "rate");
