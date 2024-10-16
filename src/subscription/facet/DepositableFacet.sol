@@ -29,7 +29,6 @@ import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 abstract contract AbstractDepositableFacet is
-    Initializable,
     OzContext,
     OzERC721Enumerable,
     HasValidation,

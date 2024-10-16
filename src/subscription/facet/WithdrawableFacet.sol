@@ -28,14 +28,14 @@ import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 abstract contract AbstractWithdrawableFacet is
-    Initializable,
+    OzContext,
+    OzERC721Enumerable,
     HasValidation,
     HasBaseSubscription,
     HasPaymentToken,
     HasRate,
     HasUserData,
     HasEpochs,
-    ERC721EnumerableUpgradeable,
     HasFlagSettings,
     SubscriptionFlags,
     Withdrawable
@@ -73,7 +73,8 @@ abstract contract AbstractWithdrawableFacet is
 
         _deleteSubscription(tokenId);
 
-        _burn(tokenId);
+        // TODO FIXME
+        // _burn(tokenId);
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -82,6 +83,8 @@ abstract contract AbstractWithdrawableFacet is
 }
 
 contract WithdrawableFacet is
+    // ContextUpgradeable,
+    // ERC721EnumerableUpgradeable,
     TimestampTimeAware,
     Rate,
     PaymentToken,
@@ -90,6 +93,7 @@ contract WithdrawableFacet is
     FlagSettings,
     Validation,
     BaseSubscription,
+    ERC721EnumerableUpgradeable,
     AbstractWithdrawableFacet
 {
     /**

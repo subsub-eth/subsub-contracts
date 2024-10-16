@@ -14,4 +14,6 @@ abstract contract OzERC721Enumerable {
     function _ownerOf(uint256 tokenId) internal view virtual returns (address);
 
     function _isAuthorized(address owner, address spender, uint256 tokenId) internal view virtual returns (bool);
+
+    // function _burn(uint256 tokenId) internal virtual;
 }

@@ -20,10 +20,10 @@ import {TimestampTimeAware} from "../TimeAware.sol";
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 
 import {OzContext} from "../../dependency/OzContext.sol";
+import {OzERC721Enumerable} from "../../dependency/OzERC721Enumerable.sol";
 import {OzInitializable} from "../../dependency/OzInitializable.sol";
 
 abstract contract AbstractPropertiesFacet is
-    // Initializable,
     HasMaxSupply,
     HasMetadata,
     HasRate,
@@ -33,7 +33,6 @@ abstract contract AbstractPropertiesFacet is
     HasEpochs,
     HasFlagSettings,
     HasValidation,
-    // ERC721EnumerableUpgradeable,
     SubscriptionProperties
 {
     function settings()
@@ -70,14 +69,9 @@ abstract contract AbstractPropertiesFacet is
     }
 }
 
-abstract contract PropertiesFacet is
-    // Validation,
-    // Initializable,
-    // Validation,
+contract PropertiesFacet is
+    TimestampTimeAware,
     ContextUpgradeable,
-    // Validation,
-    // ERC721EnumerableUpgradeable,
-    ERC721Upgradeable,
     HandleOwned,
     MaxSupply,
     Metadata,
@@ -86,8 +80,8 @@ abstract contract PropertiesFacet is
     Epochs,
     UserData,
     FlagSettings,
-    TimestampTimeAware,
-    // Validation,
+    Validation,
+    ERC721EnumerableUpgradeable,
     AbstractPropertiesFacet
 {
     constructor(address handleContract) HandleOwned(handleContract) {
@@ -99,6 +93,44 @@ abstract contract PropertiesFacet is
      */
     function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
         return ContextUpgradeable._msgSender();
+    }
+
+    function _safeMint(address to, uint256 tokenId, bytes memory data)
+        internal
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+    {
+        ERC721Upgradeable._safeMint(to, tokenId, data);
+    }
+
+    function totalSupply()
+        public
+        view
+        virtual
+        override(ERC721EnumerableUpgradeable, OzERC721Enumerable)
+        returns (uint256)
+    {
+        return ERC721EnumerableUpgradeable.totalSupply();
+    }
+
+    function _ownerOf(uint256 tokenId)
+        internal
+        view
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+        returns (address)
+    {
+        return ERC721Upgradeable._ownerOf(tokenId);
+    }
+
+    function _isAuthorized(address owner, address spender, uint256 tokenId)
+        internal
+        view
+        virtual
+        override(ERC721Upgradeable, OzERC721Enumerable)
+        returns (bool)
+    {
+        return ERC721Upgradeable._isAuthorized(owner, spender, tokenId);
     }
 
     function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
