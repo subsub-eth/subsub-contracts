@@ -90,7 +90,7 @@ abstract contract PaymentToken is OzInitializable, HasPaymentToken {
     }
 
     function __PaymentToken_init_unchained(address token) internal {
-        _checkInitializing();
+        __checkInitializing();
         PaymentTokenLib.init(token);
     }
 

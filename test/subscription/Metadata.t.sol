@@ -3,18 +3,14 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
 import "../../src/subscription/Metadata.sol";
 
-contract TestMetadata is Initializable, Metadata {
+contract TestMetadata is OzInitializableBind, Metadata {
     constructor(string memory description, string memory image, string memory externalUrl) initializer {
         __Metadata_init(description, image, externalUrl);
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 
     function setDescription(string calldata _description) public {

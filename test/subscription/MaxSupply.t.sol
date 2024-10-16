@@ -4,15 +4,11 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/subscription/MaxSupply.sol";
 
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
-contract TestMaxSupply is Initializable, MaxSupply {
+contract TestMaxSupply is OzInitializableBind, MaxSupply {
     constructor(uint256 _supply) initializer {
         __MaxSupply_init(_supply);
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 
     function maxSupply() public view returns (uint256) {

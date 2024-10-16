@@ -6,8 +6,8 @@ import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/
 
 import {SubLib} from "../SubLib.sol";
 
-import {OzContext} from "../../dependency/OzContext.sol";
-import {OzInitializable} from "../../dependency/OzInitializable.sol";
+import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
+import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
 import {Claimable, SubscriptionFlags} from "../ISubscription.sol";
 
@@ -79,7 +79,8 @@ abstract contract AbstractClaimableFacet is
 }
 
 contract ClaimableFacet is
-    ContextUpgradeable,
+    OzInitializableBind,
+    OzContextBind,
     TimestampTimeAware,
     Rate,
     PaymentToken,
@@ -91,16 +92,5 @@ contract ClaimableFacet is
 {
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();
-    }
-
-    /**
-     * Interface late bindings
-     */
-    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
-        return ContextUpgradeable._msgSender();
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 }

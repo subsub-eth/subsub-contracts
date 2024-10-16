@@ -45,7 +45,7 @@ abstract contract Rate is OzInitializable, HasRate {
     }
 
     function __Rate_init_unchained(uint256 rate) internal {
-        _checkInitializing();
+        __checkInitializing();
         RateLib.init(rate);
     }
 

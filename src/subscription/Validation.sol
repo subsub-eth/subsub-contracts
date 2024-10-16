@@ -27,7 +27,7 @@ abstract contract HasValidation {
 
 abstract contract Validation is OzContext, OzERC721Enumerable, HasValidation, SubscriptionFlags {
     modifier requireExists(uint256 tokenId) virtual override {
-        require(_ownerOf(tokenId) != address(0), "SUB: subscription does not exist");
+        require(__ownerOf(tokenId) != address(0), "SUB: subscription does not exist");
         _;
     }
 
@@ -43,7 +43,7 @@ abstract contract Validation is OzContext, OzERC721Enumerable, HasValidation, Su
 
     modifier requireIsAuthorized(uint256 tokenId) virtual override {
         require(
-            _isAuthorized(_ownerOf(tokenId), _msgSender(), tokenId), "ERC721: caller is not token owner or approved"
+            __isAuthorized(__ownerOf(tokenId), __msgSender(), tokenId), "ERC721: caller is not token owner or approved"
         );
         _;
     }

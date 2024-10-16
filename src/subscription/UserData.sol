@@ -471,7 +471,7 @@ abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
     }
 
     function __UserData_init_unchained(uint24 lock) internal {
-        _checkInitializing();
+        __checkInitializing();
         UserDataLib.init(lock);
     }
 

@@ -3,9 +3,9 @@ pragma solidity ^0.8.20;
 
 import {SubLib} from "../SubLib.sol";
 
-import {OzContext} from "../../dependency/OzContext.sol";
-import {OzERC721Enumerable} from "../../dependency/OzERC721Enumerable.sol";
-import {OzInitializable} from "../../dependency/OzInitializable.sol";
+import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
+import {OzERC721Enumerable, OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
+import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 import {Withdrawable, SubscriptionFlags} from "../ISubscription.sol";
@@ -61,20 +61,19 @@ abstract contract AbstractWithdrawableFacet is
         _reduceInEpochs(depositedAt, oldDeposit, newDeposit, _multiplier(tokenId), _rate());
 
         uint256 externalAmount = _asExternal(amount);
-        _paymentTokenSend(payable(_msgSender()), externalAmount);
+        _paymentTokenSend(payable(__msgSender()), externalAmount);
 
-        emit SubscriptionWithdrawn(tokenId, externalAmount, _msgSender(), _totalDeposited(tokenId));
+        emit SubscriptionWithdrawn(tokenId, externalAmount, __msgSender(), _totalDeposited(tokenId));
         emit MetadataUpdate(tokenId);
     }
 
     function burn(uint256 tokenId) external {
         // only owner of tokenId can burn
-        require(_msgSender() == _ownerOf(tokenId), "SUB: not the owner");
+        require(__msgSender() == __ownerOf(tokenId), "SUB: not the owner");
 
         _deleteSubscription(tokenId);
 
-        // TODO FIXME
-        // _burn(tokenId);
+        __burn(tokenId);
     }
 
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
@@ -93,55 +92,9 @@ contract WithdrawableFacet is
     FlagSettings,
     Validation,
     BaseSubscription,
-    ERC721EnumerableUpgradeable,
+    OzInitializableBind,
+    OzContextBind,
+    OzERC721EnumerableBind,
     AbstractWithdrawableFacet
 {
-    /**
-     * Interface late bindings
-     */
-    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
-        return ContextUpgradeable._msgSender();
-    }
-
-    function _safeMint(address to, uint256 tokenId, bytes memory data)
-        internal
-        virtual
-        override(ERC721Upgradeable, OzERC721Enumerable)
-    {
-        ERC721Upgradeable._safeMint(to, tokenId, data);
-    }
-
-    function totalSupply()
-        public
-        view
-        virtual
-        override(ERC721EnumerableUpgradeable, OzERC721Enumerable)
-        returns (uint256)
-    {
-        return ERC721EnumerableUpgradeable.totalSupply();
-    }
-
-    function _ownerOf(uint256 tokenId)
-        internal
-        view
-        virtual
-        override(ERC721Upgradeable, OzERC721Enumerable)
-        returns (address)
-    {
-        return ERC721Upgradeable._ownerOf(tokenId);
-    }
-
-    function _isAuthorized(address owner, address spender, uint256 tokenId)
-        internal
-        view
-        virtual
-        override(ERC721Upgradeable, OzERC721Enumerable)
-        returns (bool)
-    {
-        return ERC721Upgradeable._isAuthorized(owner, spender, tokenId);
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
-    }
 }

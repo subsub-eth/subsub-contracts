@@ -5,8 +5,7 @@ import "../../src/subscription/Subscription.sol";
 import "../../src/subscription/Epochs.sol";
 import {SubData} from "../../src/subscription/UserData.sol";
 
-import {OzInitializable} from "../../src/dependency/OzInitializable.sol";
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializable, OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
 abstract contract TestSubEvents {
     event Burned(uint256 indexed tokenId);
@@ -46,6 +45,7 @@ abstract contract TestSubEvents {
  *
  */
 abstract contract AbstractTestSub is
+    OzInitializableBind,
     TestSubEvents,
     // actual impl
     MaxSupply,
@@ -257,10 +257,6 @@ abstract contract AbstractTestSub is
 
     function _asExternal(uint256) internal view virtual override returns (uint256) {
         revert("SUB: not implemented");
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 }
 

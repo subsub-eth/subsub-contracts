@@ -44,7 +44,7 @@ abstract contract TokenIdProvider is OzInitializable, HasTokenIdProvider {
     }
 
     function __TokenIdProvider_init_unchained(uint256 tokenId) internal {
-        _checkInitializing();
+        __checkInitializing();
         TokenIdProviderLib.init(tokenId);
     }
 

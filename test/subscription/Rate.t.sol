@@ -4,15 +4,11 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/subscription/Rate.sol";
 
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
-contract TestRate is Initializable, Rate {
+contract TestRate is OzInitializableBind, Rate {
     constructor(uint256 _rate) initializer {
         __Rate_init(_rate);
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 
     function rate() public view returns (uint256) {

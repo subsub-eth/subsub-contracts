@@ -6,18 +6,14 @@ import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import "../../src/subscription/UserData.sol";
 import {MathFunctions} from "../../src/MathFunctions.sol";
 
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
-contract TestUserData is Initializable, UserData {
+contract TestUserData is OzInitializableBind, UserData {
     uint256 private rate;
 
     constructor(uint24 lock_, uint256 rate_) initializer {
         __UserData_init(lock_);
         rate = rate_;
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 
     function _now() internal view override returns (uint256) {

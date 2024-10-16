@@ -5,15 +5,11 @@ import "forge-std/Test.sol";
 import "../../src/subscription/Epochs.sol";
 
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
-contract TestEpochs is Initializable, Epochs {
+contract TestEpochs is OzInitializableBind, Epochs {
     constructor(uint256 epochSize_) initializer {
         __Epochs_init(epochSize_);
-    }
-
-    function _checkInitializing() internal view virtual override(Initializable, OzInitializable) {
-        Initializable._checkInitializing();
     }
 
     function getEpoch(uint256 epoch) external view virtual returns (Epoch memory) {

@@ -71,14 +71,16 @@ abstract contract HasMetadata {
 }
 
 abstract contract Metadata is OzInitializable, HasMetadata {
-    function __Metadata_init(string memory description, string memory image, string memory externalUrl) internal {
+    function __Metadata_init(string memory description, string memory image, string memory externalUrl)
+        internal
+    {
         __Metadata_init_unchained(description, image, externalUrl);
     }
 
     function __Metadata_init_unchained(string memory description, string memory image, string memory externalUrl)
         internal
     {
-        _checkInitializing();
+        __checkInitializing();
         MetadataLib.init(description, image, externalUrl);
     }
 

@@ -6,9 +6,7 @@ import "./IBadge.sol";
 import {MintAllowedUpgradeable} from "../MintAllowedUpgradeable.sol";
 import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
 
-import {OzContext} from "../dependency/OzContext.sol";
-
-import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+import {OzContext, OzContextBind} from "../dependency/OzContext.sol";
 
 import {ERC1155Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/ERC1155Upgradeable.sol";
 import {ERC1155BurnableUpgradeable} from
@@ -17,7 +15,7 @@ import {ERC1155SupplyUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
 contract Badge is
-    ContextUpgradeable,
+    OzContextBind,
     IBadge,
     ERC1155SupplyUpgradeable,
     ERC1155BurnableUpgradeable,
@@ -107,7 +105,7 @@ contract Badge is
 
         $._tokenData[id] = tokenData;
 
-        emit TokenCreated(_msgSender(), id);
+        emit TokenCreated(__msgSender(), id);
     }
 
     function setMintAllowed(address minter, uint256 id, bool allow)
@@ -138,12 +136,5 @@ contract Badge is
         override(ERC1155SupplyUpgradeable, ERC1155Upgradeable)
     {
         super._update(from, to, ids, values);
-    }
-
-    /**
-     * Interface late bindings
-     */
-    function _msgSender() internal view virtual override(ContextUpgradeable, OzContext) returns (address) {
-        return ContextUpgradeable._msgSender();
     }
 }

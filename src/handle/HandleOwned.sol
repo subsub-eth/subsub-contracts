@@ -32,8 +32,8 @@ abstract contract HandleOwned is OzContext, HasHandleOwned {
 
     function _checkOwner() internal view override {
         address owner_ = owner();
-        if (owner_ != _msgSender() && !_isValidSigner(owner_)) {
-            revert UnauthorizedAccount(_msgSender());
+        if (owner_ != __msgSender() && !_isValidSigner(owner_)) {
+            revert UnauthorizedAccount(__msgSender());
         }
     }
 
@@ -42,7 +42,7 @@ abstract contract HandleOwned is OzContext, HasHandleOwned {
         address payable acc_ = payable(acc);
         if (acc_.code.length > 0) {
             // does the owner contract implement the interface
-            try IERC6551Account(acc_).isValidSigner(_msgSender(), "") returns (bytes4 magicValue) {
+            try IERC6551Account(acc_).isValidSigner(__msgSender(), "") returns (bytes4 magicValue) {
                 return magicValue == 0x523e3260;
             } catch {
                 return false;

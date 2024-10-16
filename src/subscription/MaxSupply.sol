@@ -39,7 +39,7 @@ abstract contract MaxSupply is OzInitializable, HasMaxSupply {
     }
 
     function __MaxSupply_init_unchained(uint256 maxSupply) internal {
-        _checkInitializing();
+        __checkInitializing();
         MaxSupplyLib.init(maxSupply);
     }
 

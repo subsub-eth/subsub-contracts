@@ -565,7 +565,7 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
     }
 
     function __Epochs_init_unchained(uint256 epochSize) internal {
-        _checkInitializing();
+        __checkInitializing();
         EpochsLib.init(epochSize, _now());
     }
 
