@@ -6,11 +6,13 @@ import {IERC6551Account} from "erc6551/interfaces/IERC6551Account.sol";
 
 import {OzContext} from "../dependency/OzContext.sol";
 
+import {IOwnable} from "../IOwnable.sol";
+
 interface HandleOwnedErrors {
     error UnauthorizedAccount(address account);
 }
 
-abstract contract HasHandleOwned is HandleOwnedErrors {
+abstract contract HasHandleOwned is IOwnable, HandleOwnedErrors {
     modifier onlyOwner() {
         _checkOwner();
         _;
@@ -19,8 +21,6 @@ abstract contract HasHandleOwned is HandleOwnedErrors {
     function _checkOwner() internal view virtual;
 
     function _isValidSigner(address acc) internal view virtual returns (bool);
-
-    function owner() public view virtual returns (address);
 }
 
 abstract contract HandleOwned is OzContext, HasHandleOwned {

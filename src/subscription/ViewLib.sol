@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Subscription} from "./Subscription.sol";
+import {ISubscriptionInternal} from "./ISubscription.sol";
 
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
@@ -12,7 +12,7 @@ library ViewLib {
     using Strings for uint256;
     using Strings for address;
 
-    function contractData(Subscription s) public view returns (string memory) {
+    function contractData(ISubscriptionInternal s) public view returns (string memory) {
         string memory output;
         {
             (address token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) = s.settings();
@@ -95,7 +95,7 @@ library ViewLib {
         return output;
     }
 
-    function tokenData(Subscription s, uint256 tokenId) public view returns (string memory) {
+    function tokenData(ISubscriptionInternal s, uint256 tokenId) public view returns (string memory) {
         // TODO mind changes to contract-wide metadata need to fire ERC4906 events
         string memory output;
 

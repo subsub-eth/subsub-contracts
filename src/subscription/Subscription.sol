@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISubscription, MetadataStruct, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
+import {ISubscriptionInternal, MetadataStruct, SubSettings, SubscriptionFlags} from "./ISubscription.sol";
 import {SubLib} from "./SubLib.sol";
 import {ViewLib} from "./ViewLib.sol";
 
@@ -36,7 +36,7 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 abstract contract Subscription is
     OzInitializableBind,
     OzContextBind,
-    ISubscription,
+    ISubscriptionInternal,
     TimeAware,
     HasMaxSupply,
     HasTokenIdProvider,
@@ -147,7 +147,7 @@ abstract contract Subscription is
     }
 
     function contractURI() external view returns (string memory) {
-        return this.contractData();
+        return ViewLib.contractData(ISubscriptionInternal(address(this)));
     }
 
     function claimed() external view returns (uint256) {

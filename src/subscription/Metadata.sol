@@ -5,6 +5,13 @@ import {MetadataStruct} from "./ISubscription.sol";
 
 import {OzInitializable} from "../dependency/OzInitializable.sol";
 
+interface IMetadata {
+    function metadata()
+        external
+        view
+        returns (string memory description, string memory image, string memory externalUrl);
+}
+
 library MetadataLib {
     struct MetadataStorage {
         string _description;
@@ -56,13 +63,7 @@ library MetadataLib {
     }
 }
 
-abstract contract HasMetadata {
-    function metadata()
-        external
-        view
-        virtual
-        returns (string memory description, string memory image, string memory externalUrl);
-
+abstract contract HasMetadata is IMetadata {
     function _setDescription(string calldata _description) internal virtual;
 
     function _setImage(string calldata _image) internal virtual;
@@ -71,9 +72,7 @@ abstract contract HasMetadata {
 }
 
 abstract contract Metadata is OzInitializable, HasMetadata {
-    function __Metadata_init(string memory description, string memory image, string memory externalUrl)
-        internal
-    {
+    function __Metadata_init(string memory description, string memory image, string memory externalUrl) internal {
         __Metadata_init_unchained(description, image, externalUrl);
     }
 

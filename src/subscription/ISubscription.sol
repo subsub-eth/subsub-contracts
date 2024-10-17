@@ -7,6 +7,11 @@ import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/ext
 import {IERC721Enumerable} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IERC4906} from "openzeppelin-contracts/contracts/interfaces/IERC4906.sol";
 
+import {IOwnable} from "../IOwnable.sol";
+import {IHasFlags} from "../FlagSettings.sol";
+
+import {IMetadata} from "./Metadata.sol";
+
 /**
  * @title Subscription Events
  * @notice Marker interface containing Subscription related events
@@ -372,9 +377,17 @@ interface ISubscription is
     IERC721Metadata,
     IERC721Enumerable,
     IERC4906,
-    Depositable,
+    IOwnable,
+    IHasFlags,
+    IMetadata,
     Claimable,
+    Depositable,
     Withdrawable,
     SubscriptionMetadata,
     SubscriptionInitialize
 {}
+
+/**
+ * @title Subscription Godless interface
+ */
+interface ISubscriptionInternal is ISubscription, SubscriptionProperties {}

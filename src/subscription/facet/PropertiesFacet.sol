@@ -17,6 +17,9 @@ import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
 import {OzERC721Enumerable, OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
 import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
+/**
+ * @dev Properties are not exposed on {ISubscription} but only used to modify subscription properties
+ */
 abstract contract AbstractPropertiesFacet is
     HasMaxSupply,
     HasMetadata,
