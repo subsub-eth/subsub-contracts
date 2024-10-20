@@ -105,27 +105,27 @@ abstract contract HasTips {
 }
 
 abstract contract Tips is HasTips {
-    function _addTip(uint256 tokenId, uint256 amount) internal override {
+    function _addTip(uint256 tokenId, uint256 amount) internal virtual override {
         TipsLib.addTip(tokenId, amount);
     }
 
-    function _tips(uint256 tokenId) internal view override returns (uint256) {
+    function _tips(uint256 tokenId) internal view virtual override returns (uint256) {
         return TipsLib.tips(tokenId);
     }
 
-    function _allTips() internal view override returns (uint256) {
+    function _allTips() internal view virtual override returns (uint256) {
         return TipsLib.allTips();
     }
 
-    function _claimedTips() internal view override returns (uint256) {
+    function _claimedTips() internal view virtual override returns (uint256) {
         return TipsLib.claimedTips();
     }
 
-    function _claimableTips() internal view override returns (uint256) {
+    function _claimableTips() internal view virtual override returns (uint256) {
         return TipsLib.claimableTips();
     }
 
-    function _claimTips() internal override returns (uint256 claimable) {
+    function _claimTips() internal virtual override returns (uint256 claimable) {
         return TipsLib.claimTips();
     }
 }

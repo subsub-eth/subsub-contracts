@@ -483,87 +483,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         _sub.renew(tokenId, amount, message);
     }
 
-
-    function testClaimable(uint256 claimable) public {
-        claimable = bound(claimable, 0, type(uint192).max);
-        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
-
-        assertEq(_sub.claimable(), claimable / _sub.CONV(), "Claimable as external");
-    }
-
-    function testClaim(address payable to, uint256 claimable) public {
-        vm.assume(to != address(0) && to != alice);
-        claimable = bound(claimable, 0, type(uint192).max);
-        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
-        uint256 exClaimable = claimable / _sub.CONV();
-        testToken.mint(address(_sub), exClaimable);
-
-        vm.startPrank(owner);
-        vm.expectEmit();
-        emit FundsClaimed(exClaimable, _sub.TOTAL_CLAIMED() / _sub.CONV());
-
-        _sub.claim(to);
-
-        assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
-    }
-
-    function testClaim_native(address payable to, uint256 claimable) public {
-        assumePayable(to);
-        vm.assume(to != address(0) && to.balance == 0 && to != alice);
-        claimable = bound(claimable, 0, type(uint192).max);
-        settings.token = address(0);
-        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
-        uint256 exClaimable = claimable / _sub.CONV();
-        deal(address(_sub), type(uint192).max);
-
-        vm.startPrank(owner);
-        vm.expectEmit();
-        emit FundsClaimed(exClaimable, _sub.TOTAL_CLAIMED() / _sub.CONV());
-
-        _sub.claim(to);
-
-        assertEq(to.balance, exClaimable, "claimable funds transferred");
-        assertEq(address(_sub).balance, type(uint192).max - exClaimable, "claimable funds transferred from contract");
-    }
-
-    function testClaimBatch(address payable to, uint256 claimable, uint256 upToEpoch) public {
-        vm.assume(to != address(0) && to != alice);
-        claimable = bound(claimable, 0, type(uint192).max);
-        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
-        uint256 exClaimable = claimable / _sub.CONV();
-        testToken.mint(address(_sub), exClaimable);
-
-        vm.startPrank(owner);
-        vm.expectEmit();
-        emit FundsClaimed(exClaimable, _sub.TOTAL_CLAIMED() / _sub.CONV());
-
-        _sub.claim(to, upToEpoch);
-
-        assertEq(testToken.balanceOf(to), exClaimable, "claimable funds transferred");
-    }
-
-    function testClaimBatch_notOwner(address user, address payable to, uint256 claimable, uint256 upToEpoch) public {
-        vm.assume(user != owner);
-        claimable = bound(claimable, 0, type(uint192).max);
-        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
-
-        vm.startPrank(user);
-        vm.expectRevert();
-
-        _sub.claim(to, upToEpoch);
-    }
-
-    function testClaim_notOwner(address user, address payable to, uint256 claimable) public {
-        vm.assume(user != owner);
-        claimable = bound(claimable, 0, type(uint192).max);
-        ClaimSub _sub = new ClaimSub(owner, settings, claimable);
-
-        vm.startPrank(user);
-        vm.expectRevert();
-
-        _sub.claim(to);
-    }
-
     function testTip(uint256 tokenId, uint256 amount, string calldata message) public {
         amount = bound(amount, 1, testToken.balanceOf(alice));
 
@@ -657,50 +576,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
 
         vm.expectRevert("Flag: setting enabled");
         _sub.tip(tokenId, amount, message);
-    }
-
-    function testClaimTips(address payable to, uint256 claimable) public {
-        vm.assume(to != address(0) && to != alice);
-        claimable = bound(claimable, 0, type(uint192).max);
-        TipSub _sub = new TipSub(owner, settings, claimable);
-        testToken.mint(address(_sub), claimable);
-
-        vm.startPrank(owner);
-
-        vm.expectEmit();
-        emit TipsClaimed(claimable, _sub.CLAIMED_TIPS());
-
-        _sub.claimTips(to);
-
-        assertEq(testToken.balanceOf(address(to)), claimable, "amount transferred");
-    }
-
-    function testClaimTips_native(address payable to, uint256 claimable) public {
-        assumePayable(to);
-        vm.assume(to != address(0) && to.balance == 0 && to != alice);
-        claimable = bound(claimable, 0, type(uint192).max);
-        settings.token = address(0);
-        TipSub _sub = new TipSub(owner, settings, claimable);
-        deal(address(_sub), type(uint192).max);
-
-        vm.startPrank(owner);
-
-        vm.expectEmit();
-        emit TipsClaimed(claimable, _sub.CLAIMED_TIPS());
-
-        _sub.claimTips(to);
-
-        assertEq(to.balance, claimable, "claimable funds transferred");
-        assertEq(address(_sub).balance, type(uint192).max - claimable, "claimable funds transferred from contract");
-    }
-
-    function testClaimTips_notOwner(address user, address payable to, uint256 claimable) public {
-        vm.assume(user != owner);
-        TipSub _sub = new TipSub(owner, settings, claimable);
-
-        vm.prank(user);
-        vm.expectRevert();
-        _sub.claimTips(to);
     }
 }
 
@@ -924,109 +799,6 @@ contract ChangeMultiplierInactiveSub is AbstractTestSub {
     }
 }
 
-contract WithdrawSub is AbstractTestSub {
-    uint256 public constant CONV = 10;
-    uint24 public constant MULTI = 9999;
-
-    uint256 public constant DEPOSITED_AT = 1234;
-    uint256 public constant OLD_DEPOSIT = 2345;
-    uint256 public constant NEW_DEPOSIT = 6789;
-
-    uint256 public constant TOTAL_DEPOSITED = 9876;
-
-    uint256 public withdrawable;
-
-    constructor(address owner, SubSettings memory settings, uint256 _withdrawable)
-        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
-    {
-        withdrawable = _withdrawable;
-    }
-
-    function _withdrawableFromSubscription(uint256) internal view override returns (uint256) {
-        return withdrawable;
-    }
-
-    function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
-        internal
-        override
-        returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit)
-    {
-        emit SubWithdrawn(tokenId, amount);
-        depositedAt = DEPOSITED_AT;
-        oldDeposit = OLD_DEPOSIT;
-        newDeposit = NEW_DEPOSIT;
-    }
-
-    function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
-        internal
-        override
-    {
-        emit EpochsReduced(depositedAt, oldDeposit, newDeposit, shares, rate);
-    }
-
-    function _totalDeposited(uint256) internal pure override returns (uint256) {
-        return TOTAL_DEPOSITED;
-    }
-
-    function _multiplier(uint256) internal pure override returns (uint24) {
-        return MULTI;
-    }
-
-    function _asInternal(uint256 v) internal view virtual override returns (uint256) {
-        return v * CONV;
-    }
-
-    function _asExternal(uint256 v) internal view virtual override returns (uint256) {
-        return v / CONV;
-    }
-}
-
-contract ClaimSub is AbstractTestSub {
-    uint256 public constant CONV = 10;
-
-    uint256 public constant CURRENT_EPOCH = 1234;
-    uint256 public constant LAST_PROCESSED_EPOCH = 2345;
-    uint256 public constant TOTAL_CLAIMED = 9876;
-
-    uint256 public claimable_;
-
-    constructor(address owner, SubSettings memory settings, uint256 _claimable)
-        AbstractTestSub(owner, "name", "symbol", MetadataStruct("description", "image", "externalUrl"), settings)
-    {
-        claimable_ = _claimable;
-    }
-
-    function _scanEpochs(uint256, uint256) internal view override returns (uint256 amount, uint256 a, uint256 b) {
-        amount = claimable_;
-        a = 0;
-        b = 0;
-    }
-
-    function _claimEpochs(uint256, uint256) internal view override returns (uint256) {
-        return claimable_;
-    }
-
-    function _currentEpoch() internal pure override returns (uint256) {
-        return CURRENT_EPOCH;
-    }
-
-    function _lastProcessedEpoch() internal pure override returns (uint256) {
-        return LAST_PROCESSED_EPOCH;
-    }
-
-    function _claimed() internal pure virtual override returns (uint256) {
-        return TOTAL_CLAIMED;
-    }
-
-    function _asInternal(uint256 v) internal view virtual override returns (uint256) {
-        return v * CONV;
-    }
-
-    function _asExternal(uint256 v) internal view virtual override returns (uint256) {
-        return v / CONV;
-    }
-}
-
 contract TipSub is AbstractTestSub {
     uint256 public constant CONV = 10;
 
@@ -1058,17 +830,5 @@ contract TipSub is AbstractTestSub {
 
     function _allTips() internal pure override returns (uint256) {
         return ALL_TIPS;
-    }
-
-    function _claimedTips() internal pure override returns (uint256) {
-        return CLAIMED_TIPS;
-    }
-
-    function _claimableTips() internal view override returns (uint256) {
-        return claimable_;
-    }
-
-    function _claimTips() internal view override returns (uint256) {
-        return claimable_;
     }
 }
