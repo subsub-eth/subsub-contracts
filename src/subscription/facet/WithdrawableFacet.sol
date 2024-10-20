@@ -67,23 +67,12 @@ abstract contract AbstractWithdrawableFacet is
         emit MetadataUpdate(tokenId);
     }
 
-    function burn(uint256 tokenId) external {
-        // only owner of tokenId can burn
-        require(__msgSender() == __ownerOf(tokenId), "SUB: not the owner");
-
-        _deleteSubscription(tokenId);
-
-        __burn(tokenId);
-    }
-
     function withdrawable(uint256 tokenId) external view requireExists(tokenId) returns (uint256) {
         return _asExternal(_withdrawableFromSubscription(tokenId));
     }
 }
 
 contract WithdrawableFacet is
-    // ContextUpgradeable,
-    // ERC721EnumerableUpgradeable,
     TimestampTimeAware,
     Rate,
     PaymentToken,

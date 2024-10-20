@@ -132,50 +132,6 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         sub.setFlags(flags);
     }
 
-    function testBurn(uint256 tokenId) public {
-        BurnSub _sub = new BurnSub();
-
-        _sub.simpleMint(alice, tokenId);
-
-        assertEq(_sub.totalSupply(), 1, "Token created");
-        assertEq(_sub.balanceOf(alice), 1, "Token created to user");
-
-        vm.prank(alice);
-        vm.expectEmit();
-        emit Burned(tokenId);
-
-        _sub.burn(tokenId);
-
-        assertEq(_sub.totalSupply(), 0, "Token burned");
-        assertEq(_sub.balanceOf(alice), 0, "Token burned from user");
-    }
-
-    function testBurn_notOwner(uint256 tokenId, address user) public {
-        vm.assume(alice != user && user != address(this));
-        BurnSub _sub = new BurnSub();
-
-        _sub.simpleMint(alice, tokenId);
-
-        assertEq(_sub.balanceOf(alice), 1, "Token created to user");
-
-        vm.startPrank(user);
-        vm.expectRevert();
-        _sub.burn(tokenId);
-    }
-
-    function testBurn_twice(uint256 tokenId) public {
-        BurnSub _sub = new BurnSub();
-
-        _sub.simpleMint(alice, tokenId);
-
-        vm.prank(alice);
-
-        _sub.burn(tokenId);
-
-        vm.expectRevert();
-        _sub.burn(tokenId);
-    }
-
     function testMint(uint256 amount, uint24 multiplier, string calldata message) public {
         amount = bound(amount, 0, testToken.balanceOf(alice));
         multiplier = uint24(bound(multiplier, SubLib.MULTIPLIER_BASE, SubLib.MULTIPLIER_MAX));

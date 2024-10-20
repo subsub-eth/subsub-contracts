@@ -238,7 +238,13 @@ interface Withdrawable is SubscriptionEvents, IERC4906 {
      * @return the amount of funds that can be withdrawn
      */
     function withdrawable(uint256 tokenId) external view returns (uint256);
+}
 
+/**
+ * @title Subscription burnable view
+ * @notice provides methods for subscribers to burn their subscription
+ */
+interface Burnable {
     /**
      * @notice "Burns" a subscription token, deletes all achieved subscription data and does not withdraw any withdrawable funds
      * @param tokenId token to burn
@@ -383,6 +389,7 @@ interface ISubscription is
     Claimable,
     Depositable,
     Withdrawable,
+    Burnable,
     SubscriptionMetadata,
     SubscriptionInitialize
 {}
