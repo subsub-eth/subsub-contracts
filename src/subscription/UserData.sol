@@ -475,28 +475,29 @@ abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
         UserDataLib.init(lock);
     }
 
-    function _lock() internal view override returns (uint24) {
+    function _lock() internal view virtual override returns (uint24) {
         return UserDataLib.lock();
     }
 
-    function _isActive(uint256 tokenId) internal view override returns (bool) {
+    function _isActive(uint256 tokenId) internal view virtual override returns (bool) {
         return UserDataLib.isActive(tokenId, _now(), _rate());
     }
 
-    function _expiresAt(uint256 tokenId) internal view override returns (uint256) {
+    function _expiresAt(uint256 tokenId) internal view virtual override returns (uint256) {
         return UserDataLib.expiresAt(tokenId, _rate());
     }
 
-    function _deleteSubscription(uint256 tokenId) internal override {
+    function _deleteSubscription(uint256 tokenId) internal virtual override {
         return UserDataLib.deleteSubscription(tokenId);
     }
 
-    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal override {
+    function _createSubscription(uint256 tokenId, uint256 amount, uint24 multiplier) internal virtual override {
         UserDataLib.createSubscription(tokenId, amount, multiplier, _now());
     }
 
     function _extendSubscription(uint256 tokenId, uint256 amount)
         internal
+        virtual
         override
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, bool reactivated)
     {
@@ -504,12 +505,13 @@ abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
             UserDataLib.extendSubscription(tokenId, amount, _now(), _rate());
     }
 
-    function _withdrawableFromSubscription(uint256 tokenId) internal view override returns (uint256) {
+    function _withdrawableFromSubscription(uint256 tokenId) internal view virtual override returns (uint256) {
         return UserDataLib.withdrawableFromSubscription(tokenId, _now(), _rate());
     }
 
     function _withdrawFromSubscription(uint256 tokenId, uint256 amount)
         internal
+        virtual
         override
         returns (uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit)
     {
@@ -525,27 +527,27 @@ abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
         (isActive, change) = UserDataLib.changeMultiplier(tokenId, newMultiplier, _now(), _rate());
     }
 
-    function _spent(uint256 tokenId) internal view override returns (uint256 spentAmount, uint256 unspentAmount) {
+    function _spent(uint256 tokenId) internal view virtual override returns (uint256 spentAmount, uint256 unspentAmount) {
         (spentAmount, unspentAmount) = UserDataLib.spent(tokenId, _now(), _rate());
     }
 
-    function _totalDeposited(uint256 tokenId) internal view override returns (uint256) {
+    function _totalDeposited(uint256 tokenId) internal view virtual override returns (uint256) {
         return UserDataLib.totalDeposited(tokenId);
     }
 
-    function _multiplier(uint256 tokenId) internal view override returns (uint24) {
+    function _multiplier(uint256 tokenId) internal view virtual override returns (uint24) {
         return UserDataLib.multiplier(tokenId);
     }
 
-    function _lastDepositedAt(uint256 tokenId) internal view override returns (uint256) {
+    function _lastDepositedAt(uint256 tokenId) internal view virtual override returns (uint256) {
         return UserDataLib.lastDepositedAt(tokenId);
     }
 
-    function _getSubData(uint256 tokenId) internal view override returns (SubData memory) {
+    function _getSubData(uint256 tokenId) internal view virtual override returns (SubData memory) {
         return UserDataLib.getSubData(tokenId);
     }
 
-    function _setSubData(uint256 tokenId, SubData memory data) internal {
+    function _setSubData(uint256 tokenId, SubData memory data) internal virtual {
         UserDataLib.setSubData(tokenId, data);
     }
 }

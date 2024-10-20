@@ -96,5 +96,4 @@ contract WithdrawableFacet is
     OzContextBind,
     OzERC721EnumerableBind,
     AbstractWithdrawableFacet
-{
-}
+{}

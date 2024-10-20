@@ -625,50 +625,51 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
         EpochsLib.setClaimed(claimed);
     }
 
-    function _epochSize() internal view override returns (uint256) {
+    function _epochSize() internal view virtual override returns (uint256) {
         return EpochsLib.epochSize();
     }
 
-    function _currentEpoch() internal view override returns (uint256) {
+    function _currentEpoch() internal view virtual override returns (uint256) {
         return EpochsLib.epochAt(_now());
     }
 
-    function _claimed() internal view override returns (uint256) {
+    function _claimed() internal view virtual override returns (uint256) {
         return EpochsLib.claimed();
     }
 
-    function _lastProcessedEpoch() internal view override returns (uint256) {
+    function _lastProcessedEpoch() internal view virtual override returns (uint256) {
         return EpochsLib.lastProcessedEpoch();
     }
 
-    function _activeSubShares() internal view override returns (uint256) {
+    function _activeSubShares() internal view virtual override returns (uint256) {
         return EpochsLib.activeSubShares(_now());
     }
 
     // TODO remove me
-    function _startProcessingEpoch(uint256 suggestedLastEpoch, bool initialClaim) internal pure returns (uint256) {
+    function _startProcessingEpoch(uint256 suggestedLastEpoch, bool initialClaim) internal pure virtual returns (uint256) {
         return EpochsLib.startProcessingEpoch(suggestedLastEpoch, initialClaim);
     }
 
     function _scanEpochs(uint256 rate, uint256 upToEpoch)
         internal
         view
-        override
+        virtual override
         returns (uint256 amount, uint256 starting, uint256 expiring)
     {
         (amount, starting, expiring,) = EpochsLib.scanEpochs(rate, upToEpoch);
     }
 
-    function _claimEpochs(uint256 rate, uint256 upToEpoch) internal override returns (uint256) {
+    function _claimEpochs(uint256 rate, uint256 upToEpoch) internal virtual override returns (uint256) {
         return EpochsLib.claimEpochs(rate, upToEpoch, _now());
     }
 
-    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal override {
+    function _addToEpochs(uint256 depositedAt, uint256 amount, uint256 shares, uint256 rate) internal virtual override {
         EpochsLib.addToEpochs(depositedAt, amount, shares, rate);
     }
 
     function _extendInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal
+        virtual
         override
     {
         EpochsLib.extendInEpochs(depositedAt, oldDeposit, newDeposit, shares, rate);
@@ -676,6 +677,7 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
 
     function _reduceInEpochs(uint256 depositedAt, uint256 oldDeposit, uint256 newDeposit, uint256 shares, uint256 rate)
         internal
+        virtual
         override
     {
         EpochsLib.reduceInEpochs(depositedAt, oldDeposit, newDeposit, shares, _now(), rate);
