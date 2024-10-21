@@ -11,19 +11,19 @@ import {ERC6551Proxy} from "solady/accounts/ERC6551Proxy.sol";
 import {SimpleErc6551} from "../src/account/SimpleErc6551.sol";
 
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {DummyPriceFeed} from "../test/mocks/DummyPriceFeed.sol";
 
-import {BadBeaconNotContract} from "openzeppelin-contracts/contracts/mocks/proxy/BadBeacon.sol";
-import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
-import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {BadBeaconNotContract} from "openzeppelin-contracts/mocks/proxy/BadBeacon.sol";
+import {BeaconProxy} from "openzeppelin-contracts/proxy/beacon/BeaconProxy.sol";
+import {UpgradeableBeacon} from "openzeppelin-contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {
     ITransparentUpgradeableProxy,
     TransparentUpgradeableProxy
-} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+} from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
 
 import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";

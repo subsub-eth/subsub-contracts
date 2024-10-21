@@ -6,10 +6,10 @@ import "../../../src/subscription/handle/Factory.sol";
 import "../../../src/subscription/Subscription.sol";
 import "../../../src/subscription/ISubscription.sol";
 
-import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
-import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UpgradeableBeacon} from "openzeppelin-contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract TestFactory is Factory {
     constructor(address beacon) Factory(beacon) initializer {

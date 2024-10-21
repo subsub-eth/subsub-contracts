@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 /**
  * @dev internal interface exposing OZ {ERC721Enumerable} methods without

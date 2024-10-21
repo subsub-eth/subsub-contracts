@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
-import {IBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol";
+import {BeaconProxy} from "openzeppelin-contracts/proxy/beacon/BeaconProxy.sol";
+import {IBeacon} from "openzeppelin-contracts/proxy/beacon/IBeacon.sol";
 
 import {IBadgeInitialize} from "../IBadge.sol";
 

@@ -8,7 +8,7 @@ import "../../../src/subscription/ISubscription.sol";
 
 import "../../mocks/TestSubscription.sol";
 
-import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
 contract TestSubscriptionHandle is SubscriptionHandle {
     struct Details {

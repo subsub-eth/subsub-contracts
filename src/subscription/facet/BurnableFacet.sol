@@ -13,7 +13,7 @@ import {HasUserData, UserData} from "../UserData.sol";
 import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
 
 import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 abstract contract AbstractBurnableFacet is
     OzContext,

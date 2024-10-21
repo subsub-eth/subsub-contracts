@@ -17,7 +17,7 @@ import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
 
 import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract InitFacetTest is Test {
     ISubscriptionInternal public sub;

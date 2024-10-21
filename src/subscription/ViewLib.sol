@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import {ISubscriptionInternal} from "./ISubscription.sol";
 
-import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
-import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Base64} from "openzeppelin-contracts/utils/Base64.sol";
+import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
 library ViewLib {
     // TODO add symbol to contractURI

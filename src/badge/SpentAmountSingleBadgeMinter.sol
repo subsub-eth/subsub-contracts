@@ -5,7 +5,7 @@ import {IBadgeMinter} from "./IBadgeMinter.sol";
 import {IBadge} from "./IBadge.sol";
 import {ISubscription} from "../subscription/ISubscription.sol";
 
-import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
+import {Context} from "openzeppelin-contracts/utils/Context.sol";
 
 // allows a one time mint per token id
 // allows mint as soon as a specified amount of funds was spent in the token

@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {ERC20DecimalsMock as ERC20DecMock} from "openzeppelin-contracts/contracts/mocks/token/ERC20DecimalsMock.sol";
+import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
+import {ERC20DecimalsMock as ERC20DecMock} from "openzeppelin-contracts/mocks/token/ERC20DecimalsMock.sol";
 
 contract ERC20DecimalsMock is ERC20DecMock {
     constructor(uint8 decimals_) ERC20DecMock(decimals_) ERC20("Test Dollars", "testUSD") {}

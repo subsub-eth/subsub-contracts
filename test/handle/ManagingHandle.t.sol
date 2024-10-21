@@ -7,9 +7,9 @@ import {ManagingHandle} from "../../src/handle/ManagingHandle.sol";
 
 import "../mocks/TestSubscription.sol";
 
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
 interface MintingEvent {
     event Minted(address indexed to, uint256 indexed tokenId);

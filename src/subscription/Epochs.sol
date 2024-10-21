@@ -6,7 +6,7 @@ import {TimeAware} from "./TimeAware.sol";
 
 import {OzInitializable} from "../dependency/OzInitializable.sol";
 
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 
 /**
  * @title Subscription Epochs

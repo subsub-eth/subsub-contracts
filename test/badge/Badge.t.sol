@@ -10,7 +10,7 @@ import {HandleOwnedErrors} from "../../src/handle/HandleOwned.sol";
 
 import {ERC721Mock} from "../mocks/ERC721Mock.sol";
 
-import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract BadgeTest is Test, IBadgeEvents, HandleOwnedErrors {
     ERC1967Proxy public proxy;

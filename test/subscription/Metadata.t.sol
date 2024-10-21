@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
 import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";

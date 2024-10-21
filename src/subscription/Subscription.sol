@@ -21,16 +21,16 @@ import {HasFlagSettings, FlagSettings} from "../FlagSettings.sol";
 import {OzContext, OzContextBind} from "../dependency/OzContext.sol";
 import {OzInitializable, OzInitializableBind} from "../dependency/OzInitializable.sol";
 
-import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
-import {IERC721Metadata} from "openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {IERC165} from "openzeppelin-contracts/interfaces/IERC165.sol";
+import {IERC721Metadata} from "openzeppelin-contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
-import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
+import {Base64} from "openzeppelin-contracts/utils/Base64.sol";
+import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
 // responsbile for handling conversion of token amounts between internal and external representation
 abstract contract Subscription is

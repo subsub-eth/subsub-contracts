@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import {SubscriptionInitialize, MetadataStruct, SubSettings} from "../ISubscription.sol";
 
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
-import {IBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol";
+import {BeaconProxy} from "openzeppelin-contracts/proxy/beacon/BeaconProxy.sol";
+import {IBeacon} from "openzeppelin-contracts/proxy/beacon/IBeacon.sol";
 
 abstract contract HasFactory {
     function _deploySubscription(

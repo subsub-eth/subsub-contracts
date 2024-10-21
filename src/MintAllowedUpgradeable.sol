@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "./IMintAllowedUpgradeable.sol";
 
-import "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
-import "openzeppelin-contracts-upgradeable/contracts/utils/ContextUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, IMintAllowedUpgradeable {
     struct MintAllowedStorage {

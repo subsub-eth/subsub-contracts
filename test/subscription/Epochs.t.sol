@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../src/subscription/Epochs.sol";
 
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
 
 contract TestEpochs is OzInitializableBind, Epochs {

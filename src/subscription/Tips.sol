@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {SubLib} from "./SubLib.sol";
 
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
 
 library TipsLib {
     using SubLib for uint256;

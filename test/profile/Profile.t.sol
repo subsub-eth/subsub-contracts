@@ -5,8 +5,8 @@ import "forge-std/Test.sol";
 import "../../src/profile/Profile.sol";
 
 import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+    "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
 
 // TODO test mint/renew with amount==0
 contract ProfileTest is Test {
