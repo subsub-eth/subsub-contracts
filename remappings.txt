@@ -3,8 +3,11 @@
 ds-test/=lib/forge-std/lib/ds-test/src/
 erc6551/=lib/erc6551/src/
 forge-std/=lib/forge-std/src/
-openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
-openzeppelin-contracts/=lib/openzeppelin-contracts/
+openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+openzeppelin-contracts-upgradeable/contracts/=lib/openzeppelin-contracts-upgradeable/contracts/
+openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+openzeppelin-contracts/contracts/=lib/openzeppelin-contracts/contracts/
 chainlink/=lib/chainlink/contracts/src/v0.8/
 solady/=lib/solady/src/
 diamond-beacon/=lib/diamond-beacon/src/
+diamond-1-hardhat/=lib/diamond-beacon/lib/diamond-1-hardhat/contracts/

@@ -1,21 +1,29 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/subscription/TimestampSubscription.sol";
+import "../../../src/subscription/facet/InitFacet.sol";
 
-import {MetadataStruct, SubSettings} from "../../src/subscription/ISubscription.sol";
+import {PropertiesFacet} from "../../../src/subscription/facet/PropertiesFacet.sol";
+import {ERC721Facet} from "../../../src/subscription/facet/ERC721Facet.sol";
+import {Metadata} from "../../../src/subscription/Metadata.sol";
 
-import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
-import {ERC721Mock} from "../mocks/ERC721Mock.sol";
-import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MetadataStruct, SubSettings, ISubscriptionInternal, SubscriptionProperties} from "../../../src/subscription/ISubscription.sol";
+
+import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
+
+import {DiamondBeaconProxy} from "diamond-beacon/DiamondBeaconProxy.sol";
+import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
+
+import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
+import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract SubscriptionInitTest is Test {
-    // uses TimestampSubscription as a concrete example to test init
-
-    TimestampSubscription public sub;
-    TimestampSubscription public impl;
+contract InitFacetTest is Test {
+    ISubscriptionInternal public sub;
+    InitFacet public impl;
+    PropertiesFacet public propFacet;
+    ERC721Facet public erc721Facet;
     ERC721Mock public handleContract;
 
     address public owner;
@@ -52,9 +60,33 @@ contract SubscriptionInitTest is Test {
     }
 
     function createSub() public {
-        impl = new TimestampSubscription(address(handleContract));
-        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
-        sub = TimestampSubscription(address(proxy));
+        impl = new InitFacet();
+        propFacet = new PropertiesFacet(address(handleContract));
+        erc721Facet = new ERC721Facet();
+
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](3);
+        {
+          bytes4[] memory selectors = new bytes4[](1);
+          selectors[0] = InitFacet.initialize.selector;
+          cuts[0] = IDiamond.FacetCut(address(impl), IDiamond.FacetCutAction.Add, selectors);
+        }
+        {
+          bytes4[] memory selectors = new bytes4[](2);
+          selectors[0] = SubscriptionProperties.settings.selector;
+          selectors[1] = Metadata.metadata.selector;
+          cuts[1] = IDiamond.FacetCut(address(propFacet), IDiamond.FacetCutAction.Add, selectors);
+        }
+        {
+          bytes4[] memory selectors = new bytes4[](2);
+          selectors[0] = IERC20Metadata.name.selector;
+          selectors[1] = IERC20Metadata.symbol.selector;
+          cuts[2] = IDiamond.FacetCut(address(propFacet), IDiamond.FacetCutAction.Add, selectors);
+        }
+
+
+        DiamondBeacon beacon = new DiamondBeacon(owner, cuts);
+        DiamondBeaconProxy proxy = new DiamondBeaconProxy(address(beacon), "");
+        sub = ISubscriptionInternal(address(proxy));
 
         handleContract.mint(owner, uint256(uint160(address(sub))));
     }
