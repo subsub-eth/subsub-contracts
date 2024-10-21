@@ -2,9 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/subscription/Subscription.sol";
-import "../mocks/TestSubscription.sol";
-import "./AbstractTestSub.sol";
+
+import {PropertiesFacet} from "../../../src/subscription/facet/PropertiesFacet.sol";
 
 import {
     SubscriptionEvents,
@@ -12,16 +11,21 @@ import {
     MetadataStruct,
     SubSettings,
     SubscriptionFlags
-} from "../../src/subscription/ISubscription.sol";
-import "../../src/subscription/handle/SubscriptionHandle.sol";
+} from "../../../src/subscription/ISubscription.sol";
 
-import {ERC20DecimalsMock} from "../mocks/ERC20DecimalsMock.sol";
-import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {HasUserData, UserData} from "../../../src/subscription/UserData.sol";
+import {HasEpochs, Epochs} from "../../../src/subscription/Epochs.sol";
+import {HasBaseSubscription, BaseSubscription} from "../../../src/subscription/BaseSubscription.sol";
 
-contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags, TestSubEvents {
+import {HasHandleOwned, HandleOwned} from "../../../src/handle/HandleOwned.sol";
+import {IOwnable} from "../../../src/IOwnable.sol";
+
+import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
+
+contract PropertiesFacetTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags {
     event MetadataUpdate(uint256 _tokenId);
 
-    Subscription public sub;
+    PropertiesSub public sub;
 
     address public owner;
     address public alice;
@@ -54,8 +58,7 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         // bob does not receive tokens
 
         settings = SubSettings(address(testToken), rate, lock, epochSize, maxSupply);
-
-        sub = new SimpleTestSub(owner, "name", "symbol", metadata, settings);
+        sub = new PropertiesSub(owner, "name", "symbol", metadata);
     }
 
     function testSetExternalUrl() public {
@@ -131,4 +134,32 @@ contract SubscriptionTest is Test, SubscriptionEvents, ClaimEvents, Subscription
         vm.expectRevert();
         sub.setFlags(flags);
     }
+}
+
+contract PropertiesSub is PropertiesFacet {
+    address private _owner;
+
+    constructor(address owner_, string memory tokenName, string memory tokenSymbol, MetadataStruct memory _metadata)
+        PropertiesFacet(address(0))
+        initializer
+    {
+        _owner = owner_;
+        __ERC721_init_unchained(tokenName, tokenSymbol);
+        __Metadata_init_unchained(_metadata.description, _metadata.image, _metadata.externalUrl);
+    }
+
+    // override HandleOwned
+    function _checkOwner() internal view override(HasHandleOwned, HandleOwned) {
+        require(_msgSender() == _owner, "Not Owner");
+    }
+
+    function _isValidSigner(address acc) internal view override(HasHandleOwned, HandleOwned) returns (bool) {
+        return acc == _owner;
+    }
+
+    function owner() public view override(IOwnable, HandleOwned) returns (address) {
+        return _owner;
+    }
+
+    function _disableInitializers() internal override {}
 }
