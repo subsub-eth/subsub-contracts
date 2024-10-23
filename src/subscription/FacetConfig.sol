@@ -141,3 +141,49 @@ contract FacetConfig {
         return s;
     }
 }
+
+library FacetConfigLib {
+    function concat(IDiamond.FacetCut[] memory a, IDiamond.FacetCut[] memory b)
+        internal
+        pure
+        returns (IDiamond.FacetCut[] memory)
+    {
+        IDiamond.FacetCut[] memory returnArr = new IDiamond.FacetCut[](a.length + b.length);
+
+        uint256 i = 0;
+        for (; i < a.length; i++) {
+            returnArr[i] = a[i];
+        }
+
+        uint256 j = 0;
+        while (j < b.length) {
+            returnArr[i++] = b[j++];
+        }
+
+        return returnArr;
+    }
+
+    function asAddCut(bytes4[] memory selectors, address target) internal pure returns (IDiamond.FacetCut[] memory) {
+        IDiamond.FacetCut memory c = IDiamond.FacetCut(target, IDiamond.FacetCutAction.Add, selectors);
+
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
+        cuts[0] = c;
+        return cuts;
+    }
+
+    function asRemoveCut(bytes4[] memory selectors) internal pure returns (IDiamond.FacetCut[] memory) {
+        IDiamond.FacetCut memory c = IDiamond.FacetCut(address(0), IDiamond.FacetCutAction.Remove, selectors);
+
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
+        cuts[0] = c;
+        return cuts;
+    }
+
+    function asReplaceCut(bytes4[] memory selectors, address target) internal pure returns (IDiamond.FacetCut[] memory) {
+        IDiamond.FacetCut memory c = IDiamond.FacetCut(target, IDiamond.FacetCutAction.Replace, selectors);
+
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
+        cuts[0] = c;
+        return cuts;
+    }
+}

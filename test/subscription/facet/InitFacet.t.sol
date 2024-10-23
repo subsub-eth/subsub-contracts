@@ -4,16 +4,12 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../../src/subscription/facet/InitFacet.sol";
 
-import {FacetConfig} from "../../../src/subscription/FacetConfig.sol";
+import {FacetConfig, FacetConfigLib} from "../../../src/subscription/FacetConfig.sol";
 
 import {PropertiesFacet} from "../../../src/subscription/facet/PropertiesFacet.sol";
 import {ERC721Facet} from "../../../src/subscription/facet/ERC721Facet.sol";
 
-import {
-    MetadataStruct,
-    SubSettings,
-    ISubscriptionInternal
-} from "../../../src/subscription/ISubscription.sol";
+import {MetadataStruct, SubSettings, ISubscriptionInternal} from "../../../src/subscription/ISubscription.sol";
 
 import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
 
@@ -24,6 +20,9 @@ import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 
 contract InitFacetTest is Test {
+    using FacetConfigLib for IDiamond.FacetCut[];
+    using FacetConfigLib for bytes4[];
+
     FacetConfig public config;
 
     ISubscriptionInternal public sub;
@@ -72,16 +71,9 @@ contract InitFacetTest is Test {
         propFacet = new PropertiesFacet(address(handleContract));
         erc721Facet = new ERC721Facet();
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](3);
-        {
-            cuts[0] = IDiamond.FacetCut(address(impl), IDiamond.FacetCutAction.Add, config.initFacet(impl));
-        }
-        {
-            cuts[1] = IDiamond.FacetCut(address(propFacet), IDiamond.FacetCutAction.Add, config.propertiesFacet(propFacet));
-        }
-        {
-            cuts[2] = IDiamond.FacetCut(address(erc721Facet), IDiamond.FacetCutAction.Add, config.erc721Facet(erc721Facet));
-        }
+        IDiamond.FacetCut[] memory cuts = config.initFacet(impl).asAddCut(address(impl)).concat(
+            config.propertiesFacet(propFacet).asAddCut(address(propFacet))
+        ).concat(config.erc721Facet(erc721Facet).asAddCut(address(erc721Facet)));
 
         DiamondBeacon beacon = new DiamondBeacon(owner, cuts);
         DiamondBeaconProxy proxy = new DiamondBeaconProxy(address(beacon), "");
