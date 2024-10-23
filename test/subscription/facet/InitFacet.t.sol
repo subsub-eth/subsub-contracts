@@ -4,11 +4,16 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../../src/subscription/facet/InitFacet.sol";
 
+import {FacetConfig} from "../../../src/subscription/FacetConfig.sol";
+
 import {PropertiesFacet} from "../../../src/subscription/facet/PropertiesFacet.sol";
 import {ERC721Facet} from "../../../src/subscription/facet/ERC721Facet.sol";
-import {Metadata} from "../../../src/subscription/Metadata.sol";
 
-import {MetadataStruct, SubSettings, ISubscriptionInternal, SubscriptionProperties} from "../../../src/subscription/ISubscription.sol";
+import {
+    MetadataStruct,
+    SubSettings,
+    ISubscriptionInternal
+} from "../../../src/subscription/ISubscription.sol";
 
 import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
 
@@ -17,9 +22,10 @@ import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
 
 import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
-import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract InitFacetTest is Test {
+    FacetConfig public config;
+
     ISubscriptionInternal public sub;
     InitFacet public impl;
     PropertiesFacet public propFacet;
@@ -42,6 +48,8 @@ contract InitFacetTest is Test {
     uint8 public decimals;
 
     function setUp() public {
+        config = new FacetConfig();
+
         owner = address(10);
         metadata = MetadataStruct("description", "image", "externalUrl");
         rate = 5;
@@ -66,23 +74,14 @@ contract InitFacetTest is Test {
 
         IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](3);
         {
-          bytes4[] memory selectors = new bytes4[](1);
-          selectors[0] = InitFacet.initialize.selector;
-          cuts[0] = IDiamond.FacetCut(address(impl), IDiamond.FacetCutAction.Add, selectors);
+            cuts[0] = IDiamond.FacetCut(address(impl), IDiamond.FacetCutAction.Add, config.initFacet(impl));
         }
         {
-          bytes4[] memory selectors = new bytes4[](2);
-          selectors[0] = SubscriptionProperties.settings.selector;
-          selectors[1] = Metadata.metadata.selector;
-          cuts[1] = IDiamond.FacetCut(address(propFacet), IDiamond.FacetCutAction.Add, selectors);
+            cuts[1] = IDiamond.FacetCut(address(propFacet), IDiamond.FacetCutAction.Add, config.propertiesFacet(propFacet));
         }
         {
-          bytes4[] memory selectors = new bytes4[](2);
-          selectors[0] = IERC20Metadata.name.selector;
-          selectors[1] = IERC20Metadata.symbol.selector;
-          cuts[2] = IDiamond.FacetCut(address(propFacet), IDiamond.FacetCutAction.Add, selectors);
+            cuts[2] = IDiamond.FacetCut(address(erc721Facet), IDiamond.FacetCutAction.Add, config.erc721Facet(erc721Facet));
         }
-
 
         DiamondBeacon beacon = new DiamondBeacon(owner, cuts);
         DiamondBeaconProxy proxy = new DiamondBeaconProxy(address(beacon), "");
