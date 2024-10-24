@@ -3,16 +3,16 @@ pragma solidity ^0.8.20;
 
 import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
 
-import {InitFacet} from "./facet/InitFacet.sol";
-import {ERC721Facet} from "./facet/ERC721Facet.sol";
-import {PropertiesFacet} from "./facet/PropertiesFacet.sol";
 import {BurnableFacet} from "./facet/BurnableFacet.sol";
 import {ClaimableFacet} from "./facet/ClaimableFacet.sol";
 import {DepositableFacet} from "./facet/DepositableFacet.sol";
+import {ERC721Facet} from "./facet/ERC721Facet.sol";
+import {InitFacet} from "./facet/InitFacet.sol";
 import {MetadataFacet} from "./facet/MetadataFacet.sol";
+import {PropertiesFacet} from "./facet/PropertiesFacet.sol";
 import {WithdrawableFacet} from "./facet/WithdrawableFacet.sol";
 
-import {SubscriptionProperties, ISubscriptionInternal} from "./ISubscription.sol";
+import {ISubscriptionInternal, SubscriptionProperties} from "./ISubscription.sol";
 
 import {IMetadata} from "./Metadata.sol";
 
@@ -139,51 +139,5 @@ contract FacetConfig {
         s.push(f.withdrawable.selector);
 
         return s;
-    }
-}
-
-library FacetConfigLib {
-    function concat(IDiamond.FacetCut[] memory a, IDiamond.FacetCut[] memory b)
-        internal
-        pure
-        returns (IDiamond.FacetCut[] memory)
-    {
-        IDiamond.FacetCut[] memory returnArr = new IDiamond.FacetCut[](a.length + b.length);
-
-        uint256 i = 0;
-        for (; i < a.length; i++) {
-            returnArr[i] = a[i];
-        }
-
-        uint256 j = 0;
-        while (j < b.length) {
-            returnArr[i++] = b[j++];
-        }
-
-        return returnArr;
-    }
-
-    function asAddCut(bytes4[] memory selectors, address target) internal pure returns (IDiamond.FacetCut[] memory) {
-        IDiamond.FacetCut memory c = IDiamond.FacetCut(target, IDiamond.FacetCutAction.Add, selectors);
-
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
-        cuts[0] = c;
-        return cuts;
-    }
-
-    function asRemoveCut(bytes4[] memory selectors) internal pure returns (IDiamond.FacetCut[] memory) {
-        IDiamond.FacetCut memory c = IDiamond.FacetCut(address(0), IDiamond.FacetCutAction.Remove, selectors);
-
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
-        cuts[0] = c;
-        return cuts;
-    }
-
-    function asReplaceCut(bytes4[] memory selectors, address target) internal pure returns (IDiamond.FacetCut[] memory) {
-        IDiamond.FacetCut memory c = IDiamond.FacetCut(target, IDiamond.FacetCutAction.Replace, selectors);
-
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](1);
-        cuts[0] = c;
-        return cuts;
     }
 }

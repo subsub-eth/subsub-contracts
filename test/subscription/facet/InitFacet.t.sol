@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../../../src/subscription/facet/InitFacet.sol";
 
-import {FacetConfig, FacetConfigLib} from "../../../src/subscription/FacetConfig.sol";
+import {FacetConfig} from "../../../src/subscription/FacetConfig.sol";
 
 import {PropertiesFacet} from "../../../src/subscription/facet/PropertiesFacet.sol";
 import {ERC721Facet} from "../../../src/subscription/facet/ERC721Facet.sol";
@@ -15,13 +15,14 @@ import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
 
 import {DiamondBeaconProxy} from "diamond-beacon/DiamondBeaconProxy.sol";
 import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
+import {FacetHelper} from "diamond-beacon/util/FacetHelper.sol";
 
 import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 
 contract InitFacetTest is Test {
-    using FacetConfigLib for IDiamond.FacetCut[];
-    using FacetConfigLib for bytes4[];
+    using FacetHelper for IDiamond.FacetCut[];
+    using FacetHelper for bytes4[];
 
     FacetConfig public config;
 
@@ -137,8 +138,9 @@ contract InitFacetTest is Test {
         sub.initialize(name, symbol, metadata, settings);
     }
 
-    function testConstruct_lockTooLarge() public {
-        settings.lock = 10_001;
+    function testConstruct_lockTooLarge(uint24 lock_) public {
+        lock_ = uint24(bound(lock_, SubLib.LOCK_BASE + 1, type(uint24).max));
+        settings.lock = lock_;
 
         createSub();
 
