@@ -4,6 +4,14 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
 import {BurnableFacet} from "../../../src/subscription/facet/BurnableFacet.sol";
+import {ERC721Facet} from "../../../src/subscription/facet/ERC721Facet.sol";
+
+import {DiamondBeaconProxy} from "diamond-beacon/DiamondBeaconProxy.sol";
+import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
+import {FacetHelper} from "diamond-beacon/util/FacetHelper.sol";
+
+import {FacetConfig} from "../../../src/subscription/FacetConfig.sol";
+import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
 
 import {
     SubscriptionEvents,
@@ -20,6 +28,12 @@ import {HasBaseSubscription, BaseSubscription} from "../../../src/subscription/B
 import {ERC20DecimalsMock} from "../../mocks/ERC20DecimalsMock.sol";
 
 contract BurnableFacetTest is Test, SubscriptionEvents, ClaimEvents, SubscriptionFlags {
+    using FacetHelper for IDiamond.FacetCut[];
+    using FacetHelper for bytes4;
+    using FacetHelper for bytes4[];
+
+    FacetConfig public config;
+
     event MetadataUpdate(uint256 _tokenId);
 
     address public owner;
@@ -38,6 +52,8 @@ contract BurnableFacetTest is Test, SubscriptionEvents, ClaimEvents, Subscriptio
     uint8 public decimals;
 
     function setUp() public {
+        config = new FacetConfig();
+
         owner = address(10);
         alice = address(11);
         bob = address(12);
@@ -55,8 +71,24 @@ contract BurnableFacetTest is Test, SubscriptionEvents, ClaimEvents, Subscriptio
         settings = SubSettings(address(testToken), rate, lock, epochSize, maxSupply);
     }
 
+    function createSub() private returns (BurnSub) {
+        BurnSub impl = new BurnSub();
+        ERC721Facet erc721Facet = new ERC721Facet();
+
+        bytes4[] memory simpleMint = impl.simpleMint.selector.asArray();
+
+        IDiamond.FacetCut[] memory cuts = config.burnableFacet(impl).asAddCut(address(impl)).concat(
+            config.erc721Facet(erc721Facet).asAddCut(address(erc721Facet)).concat(simpleMint.asAddCut(address(impl)))
+        );
+
+        DiamondBeacon beacon = new DiamondBeacon(owner, cuts);
+        DiamondBeaconProxy proxy = new DiamondBeaconProxy(address(beacon), "");
+
+        return BurnSub(address(proxy));
+    }
+
     function testBurn(uint256 tokenId) public {
-        BurnSub _sub = new BurnSub();
+        BurnSub _sub = createSub();
 
         _sub.simpleMint(alice, tokenId);
 
@@ -75,7 +107,7 @@ contract BurnableFacetTest is Test, SubscriptionEvents, ClaimEvents, Subscriptio
 
     function testBurn_notOwner(uint256 tokenId, address user) public {
         vm.assume(alice != user && user != address(this));
-        BurnSub _sub = new BurnSub();
+        BurnSub _sub = createSub();
 
         _sub.simpleMint(alice, tokenId);
 
@@ -87,7 +119,7 @@ contract BurnableFacetTest is Test, SubscriptionEvents, ClaimEvents, Subscriptio
     }
 
     function testBurn_twice(uint256 tokenId) public {
-        BurnSub _sub = new BurnSub();
+        BurnSub _sub = createSub();
 
         _sub.simpleMint(alice, tokenId);
 
@@ -100,12 +132,10 @@ contract BurnableFacetTest is Test, SubscriptionEvents, ClaimEvents, Subscriptio
     }
 }
 
-
 event Burned(uint256 indexed tokenId);
 
 contract BurnSub is BurnableFacet {
-    constructor()
-    {}
+    constructor() {}
 
     function _deleteSubscription(uint256 tokenId) internal override(HasUserData, UserData) {
         emit Burned(tokenId);
