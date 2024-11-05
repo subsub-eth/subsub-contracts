@@ -19,11 +19,29 @@ import {BadBeaconNotContract} from "openzeppelin-contracts/mocks/proxy/BadBeacon
 import {BeaconProxy} from "openzeppelin-contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "openzeppelin-contracts/proxy/beacon/UpgradeableBeacon.sol";
 
+import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
+
+import {DiamondBeaconProxy} from "diamond-beacon/DiamondBeaconProxy.sol";
+import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
+
+import {FacetHelper} from "diamond-beacon/util/FacetHelper.sol";
+
+import {FacetConfig} from "../src/subscription/FacetConfig.sol";
+
 import {
     ITransparentUpgradeableProxy,
     TransparentUpgradeableProxy
 } from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
+
+import {InitFacet} from "../src/subscription/facet/InitFacet.sol";
+import {PropertiesFacet} from "../src/subscription/facet/PropertiesFacet.sol";
+import {ERC721Facet} from "../src/subscription/facet/ERC721Facet.sol";
+import {BurnableFacet} from "../src/subscription/facet/BurnableFacet.sol";
+import {ClaimableFacet} from "../src/subscription/facet/ClaimableFacet.sol";
+import {DepositableFacet} from "../src/subscription/facet/DepositableFacet.sol";
+import {MetadataFacet} from "../src/subscription/facet/MetadataFacet.sol";
+import {WithdrawableFacet} from "../src/subscription/facet/WithdrawableFacet.sol";
 
 import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
@@ -36,6 +54,9 @@ import {Badge} from "../src/badge/Badge.sol";
 contract DeployDummy {}
 
 contract DeployScript is Script {
+    using FacetHelper for IDiamond.FacetCut[];
+    using FacetHelper for bytes4[];
+
     address private deployDummy;
 
     MetadataStruct private metadata;
@@ -142,10 +163,54 @@ contract DeployScript is Script {
 
                 subHandle = SubscriptionHandle(address(subHandleProxy));
 
-                // create Subscription Implementation with a reference to the CORRECT handle proxy
-                Subscription subscriptionImplementation = new TimestampSubscription(address(subHandle));
-                UpgradeableBeacon subscriptionBeacon =
-                    new UpgradeableBeacon(address(subscriptionImplementation), deployer);
+                IDiamond.FacetCut[] memory cuts;
+                // create Subscription Facets with a reference to the CORRECT handle proxy
+                {
+                    FacetConfig config = new FacetConfig();
+                    {
+                        InitFacet init = new InitFacet();
+                        console.log("Subscription InitFacet", address(init));
+                        cuts = config.initFacet(init).asAddCut(address(init));
+                    }
+                    {
+                        PropertiesFacet props = new PropertiesFacet(address(subHandle));
+                        console.log("Subscription PropertiesFacet", address(props));
+                        cuts = cuts.concat(config.propertiesFacet(props).asAddCut(address(props)));
+                    }
+                    {
+                        ERC721Facet erc721 = new ERC721Facet();
+                        console.log("Subscription ERC721Facet", address(erc721));
+                        cuts = cuts.concat(config.erc721Facet(erc721).asAddCut(address(erc721)));
+                    }
+                    {
+                        BurnableFacet burn = new BurnableFacet();
+                        console.log("Subscription BurnableFacet", address(burn));
+                        cuts = cuts.concat(config.burnableFacet(burn).asAddCut(address(burn)));
+                    }
+                    {
+                        ClaimableFacet claim = new ClaimableFacet(address(subHandle));
+                        console.log("Subscription ClaimableFacet", address(claim));
+                        cuts = cuts.concat(config.claimableFacet(claim).asAddCut(address(claim)));
+                    }
+                    {
+                        DepositableFacet deposit = new DepositableFacet();
+                        console.log("Subscription DepositableFacet", address(deposit));
+                        cuts = cuts.concat(config.depositableFacet(deposit).asAddCut(address(deposit)));
+                    }
+                    {
+                        MetadataFacet meta = new MetadataFacet();
+                        console.log("Subscription MetadataFacet", address(meta));
+                        cuts = cuts.concat(config.metadataFacet(meta).asAddCut(address(meta)));
+                    }
+                    {
+                        WithdrawableFacet withdraw = new WithdrawableFacet();
+                        console.log("Subscription WithdrawableFacet", address(withdraw));
+                        cuts = cuts.concat(config.withdrawableFacet(withdraw).asAddCut(address(withdraw)));
+                    }
+                }
+                DiamondBeacon subscriptionBeacon = new DiamondBeacon(deployer, cuts);
+
+                console.log("Subscription Beacon", address(subscriptionBeacon));
 
                 // fix the handle => sub reference by upgrading the handle implementation with the correct beacon ref
                 UpgradeableSubscriptionHandle subHandleImpl =
@@ -159,9 +224,6 @@ contract DeployScript is Script {
                 console.log("SubHandle Implementation", address(subHandleImpl));
                 console.log("SubHandle Proxy Admin", subHandleAdminAddress);
                 console.log("SubHandle Proxy Contract", address(subHandle));
-
-                console.log("Subscription Implementation", address(subscriptionImplementation));
-                console.log("Subscription Beacon", address(subscriptionBeacon));
             }
 
             //////////////////////////////////////////////////////////////////////
