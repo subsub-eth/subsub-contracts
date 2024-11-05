@@ -8,12 +8,14 @@ import "../../../src/subscription/ISubscription.sol";
 
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
-import {UpgradeableBeacon} from "openzeppelin-contracts/proxy/beacon/UpgradeableBeacon.sol";
-import {ERC1967Proxy} from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
 
-contract TestFactory is Factory {
-    constructor(address beacon) Factory(beacon) initializer {
-        __Factory_init();
+import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
+import {FacetHelper} from "diamond-beacon/util/FacetHelper.sol";
+
+contract TestFactory is DiamondFactory {
+    constructor(address beacon) DiamondFactory(beacon) initializer {
+        __DiamondFactory_init();
     }
 
     function deploySubscription(
@@ -42,9 +44,13 @@ contract TestSubscriptionInitialize is SubscriptionInitialize {
 }
 
 contract FactoryTest is Test {
+    using FacetHelper for IDiamond.FacetCut[];
+    using FacetHelper for bytes4;
+    using FacetHelper for bytes4[];
+
     TestFactory private factory;
 
-    IBeacon private beacon;
+    DiamondBeacon private beacon;
     TestSubscriptionInitialize private subscription;
 
     MetadataStruct private metadata;
@@ -52,7 +58,10 @@ contract FactoryTest is Test {
 
     function setUp() public {
         subscription = new TestSubscriptionInitialize();
-        beacon = new UpgradeableBeacon(address(subscription), address(this));
+        IDiamond.FacetCut[] memory cuts = subscription.initialize.selector.asArray().asAddCut(address(subscription))
+            .concat(subscription.hello.selector.asArray().asAddCut(address(subscription)));
+
+        beacon = new DiamondBeacon(address(this), cuts);
         factory = new TestFactory(address(beacon));
 
         metadata = MetadataStruct("test", "test", "test");

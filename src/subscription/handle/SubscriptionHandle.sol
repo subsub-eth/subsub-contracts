@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ISubscriptionHandle} from "./ISubscriptionHandle.sol";
-import {HasFactory, Factory} from "./Factory.sol";
+import {HasFactory, DiamondFactory} from "./Factory.sol";
 import {HasContractRegistry, ContractRegistry} from "../../handle/ContractRegistry.sol";
 import {ManagingHandle} from "../../handle/ManagingHandle.sol";
 
@@ -74,13 +74,13 @@ abstract contract SubscriptionHandle is
     }
 }
 
-contract UpgradeableSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry, ManagingHandle {
-    constructor(address beacon) Factory(beacon) {
+contract UpgradeableSubscriptionHandle is SubscriptionHandle, DiamondFactory, ContractRegistry, ManagingHandle {
+    constructor(address beacon) DiamondFactory(beacon) {
         _disableInitializers();
     }
 
     function initialize() external initializer {
-        __Factory_init_unchained();
+        __DiamondFactory_init_unchained();
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
     }
@@ -94,9 +94,9 @@ contract UpgradeableSubscriptionHandle is SubscriptionHandle, Factory, ContractR
 }
 
 // is not upgradeable
-contract SimpleSubscriptionHandle is SubscriptionHandle, Factory, ContractRegistry, ManagingHandle {
-    constructor(address beacon) Factory(beacon) initializer {
-        __Factory_init_unchained();
+contract SimpleSubscriptionHandle is SubscriptionHandle, DiamondFactory, ContractRegistry, ManagingHandle {
+    constructor(address beacon) DiamondFactory(beacon) initializer {
+        __DiamondFactory_init_unchained();
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
     }
