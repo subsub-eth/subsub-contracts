@@ -12,7 +12,7 @@ library ViewLib {
     using Strings for uint256;
     using Strings for address;
 
-    function contractData(ISubscriptionInternal s) public view returns (string memory) {
+    function contractData(ISubscriptionInternal s) internal view returns (string memory) {
         string memory output;
         {
             (address token, uint256 rate, uint256 lock, uint256 epochSize, uint256 maxSupply) = s.settings();
@@ -95,7 +95,7 @@ library ViewLib {
         return output;
     }
 
-    function tokenData(ISubscriptionInternal s, uint256 tokenId) public view returns (string memory) {
+    function tokenData(ISubscriptionInternal s, uint256 tokenId) internal view returns (string memory) {
         // TODO mind changes to contract-wide metadata need to fire ERC4906 events
         string memory output;
 
