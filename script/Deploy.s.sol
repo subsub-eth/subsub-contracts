@@ -18,11 +18,12 @@ import {DummyPriceFeed} from "../test/mocks/DummyPriceFeed.sol";
 import {BadBeaconNotContract} from "openzeppelin-contracts/mocks/proxy/BadBeacon.sol";
 import {BeaconProxy} from "openzeppelin-contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "openzeppelin-contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
 
 import {DiamondBeaconProxy} from "diamond-beacon/DiamondBeaconProxy.sol";
-import {DiamondBeacon} from "diamond-beacon/DiamondBeacon.sol";
+import {DiamondBeaconUpgradeable} from "diamond-beacon/DiamondBeaconUpgradeable.sol";
 
 import {FacetHelper} from "diamond-beacon/util/FacetHelper.sol";
 
@@ -208,9 +209,22 @@ contract DeployScript is Script {
                         cuts = cuts.concat(config.withdrawableFacet(withdraw).asAddCut(address(withdraw)));
                     }
                 }
-                DiamondBeacon subscriptionBeacon = new DiamondBeacon(deployer, cuts);
 
-                console.log("Subscription Beacon", address(subscriptionBeacon));
+                // deploy diamond beacon impl
+                address subBeaconImpl = address(new DiamondBeaconUpgradeable());
+
+                // prep initializer call
+                bytes memory initCall = abi.encodeCall(DiamondBeaconUpgradeable.init, (deployer, cuts));
+
+                // deploy actual proxy, cast to diamond beacon
+                DiamondBeaconUpgradeable subscriptionBeacon =
+                    DiamondBeaconUpgradeable(address(new ERC1967Proxy(subBeaconImpl, initCall)));
+
+                // TODO FIXME
+                // subscriptionBeacon.setDiamondSupportsInterface(interfaces, true);
+
+                console.log("Subscription Beacon Implementation", subBeaconImpl);
+                console.log("Subscription Beacon Proxy", address(subscriptionBeacon));
 
                 // fix the handle => sub reference by upgrading the handle implementation with the correct beacon ref
                 UpgradeableSubscriptionHandle subHandleImpl =
