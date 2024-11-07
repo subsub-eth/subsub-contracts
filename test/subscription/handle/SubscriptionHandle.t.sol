@@ -6,8 +6,6 @@ import "../../../src/subscription/handle/ISubscriptionHandle.sol";
 import "../../../src/subscription/handle/SubscriptionHandle.sol";
 import "../../../src/subscription/ISubscription.sol";
 
-import "../../mocks/TestSubscription.sol";
-
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
 contract TestSubscriptionHandle is SubscriptionHandle {

@@ -5,8 +5,6 @@ import "forge-std/Test.sol";
 
 import {ManagingHandle} from "../../src/handle/ManagingHandle.sol";
 
-import "../mocks/TestSubscription.sol";
-
 import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
