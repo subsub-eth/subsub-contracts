@@ -15,6 +15,10 @@ import {ERC721BurnableUpgradeable} from
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
+import {UUPSUpgradeable} from "openzeppelin-contracts/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+// TODO add test
 abstract contract BadgeHandle is
     Initializable,
     ContextUpgradeable,
@@ -64,15 +68,27 @@ abstract contract BadgeHandle is
     }
 }
 
-contract UpgradeableBadgeHandle is BadgeHandle, Factory, ContractRegistry, ManagingHandle {
+contract UpgradeableBadgeHandle is
+    BadgeHandle,
+    Factory,
+    ContractRegistry,
+    ManagingHandle,
+    UUPSUpgradeable,
+    OwnableUpgradeable
+{
     constructor(address beacon) Factory(beacon) {
         _disableInitializers();
     }
 
-    function initialize() external initializer {
+    function initialize(address owner) external initializer {
         __Factory_init_unchained();
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
+        __Ownable_init_unchained(owner);
+    }
+
+    function _authorizeUpgrade(address) internal virtual override {
+        _checkOwner();
     }
 
     function _safeMint(address to, uint256 tokenId, bytes memory data)

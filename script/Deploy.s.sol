@@ -10,6 +10,8 @@ import {IERC6551Executable} from "erc6551/interfaces/IERC6551Executable.sol";
 import {ERC6551Proxy} from "solady/accounts/ERC6551Proxy.sol";
 import {SimpleErc6551} from "../src/account/SimpleErc6551.sol";
 
+import {C3Deploy} from "../src/deploy/C3Deploy.sol";
+
 import {ERC20DecimalsMock} from "../test/mocks/ERC20DecimalsMock.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -57,10 +59,17 @@ contract DeployScript is Script {
     using FacetHelper for IDiamond.FacetCut[];
     using FacetHelper for bytes4[];
 
-    address private deployDummy;
+    C3Deploy private c3;
 
     MetadataStruct private metadata;
     SubSettings private settings;
+
+    string constant profileKey = "createz::proxy::Profile";
+    string constant subscriptionBeaconKey = "createz::beacon::Subscription";
+    string constant subscriptionHandleKey = "createz::proxy::SubscriptionHandle";
+
+    string constant badgeBeaconKey = "createz::beacon::Badge";
+    string constant badgeHandleKey = "createz::proxy::BadgeHandle";
 
     string private anvilSeed = "test test test test test test test test test test test junk";
 
@@ -107,19 +116,20 @@ contract DeployScript is Script {
                 deployerKey = vm.deriveKey(anvilSeed, 0);
             }
             deployer = vm.rememberKey(deployerKey);
+
+            // enforce a fresh account for initial deployment
+            require(vm.getNonce(deployer) == 0, "Deployer did send transactions before");
         }
 
         {
             vm.startBroadcast(deployer);
             vm.recordLogs();
 
+            // deploy using separate deployer
+            c3 = new C3Deploy(deployer);
+            console.log("C3Deploy", address(c3));
+
             // simple Test Deployment
-
-            //////////////////////////////////////////////////////////////////////
-            // DEPLOY DEPLOY_DUMMY for chicken & egg proxy setups
-            //////////////////////////////////////////////////////////////////////
-
-            deployDummy = address(new DeployDummy());
 
             //////////////////////////////////////////////////////////////////////
             // DEPLOY PROFILE
@@ -149,19 +159,22 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
 
             {
-                // Handling chicken & egg problem: handle + subscription reference each other
-                // create handle implementation with a dummy subscription beacon
-                TransparentUpgradeableProxy subHandleProxy = new TransparentUpgradeableProxy(deployDummy, deployer, "");
-
-                address subHandleAdminAddress;
                 {
-                    Vm.Log[] memory logs = vm.getRecordedLogs();
+                    address addr = c3.predictAddress(subscriptionBeaconKey);
 
-                    // get the ProxyAdmin address
-                    subHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
+                    UpgradeableSubscriptionHandle impl = new UpgradeableSubscriptionHandle(addr);
+                    subHandle = UpgradeableSubscriptionHandle(
+                        c3.deploy(
+                            abi.encodePacked(
+                                type(ERC1967Proxy).creationCode,
+                                abi.encode(
+                                    address(impl), abi.encodeCall(UpgradeableSubscriptionHandle.initialize, (deployer))
+                                )
+                            ),
+                            subscriptionHandleKey
+                        )
+                    );
                 }
-
-                subHandle = SubscriptionHandle(address(subHandleProxy));
 
                 IDiamond.FacetCut[] memory cuts;
                 // create Subscription Facets with a reference to the CORRECT handle proxy
@@ -216,8 +229,12 @@ contract DeployScript is Script {
                 bytes memory initCall = abi.encodeCall(DiamondBeaconUpgradeable.init, (deployer, cuts));
 
                 // deploy actual proxy, cast to diamond beacon
-                DiamondBeaconUpgradeable subscriptionBeacon =
-                    DiamondBeaconUpgradeable(address(new ERC1967Proxy(subBeaconImpl, initCall)));
+                DiamondBeaconUpgradeable subscriptionBeacon = DiamondBeaconUpgradeable(
+                    c3.deploy(
+                        abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(subBeaconImpl, initCall)),
+                        subscriptionBeaconKey
+                    )
+                );
 
                 // TODO FIXME
                 // subscriptionBeacon.setDiamondSupportsInterface(interfaces, true);
@@ -225,17 +242,6 @@ contract DeployScript is Script {
                 console.log("Subscription Beacon Implementation", subBeaconImpl);
                 console.log("Subscription Beacon Proxy", address(subscriptionBeacon));
 
-                // fix the handle => sub reference by upgrading the handle implementation with the correct beacon ref
-                UpgradeableSubscriptionHandle subHandleImpl =
-                    new UpgradeableSubscriptionHandle(address(subscriptionBeacon));
-                ProxyAdmin(subHandleAdminAddress).upgradeAndCall(
-                    ITransparentUpgradeableProxy(address(subHandleProxy)),
-                    address(subHandleImpl),
-                    abi.encodeWithSignature("initialize()")
-                );
-
-                console.log("SubHandle Implementation", address(subHandleImpl));
-                console.log("SubHandle Proxy Admin", subHandleAdminAddress);
                 console.log("SubHandle Proxy Contract", address(subHandle));
             }
 
@@ -244,35 +250,29 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
 
             {
-                // Handling chicken & egg problem: handle + badge reference each other
-                // create handle implementation with a dummy badge beacon
-                TransparentUpgradeableProxy badgeHandleProxy =
-                    new TransparentUpgradeableProxy(deployDummy, deployer, "");
-
-                address badgeHandleAdminAddress;
                 {
-                    Vm.Log[] memory logs = vm.getRecordedLogs();
-
-                    // get the ProxyAdmin address
-                    badgeHandleAdminAddress = getProxyAdminAddressFromLogs(logs);
+                    UpgradeableBadgeHandle impl = new UpgradeableBadgeHandle(c3.predictAddress(badgeBeaconKey));
+                    badgeHandle = UpgradeableBadgeHandle(
+                        c3.deploy(
+                            abi.encodePacked(
+                                type(ERC1967Proxy).creationCode,
+                                abi.encode(address(impl), abi.encodeCall(UpgradeableBadgeHandle.initialize, (deployer)))
+                            ),
+                            badgeHandleKey
+                        )
+                    );
                 }
 
-                badgeHandle = BadgeHandle(address(badgeHandleProxy));
-
-                // create Badge Implementation with a reference to the CORRECT handle proxy
                 Badge badgeImplementation = new Badge(address(badgeHandle));
-                UpgradeableBeacon badgescriptionBeacon = new UpgradeableBeacon(address(badgeImplementation), deployer);
-
-                // fix the handle => badge reference by upgrading the handle implementation with the correct beacon ref
-                UpgradeableBadgeHandle badgeHandleImpl = new UpgradeableBadgeHandle(address(badgescriptionBeacon));
-                ProxyAdmin(badgeHandleAdminAddress).upgradeAndCall(
-                    ITransparentUpgradeableProxy(address(badgeHandleProxy)),
-                    address(badgeHandleImpl),
-                    abi.encodeWithSignature("initialize()")
+                UpgradeableBeacon badgescriptionBeacon = UpgradeableBeacon(
+                    c3.deploy(
+                        abi.encodePacked(
+                            type(UpgradeableBeacon).creationCode, abi.encode(address(badgeImplementation), deployer)
+                        ),
+                        badgeBeaconKey
+                    )
                 );
 
-                console.log("BadgeHandle Implementation", address(badgeHandleImpl));
-                console.log("BadgeHandle Proxy Admin", badgeHandleAdminAddress);
                 console.log("BadgeHandle Proxy Contract", address(badgeHandle));
 
                 console.log("Badge Implementation", address(badgeImplementation));
@@ -299,7 +299,8 @@ contract DeployScript is Script {
             //////////////////////////////////////////////////////////////////////
             vm.startBroadcast(deployer);
 
-            erc6551Registry = new ERC6551Registry();
+            erc6551Registry =
+                ERC6551Registry(c3.deploy(abi.encodePacked(type(ERC6551Registry).creationCode), "ERC6551Registry"));
 
             console.log("ERC6551 Registry", address(erc6551Registry));
 
@@ -311,7 +312,10 @@ contract DeployScript is Script {
 
             erc6551AccountImplementation = address(new SimpleErc6551());
             console.log("ERC6551 Account Implementation", erc6551AccountImplementation);
-            erc6551AccountProxy = address(new ERC6551Proxy(erc6551AccountImplementation));
+            erc6551AccountProxy = c3.deploy(
+                abi.encodePacked(type(ERC6551Proxy).creationCode, abi.encode(erc6551AccountImplementation)),
+                "ERC6551Proxy"
+            );
             console.log("ERC6551 Account Proxy", erc6551AccountProxy);
 
             vm.stopBroadcast();
@@ -321,7 +325,9 @@ contract DeployScript is Script {
 
             vm.startBroadcast(deployer);
 
-            testUsd = new ERC20DecimalsMock(18);
+            testUsd = ERC20DecimalsMock(
+                c3.deploy(abi.encodePacked(type(ERC20DecimalsMock).creationCode, abi.encode(18)), "TestUSD ERC20")
+            );
             console.log("TestUSD ERC20 Token Contract", address(testUsd));
             settings.token = address(testUsd);
 
@@ -341,7 +347,11 @@ contract DeployScript is Script {
 
             {
                 uint8 decimals = 8;
-                DummyPriceFeed priceFeed = new DummyPriceFeed(decimals);
+                DummyPriceFeed priceFeed = DummyPriceFeed(
+                    c3.deploy(
+                        abi.encodePacked(type(DummyPriceFeed).creationCode, abi.encode(decimals)), "TestUSD PriceFeed"
+                    )
+                );
                 console.log("TestUSD Price Feed", address(priceFeed));
 
                 priceFeed.setAnswer(99860888);

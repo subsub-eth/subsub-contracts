@@ -17,6 +17,10 @@ import {ERC721BurnableUpgradeable} from
 import {ERC721EnumerableUpgradeable} from
     "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
+import {UUPSUpgradeable} from "openzeppelin-contracts/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+// TODO get rid of Burnable inheritance
 abstract contract SubscriptionHandle is
     Initializable,
     ContextUpgradeable,
@@ -26,7 +30,6 @@ abstract contract SubscriptionHandle is
     ERC721BurnableUpgradeable,
     ERC721EnumerableUpgradeable
 {
-    // TODO deploy block and time based subs?
     // TODO? store subscription contract in manager for validity check -> isManaged()?
 
     function mint(
@@ -74,15 +77,27 @@ abstract contract SubscriptionHandle is
     }
 }
 
-contract UpgradeableSubscriptionHandle is SubscriptionHandle, DiamondFactory, ContractRegistry, ManagingHandle {
+contract UpgradeableSubscriptionHandle is
+    SubscriptionHandle,
+    DiamondFactory,
+    ContractRegistry,
+    ManagingHandle,
+    UUPSUpgradeable,
+    OwnableUpgradeable
+{
     constructor(address beacon) DiamondFactory(beacon) {
         _disableInitializers();
     }
 
-    function initialize() external initializer {
+    function initialize(address owner) external initializer {
         __DiamondFactory_init_unchained();
         __Context_init_unchained();
         __ERC721Enumerable_init_unchained();
+        __Ownable_init_unchained(owner);
+    }
+
+    function _authorizeUpgrade(address) internal virtual override {
+        _checkOwner();
     }
 
     function _safeMint(address to, uint256 tokenId, bytes memory data)

@@ -8,6 +8,8 @@ import "../../../src/subscription/ISubscription.sol";
 
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
+import {ERC1967Proxy} from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 contract TestSubscriptionHandle is SubscriptionHandle {
     struct Details {
         bool set;
@@ -136,9 +138,52 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
         assertEq(handle.isManaged(uint256(uint160(addr))), managed, "managed value set");
     }
 
-    function testManaged_largeValue(uint256 tokenId) public {
+    function testManaged_largeValue(uint256 tokenId) public view {
         tokenId = bound(tokenId, uint256(type(uint160).max) + 1, type(uint256).max);
 
         assertFalse(handle.isManaged(tokenId), "out of bounds tokenId is always false");
+    }
+
+    function testUpgrade(address owner) public {
+        assumePayable(owner);
+        assumeNotPrecompile(owner);
+
+        UpgradeableSubscriptionHandle impl = new UpgradeableSubscriptionHandle(address(0));
+        UpgradeableSubscriptionHandle _handle = UpgradeableSubscriptionHandle(
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(UpgradeableSubscriptionHandle.initialize, (owner))))
+        );
+
+        // initialized
+        assertEq(owner, _handle.owner(), "Owner set in initializer");
+
+        address newImpl = address(new UpgradeableSubscriptionHandle(address(1)));
+        vm.prank(owner);
+        _handle.upgradeToAndCall(newImpl, "");
+    }
+
+    function testUpgrade_notAuthorized(address owner, address user_) public {
+        assumePayable(owner);
+        assumeNotPrecompile(owner);
+
+        assumePayable(user_);
+        assumeNotPrecompile(user_);
+
+        UpgradeableSubscriptionHandle impl = new UpgradeableSubscriptionHandle(address(0));
+        UpgradeableSubscriptionHandle _handle = UpgradeableSubscriptionHandle(
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(UpgradeableSubscriptionHandle.initialize, (owner))))
+        );
+
+        address newImpl = address(new UpgradeableSubscriptionHandle(address(1)));
+        vm.prank(user_);
+        vm.expectRevert();
+        _handle.upgradeToAndCall(newImpl, "");
+    }
+
+    function testInitilizer_disabled() public {
+
+        UpgradeableSubscriptionHandle impl = new UpgradeableSubscriptionHandle(address(0));
+
+        vm.expectRevert();
+        impl.initialize(address(0));
     }
 }
