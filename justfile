@@ -19,10 +19,12 @@ pnpm-pack:
 deploy-local:
   forge script script/Deploy.s.sol:DeployScript --fork-url http://localhost:8545 --broadcast
 
-# test deploy to anvil with test data
-test-deploy-local $DEPLOY_TEST_DATA="true":
-  forge script script/Deploy.s.sol:DeployScript --fork-url http://localhost:8545 --broadcast
+# deploy test data to anvil
+deploy-test-data:
+  forge script script/TestData.s.sol:TestDataScript --fork-url http://localhost:8545 --broadcast
 
+# test deploy to anvil with test data
+test-deploy-local: deploy-local deploy-test-data
 
 # test
 test:
