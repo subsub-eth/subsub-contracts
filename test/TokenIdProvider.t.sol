@@ -2,9 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/subscription/TokenIdProvider.sol";
+import "../src/TokenIdProvider.sol";
 
-import {OzInitializableBind} from "../../src/dependency/OzInitializable.sol";
+import {OzInitializableBind} from "../src/dependency/OzInitializable.sol";
 
 contract TestTokenIdProvider is OzInitializableBind, TokenIdProvider {
     constructor(uint256 _tokenId) initializer {

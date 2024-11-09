@@ -12,7 +12,7 @@ import {Epochs} from "../Epochs.sol";
 import {UserData} from "../UserData.sol";
 import {PaymentToken} from "../PaymentToken.sol";
 import {MaxSupply} from "../MaxSupply.sol";
-import {TokenIdProvider} from "../TokenIdProvider.sol";
+import {TokenIdProvider} from "../../TokenIdProvider.sol";
 import {Metadata} from "../Metadata.sol";
 import {TimestampTimeAware} from "../TimeAware.sol";
 

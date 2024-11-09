@@ -7,7 +7,7 @@ import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 import {Depositable, SubscriptionFlags} from "../ISubscription.sol";
 
 import {HasMaxSupply, MaxSupply} from "../MaxSupply.sol";
-import {HasTokenIdProvider, TokenIdProvider} from "../TokenIdProvider.sol";
+import {HasTokenIdProvider, TokenIdProvider} from "../../TokenIdProvider.sol";
 import {HasPaymentToken, PaymentToken} from "../PaymentToken.sol";
 import {Tips, HasTips} from "../Tips.sol";
 import {HasRate, Rate} from "../Rate.sol";

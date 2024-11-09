@@ -31,12 +31,6 @@ import {FacetHelper} from "diamond-beacon/util/FacetHelper.sol";
 
 import {FacetConfig} from "../src/subscription/FacetConfig.sol";
 
-import {
-    ITransparentUpgradeableProxy,
-    TransparentUpgradeableProxy
-} from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
-
 import {InitFacet} from "../src/subscription/facet/InitFacet.sol";
 import {PropertiesFacet} from "../src/subscription/facet/PropertiesFacet.sol";
 import {ERC721Facet} from "../src/subscription/facet/ERC721Facet.sol";
@@ -53,7 +47,6 @@ import "../src/subscription/handle/SubscriptionHandle.sol";
 import {BadgeHandle, UpgradeableBadgeHandle} from "../src/badge/handle/BadgeHandle.sol";
 import {Badge} from "../src/badge/Badge.sol";
 
-contract DeployDummy {}
 
 contract DeployScript is Script {
     using FacetHelper for IDiamond.FacetCut[];
@@ -135,23 +128,18 @@ contract DeployScript is Script {
             // DEPLOY PROFILE
             //////////////////////////////////////////////////////////////////////
 
-            Profile profileImplementation = new Profile();
-            TransparentUpgradeableProxy profileProxy = new TransparentUpgradeableProxy(
-                address(profileImplementation), deployer, abi.encodeWithSignature("initialize()")
+            address profileImplementation = address(new Profile());
+
+            profile = Profile(
+                c3.deploy(
+                    abi.encodePacked(
+                        type(ERC1967Proxy).creationCode,
+                        abi.encode(address(profileImplementation), abi.encodeCall(Profile.initialize, (deployer)))
+                    ), profileKey
+                )
             );
 
-            address proxyAdminAddress;
-            {
-                Vm.Log[] memory logs = vm.getRecordedLogs();
-
-                // get the ProxyAdmin address
-                proxyAdminAddress = getProxyAdminAddressFromLogs(logs);
-            }
-
-            profile = Profile(address(profileProxy));
-
-            console.log("Profile Contract Implementation", address(profileImplementation));
-            console.log("Profile Proxy Admin", proxyAdminAddress);
+            console.log("Profile Contract Implementation", profileImplementation);
             console.log("Profile Contract Proxy", address(profile));
 
             //////////////////////////////////////////////////////////////////////

@@ -145,6 +145,7 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
     }
 
     function testUpgrade(address owner) public {
+        vm.assume(owner != address(0));
         assumePayable(owner);
         assumeNotPrecompile(owner);
 
@@ -162,6 +163,7 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
     }
 
     function testUpgrade_notAuthorized(address owner, address user_) public {
+        vm.assume(owner != address(0) && user_ != address(0) && owner != user_);
         assumePayable(owner);
         assumeNotPrecompile(owner);
 
@@ -180,7 +182,6 @@ contract SubscriptionHandleTest is Test, SubscriptionHandleEvents {
     }
 
     function testInitilizer_disabled() public {
-
         UpgradeableSubscriptionHandle impl = new UpgradeableSubscriptionHandle(address(0));
 
         vm.expectRevert();

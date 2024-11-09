@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {OzInitializable} from "../dependency/OzInitializable.sol";
+import {OzInitializable} from "./dependency/OzInitializable.sol";
 
 library TokenIdProviderLib {
     struct TokenIdProviderStorage {

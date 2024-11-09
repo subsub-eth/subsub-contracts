@@ -3,12 +3,17 @@ pragma solidity ^0.8.20;
 
 import {IProfile} from "./IProfile.sol";
 
-import {ERC721} from "openzeppelin-contracts/token/ERC721/ERC721.sol";
+import {TokenIdProvider} from "../TokenIdProvider.sol";
+
+import {OzERC721Enumerable, OzERC721EnumerableBind} from "../dependency/OzERC721Enumerable.sol";
+import {OzInitializable, OzInitializableBind} from "../dependency/OzInitializable.sol";
+
+import {UUPSUpgradeable} from "openzeppelin-contracts/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {IERC721Metadata} from "openzeppelin-contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 import {Base64} from "openzeppelin-contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
@@ -17,12 +22,18 @@ import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 // TODO add ERC 4906 metadata events
 // TODO change token id generation
 // TODO add burn
-// TODO add gap?
 // TODO fix supportsInterface
 // TODO add meta information, name, links, etc
 // TODO max supply?
 // TODO bind to another ERC721 for identity verification
-contract Profile is IProfile, ERC721EnumerableUpgradeable {
+contract Profile is
+    IProfile,
+    UUPSUpgradeable,
+    TokenIdProvider,
+    OwnableUpgradeable,
+    OzInitializableBind,
+    OzERC721EnumerableBind
+{
     using Strings for uint256;
 
     struct ProfileData {
@@ -32,17 +43,32 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         string externalUrl;
     }
 
-    uint256 private nextTokenId;
-    mapping(uint256 => ProfileData) private profileData;
+    struct ProfileStorage {
+        mapping(uint256 => ProfileData) profileData;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("createz.storage.profile.Profile")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ProfileStorageLocation = 0xe22c20322938b38ad602d1185b878213a0018b84eb01aa9745d509f61703cd00;
+
+    function _getProfileStorage() private pure returns (ProfileStorage storage $) {
+        assembly {
+            $.slot := ProfileStorageLocation
+        }
+    }
 
     constructor() {
         // disable direct usage of implementation contract
         _disableInitializers();
     }
 
-    function initialize() public initializer {
+    function initialize(address owner) public initializer {
         __ERC721_init("CreateZ Profile", "crzP");
-        nextTokenId = 1;
+        __TokenIdProvider_init_unchained(0);
+        __Ownable_init_unchained(owner);
+    }
+
+    function _authorizeUpgrade(address) internal virtual override {
+        _checkOwner();
     }
 
     function mint(string memory _name, string memory _description, string memory _image, string memory _externalUrl)
@@ -50,9 +76,10 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
         returns (uint256)
     {
         require(bytes(_name).length > 2, "crzP: name too short");
-        uint256 tokenId = nextTokenId++;
+        uint256 tokenId = _nextTokenId();
 
-        profileData[tokenId] = ProfileData(_name, _description, _image, _externalUrl);
+        ProfileStorage storage $ = _getProfileStorage();
+        $.profileData[tokenId] = ProfileData(_name, _description, _image, _externalUrl);
         _safeMint(_msgSender(), tokenId);
 
         emit Minted(_msgSender(), tokenId);
@@ -69,18 +96,19 @@ contract Profile is IProfile, ERC721EnumerableUpgradeable {
     {
         require(_ownerOf(tokenId) != address(0), "crzP: Token does not exist");
 
+        ProfileStorage storage $ = _getProfileStorage();
         string memory output = Base64.encode(
             bytes(
                 string(
                     abi.encodePacked(
                         '{"name":"',
-                        profileData[tokenId].name,
+                        $.profileData[tokenId].name,
                         '","description":"',
-                        profileData[tokenId].description,
+                        $.profileData[tokenId].description,
                         '","image":"',
-                        profileData[tokenId].image,
+                        $.profileData[tokenId].image,
                         '","external_url":"',
-                        profileData[tokenId].externalUrl,
+                        $.profileData[tokenId].externalUrl,
                         '"',
                         "}"
                     )
