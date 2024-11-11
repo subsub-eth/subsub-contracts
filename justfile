@@ -20,11 +20,15 @@ deploy-local:
   forge script script/Deploy.s.sol:DeployScript --fork-url http://localhost:8545 --broadcast
 
 # deploy test data to anvil
-deploy-test-data:
+deploy-local-test-data:
   forge script script/TestData.s.sol:TestDataScript --fork-url http://localhost:8545 --broadcast
 
 # test deploy to anvil with test data
-test-deploy-local: deploy-local deploy-test-data
+test-deploy-local: deploy-local deploy-local-test-data
+
+# test deploy to anvil
+deploy-update-local:
+  forge script script/Update.s.sol:UpdateScript --fork-url http://localhost:8545 --broadcast
 
 # test
 test:
