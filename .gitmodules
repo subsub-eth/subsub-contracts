@@ -19,7 +19,7 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/Vectorized/solady
-	branch = v0.0.237
+	branch = v0.0.267
 [submodule "lib/diamond-beacon"]
 	path = lib/diamond-beacon
 	url = https://github.com/suiiii-rip/diamond-beacon
