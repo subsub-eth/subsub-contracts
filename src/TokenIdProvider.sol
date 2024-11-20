@@ -8,9 +8,9 @@ library TokenIdProviderLib {
         uint256 _tokenId;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.TokenIdProvider")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.TokenIdProvider")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant TokenIdProviderStorageLocation =
-        0x7ef95c70393698ad3167642532ce9f9a4084d997b3cd6e92fc9202fcd2992400;
+        0x40c8f2ce84303d686a9ccadcec2b4734ae4bd9191beee7cbddf307002bcc2700;
 
     function _getTokenIdProviderStorage() private pure returns (TokenIdProviderStorage storage $) {
         assembly {

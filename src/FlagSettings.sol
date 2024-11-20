@@ -31,8 +31,8 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable, FlagEvents,
         uint256 _flags;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.FlagSettings")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant FlagStorageLocation = 0xef76360c7e011776eb025551396387367250d165806b070a47601953eabbc300;
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.FlagSettings")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant FlagStorageLocation = 0xc5c3d7bab6cceabb922a9285107a3807dc3d1fd42d4176d3391dfe1aba2acc00;
 
     function _getFlagStorage() private pure returns (FlagStorage storage $) {
         assembly {

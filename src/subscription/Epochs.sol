@@ -53,8 +53,8 @@ library EpochsLib {
         uint256 _claimed;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Epochs")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant EpochsStorageLocation = 0xa37ad06674bbaa0ce562b40a47c6d9e758dfe44c585749b25d5bb38fa0f8d500;
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.Epochs")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant EpochsStorageLocation = 0x5506e84e9939bd9349ed9f3ee02b85a4ad709d31a62ad2a713a4a6a54ced2600;
 
     function _getEpochsStorage() private pure returns (EpochsStorage storage $) {
         assembly {

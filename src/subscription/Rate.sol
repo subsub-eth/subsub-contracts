@@ -15,8 +15,8 @@ library RateLib {
         uint256 _rate;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Rate")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant RateStorageLocation = 0xe56147cf33567ea17c70c1c3a37ecf7bbea223c6f2347f6e350fdeb3b5396d00;
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.Rate")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant RateStorageLocation = 0xa2ca329117191c395efb155f9beaf3d27ba875c24fb30d77820ec645ca882b00;
 
     function _getRateStorage() private pure returns (RateStorage storage $) {
         assembly {

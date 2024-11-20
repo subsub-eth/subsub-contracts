@@ -47,9 +47,9 @@ library UserDataLib {
         uint256 _claimedTips;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.UserData")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.UserData")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant UserDataStorageLocation =
-        0x759c70339345f5b3443b65fe6ae2d943782a2a023089a4692e3f21ca7befef00;
+        0xc461b00ee048bb772d4796a2912d26b5bb4f59e0aaef62e3b44e0e55e7a76900;
 
     function _getUserDataStorage() private pure returns (UserDataStorage storage $) {
         assembly {

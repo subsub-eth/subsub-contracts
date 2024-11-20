@@ -19,9 +19,9 @@ abstract contract ContractRegistry is Initializable, HasContractRegistry {
         mapping(address => uint8) _registry;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.handle.ContractRegistry")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.handle.ContractRegistry")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ContractRegistryStorageLocation =
-        0x7101d9eaf2c399621b29010cbd8463395477ce71e1068af39595d8af2086ff00;
+        0xef45d1f6881d34635203810024046e8fcd325bf121050ed25a38deba1482f700;
 
     function _getContractRegistryStorage() private pure returns (ContractRegistryStorage storage $) {
         assembly {

@@ -47,8 +47,8 @@ contract Profile is
         mapping(uint256 => ProfileData) profileData;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.profile.Profile")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ProfileStorageLocation = 0xe22c20322938b38ad602d1185b878213a0018b84eb01aa9745d509f61703cd00;
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.profile.Profile")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ProfileStorageLocation = 0xa357ab46154347e62334c40b540d88802eb0c18fc231ff964526879cc3e0b200;
 
     function _getProfileStorage() private pure returns (ProfileStorage storage $) {
         assembly {
@@ -62,7 +62,7 @@ contract Profile is
     }
 
     function initialize(address owner) public initializer {
-        __ERC721_init("CreateZ Profile", "crzP");
+        __ERC721_init("SubSub Profile", "subP");
         __TokenIdProvider_init_unchained(0);
         __Ownable_init_unchained(owner);
     }
@@ -75,7 +75,7 @@ contract Profile is
         external
         returns (uint256)
     {
-        require(bytes(_name).length > 2, "crzP: name too short");
+        require(bytes(_name).length > 2, "subP: name too short");
         uint256 tokenId = _nextTokenId();
 
         ProfileStorage storage $ = _getProfileStorage();
@@ -94,7 +94,7 @@ contract Profile is
         override(ERC721Upgradeable, IERC721Metadata)
         returns (string memory)
     {
-        require(_ownerOf(tokenId) != address(0), "crzP: Token does not exist");
+        require(_ownerOf(tokenId) != address(0), "subP: Token does not exist");
 
         ProfileStorage storage $ = _getProfileStorage();
         string memory output = Base64.encode(
@@ -123,7 +123,7 @@ contract Profile is
         string memory json = Base64.encode(
             bytes(
                 string(
-                    '{"name": "CreateZ Profile", "description": "CreateZ Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://createz.eth/profile.png", "external_link": "https://createz.eth" }'
+                    '{"name": "SubSub Profile", "description": "SubSub Profiles hold multiple Subscription Contracts that allow users to publicly support a given Creator", "image": "https://subsub.eth/profile.png", "external_link": "https://subsub.eth" }'
                 )
             )
         );

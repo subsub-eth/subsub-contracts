@@ -19,9 +19,9 @@ library MetadataLib {
         string _externalUrl;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.Metadata")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.Metadata")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant MetadataStorageLocation =
-        0x4e23e702febef80da955bb4f7960279aadd3c90263ad7e053e89ad2bb31bf100;
+        0x7f09bb67b74e2a3629aad504af5663eae73f472afa1465cca7996ce7fcc2e700;
 
     function _getMetadataStorage() private pure returns (MetadataStorage storage $) {
         assembly {

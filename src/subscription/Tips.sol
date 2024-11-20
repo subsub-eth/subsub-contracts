@@ -20,8 +20,8 @@ library TipsLib {
         uint256 _claimedTips;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.TipStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant TipsStorageLocation = 0xbf05d80824a4e35d926e60b1ca462d80f6b77fb9e9c7140da7f7231d82f47f00;
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.TipStorage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant TipsStorageLocation = 0x6593c8e4864b6bbd915fc15cbe50a3f84670836b50d945261e8b1599f6e37400;
 
     function _getTipsStorage() private pure returns (TipsStorage storage $) {
         assembly {

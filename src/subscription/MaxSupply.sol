@@ -8,9 +8,9 @@ library MaxSupplyLib {
         uint256 _maxSupply;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.MaxSupply")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.MaxSupply")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant MaxSupplyStorageLocation =
-        0x97da8ee455d56cddd7dceeea5a53194931671fa0ff8e973b104ddb5e9a466b00;
+        0xd5a193fb325eb4e2a20c62d7d7a9d4af372aaa9384d3e03b4a2a820ccc9af600;
 
     function _getMaxSupplyStorage() private pure returns (MaxSupplyStorage storage $) {
         assembly {

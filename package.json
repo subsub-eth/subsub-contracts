@@ -1,10 +1,10 @@
 {
-  "name": "@createz/contracts",
+  "name": "@subsub/contracts",
   "version": "0.2.0-alpha.16",
-  "description": "CreateZ contracts",
+  "description": "SubSub contracts",
   "scripts": {
     "clean": "rimraf dist",
-    "pack-unpack": "rimraf dist && pnpm pack && mkdir dist && tar --strip-components=1 -xvzf createz-contracts-*.tgz -C dist && rimraf createz-contracts-*.tgz",
+    "pack-unpack": "rimraf dist && pnpm pack && mkdir dist && tar --strip-components=1 -xvzf subsub-contracts-*.tgz -C dist && rimraf subsub-contracts-*.tgz",
     "deploy-local": "forge script script/Deploy.s.sol:DeployScript --fork-url http://localhost:8545 --broadcast"
   },
   "files": [
@@ -25,10 +25,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/createz-eth/createz-contracts.git"
+    "url": "git+https://github.com/subsub-eth/subsub-contracts.git"
   },
   "keywords": [
-    "createz",
+    "subsub",
     "contracts",
     "blockchain",
     "solidity"
@@ -36,9 +36,9 @@
   "author": "suiiii",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/createz-eth/createz-contracts/issues"
+    "url": "https://github.com/subsub-eth/subsub-contracts/issues"
   },
-  "homepage": "https://github.com/createz-eth/createz-contracts#readme",
+  "homepage": "https://github.com/subsub-eth/subsub-contracts#readme",
   "devDependencies": {
     "rimraf": "^5.0.5",
     "typescript": "^5.5.4"

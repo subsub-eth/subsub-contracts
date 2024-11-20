@@ -27,8 +27,8 @@ contract Badge is
         uint256 _nextId;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.Badge")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant BadgeStorageLocation = 0xaa7e2376624de49c82267d57e639d722ae9a855a54d0ae5f82e68b4011546300;
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.Badge")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant BadgeStorageLocation = 0x95c6cf3869da6cb68433b41d6e6d03ced98ce0bbe5df3fce2aaefc3bdb762e00;
 
     constructor(address handleContract) HandleOwned(handleContract) {
         _disableInitializers();

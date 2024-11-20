@@ -48,4 +48,4 @@ pnpm-clean:
   pnpm clean
 
 clean-pack:
-  rm -f createz-contracts-*.tgz
+  rm -f subsub-contracts-*.tgz

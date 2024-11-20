@@ -1,6 +1,6 @@
-# CreateZ Contracts
+# SubSub Contracts
 
-CreateZ is a permissionless, flexible crypto subscription system that is a
+SubSub is a permissionless, flexible crypto subscription system that is a
 building block for larger applications and communities.
 
 It allows creators, companies, and whoever wants to collect crypto funds over a
@@ -63,7 +63,8 @@ Relevant contracts are printed as logs
 - create/rewrite smoke/integration tests
 - store the longest streak - amount of funds vs time
 - change multiplier -> ends current sub streak
-- merge: separate funds that are accumulated in the current sub and funds merged in, enable via flag
+- merge: separate funds that are accumulated in the current sub and funds merged
+  in, enable via flag
 - Diamond
 - "upgrade"/migrate to other subscription: separate migrated funds from
   accumulated ones, enable via flag

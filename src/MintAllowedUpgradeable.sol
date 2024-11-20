@@ -14,9 +14,9 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
         mapping(uint256 => bool) _mintAllowedFrozen;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.MintAllowed")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.MintAllowed")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant MintAllowedStorageLocation =
-        0x8ef62f37b4b05bdca28aef13f3f2ccb52b250f60113b18e89910071d573a0600;
+        0x4f61531dcaa0d27e01e5a004ecb9227e5bd475d65ba122d6d2b0e240c58f4c00;
 
     function _getMintAllowedStorage() private pure returns (MintAllowedStorage storage $) {
         assembly {

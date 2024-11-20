@@ -19,9 +19,9 @@ library PaymentTokenLib {
         uint8 _decimals;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("createz.storage.subscription.PaymentToken")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.PaymentToken")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant PaymentTokenStorageLocation =
-        0x6f5829cd7e76089adec788013c8fec4384896d2139d3621f34813ccb0ad48d00;
+        0x3d4585da047dd26cb39358ad8dd06dcb27eefda57a17df92d96a802687493b00;
 
     function _getPaymentTokenStorage() private pure returns (PaymentTokenStorage storage $) {
         assembly {

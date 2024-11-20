@@ -76,7 +76,7 @@ jobs:
         with:
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           files: |
-            createz-contracts-*.tgz
+            subsub-contracts-*.tgz
             README.md
             LICENSE
 

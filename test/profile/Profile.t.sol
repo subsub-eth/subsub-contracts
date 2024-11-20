@@ -31,8 +31,8 @@ contract ProfileTest is Test {
         assertEq(implementation.name(), "", "name is not set on implementation");
         assertEq(implementation.symbol(), "", "symbol is not set on implementation");
 
-        assertEq(profile.name(), "CreateZ Profile", "name is set");
-        assertEq(profile.symbol(), "crzP", "symbol is set");
+        assertEq(profile.name(), "SubSub Profile", "name is set");
+        assertEq(profile.symbol(), "subP", "symbol is set");
     }
 
     function testMint() public {
