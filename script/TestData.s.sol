@@ -69,7 +69,26 @@ contract TestDataScript is Script {
     address private erc6551AccountProxy;
 
     function setUp() public {
-        metadata = MetadataStruct("You gain access to my heart", "https://picsum.photos/800/600", "https://example.com");
+        metadata = MetadataStruct("## You gain access to my heart\n"
+          "\n"
+          "### Heading 3!\n"
+          "# Heading 1!\n"
+          "Wow such awesome\n"
+          "\n"
+          "- some *bullet point*\n"
+          "- some **bullet point** 2\n"
+          "\n"
+          "> Look at this!\n"
+          "\n"
+          "---\n"
+          "\n"
+          "1. something else\n"
+          "1. `something else` 2\n"
+          "\n"
+          "[Cool Link](https://example.com)\n"
+          "\n"
+          "![Cool image](https://picsum.photos/200/400)\n"
+        , "https://picsum.photos/800/600", "https://example.com");
 
         settings.token = address(1);
 
