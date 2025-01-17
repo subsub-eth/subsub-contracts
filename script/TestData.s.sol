@@ -199,10 +199,10 @@ contract TestDataScript is Script {
                     erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pAlice);
 
                 address aliceSubscription1 =
-                    createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                    createSubscriptionPlanWithErc6551(pAliceAccount, "Alice's Tier 1 Sub", "SUBt1", metadata, settings);
 
                 Subscription sub2 = Subscription(
-                    createSubscriptionPlanWithErc6551(pAliceAccount, "Tier 2 Sub", "SUBt2", metadata, settings)
+                    createSubscriptionPlanWithErc6551(pAliceAccount, "Alice's Tier 2 Sub", "SUBt2", metadata, settings)
                 );
                 sub2.setFlags(3);
 
@@ -231,7 +231,7 @@ contract TestDataScript is Script {
                 address pBobAccount =
                     erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pBob);
 
-                address plan = createSubscriptionPlanWithErc6551(pBobAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                address plan = createSubscriptionPlanWithErc6551(pBobAccount, "Bob's Tier 1 Sub", "SUBt1", metadata, settings);
                 vm.stopBroadcast();
                 address[3] memory subs = [alice, charlie, dora];
                 subscribeTo(subs, plan, 10 ether);
@@ -254,7 +254,7 @@ contract TestDataScript is Script {
                     erc6551Registry.createAccount(erc6551AccountProxy, salt, block.chainid, address(profile), pCharlie);
 
                 address plan =
-                    createSubscriptionPlanWithErc6551(pCharlieAccount, "Tier 1 Sub", "SUBt1", metadata, settings);
+                    createSubscriptionPlanWithErc6551(pCharlieAccount, "Charlie's Tier 1 Sub", "SUBt1", metadata, settings);
                 vm.stopBroadcast();
                 address[3] memory subs = [alice, bob, dora];
                 subscribeTo(subs, plan, 10 ether);
