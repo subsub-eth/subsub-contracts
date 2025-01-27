@@ -5,8 +5,8 @@ import {IProfile} from "./IProfile.sol";
 
 import {TokenIdProvider} from "../TokenIdProvider.sol";
 
-import {OzERC721Enumerable, OzERC721EnumerableBind} from "../dependency/OzERC721Enumerable.sol";
-import {OzInitializable, OzInitializableBind} from "../dependency/OzInitializable.sol";
+import {OzERC721EnumerableBind} from "../dependency/OzERC721Enumerable.sol";
+import {OzInitializableBind} from "../dependency/OzInitializable.sol";
 
 import {UUPSUpgradeable} from "openzeppelin-contracts/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -48,12 +48,15 @@ contract Profile is
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.profile.Profile")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant ProfileStorageLocation = 0xa357ab46154347e62334c40b540d88802eb0c18fc231ff964526879cc3e0b200;
 
     function _getProfileStorage() private pure returns (ProfileStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := ProfileStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     constructor() {
@@ -97,6 +100,7 @@ contract Profile is
         require(_ownerOf(tokenId) != address(0), "subP: Token does not exist");
 
         ProfileStorage storage $ = _getProfileStorage();
+        // solhint-disable quotes
         string memory output = Base64.encode(
             bytes(
                 string(
@@ -115,11 +119,13 @@ contract Profile is
                 )
             )
         );
+        // solhint-enable quotes
 
         return string.concat("data:application/json;base64,", output);
     }
 
     function contractURI() external pure returns (string memory) {
+        // solhint-disable quotes
         string memory json = Base64.encode(
             bytes(
                 string(
@@ -127,6 +133,7 @@ contract Profile is
                 )
             )
         );
+        // solhint-enable quotes
         return string.concat("data:application/json;base64,", json);
     }
 }

@@ -48,13 +48,16 @@ library UserDataLib {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.UserData")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant UserDataStorageLocation =
         0xc461b00ee048bb772d4796a2912d26b5bb4f59e0aaef62e3b44e0e55e7a76900;
 
     function _getUserDataStorage() private pure returns (UserDataStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := UserDataStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function init(uint24 lock_) internal {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {SubscriptionInitialize, MetadataStruct, SubSettings} from "../ISubscription.sol";
+import {MetadataStruct, SubSettings} from "../ISubscription.sol";
 
 import {SubLib} from "../SubLib.sol";
 

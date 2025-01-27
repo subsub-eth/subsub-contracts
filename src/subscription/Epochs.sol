@@ -54,12 +54,15 @@ library EpochsLib {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.Epochs")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant EpochsStorageLocation = 0x5506e84e9939bd9349ed9f3ee02b85a4ad709d31a62ad2a713a4a6a54ced2600;
 
     function _getEpochsStorage() private pure returns (EpochsStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := EpochsStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function init(uint256 epochSize_, uint256 time) internal {

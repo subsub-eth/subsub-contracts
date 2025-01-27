@@ -35,7 +35,6 @@ import {WithdrawableFacet} from "../src/subscription/facet/WithdrawableFacet.sol
 
 import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
-import "../src/subscription/Subscription.sol";
 import "../src/subscription/handle/SubscriptionHandle.sol";
 import {BadgeHandle, UpgradeableBadgeHandle} from "../src/badge/handle/BadgeHandle.sol";
 import {Badge} from "../src/badge/Badge.sol";

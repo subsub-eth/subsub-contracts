@@ -3,17 +3,14 @@ pragma solidity ^0.8.20;
 
 import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
 import {OzERC721Enumerable, OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
-import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
+import {OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
-import {Burnable, SubscriptionFlags} from "../ISubscription.sol";
+import {Burnable} from "../ISubscription.sol";
 
-import {HasPaymentToken, PaymentToken} from "../PaymentToken.sol";
-import {HasRate, Rate} from "../Rate.sol";
+import {PaymentToken} from "../PaymentToken.sol";
+import {Rate} from "../Rate.sol";
 import {HasUserData, UserData} from "../UserData.sol";
-import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
-
-import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {TimestampTimeAware} from "../TimeAware.sol";
 
 abstract contract AbstractBurnableFacet is OzContext, OzERC721Enumerable, HasUserData, Burnable {
     function burn(uint256 tokenId) external {
@@ -26,6 +23,7 @@ abstract contract AbstractBurnableFacet is OzContext, OzERC721Enumerable, HasUse
     }
 }
 
+// solhint-disable-next-line no-empty-blocks
 contract BurnableFacet is
     TimestampTimeAware,
     Rate,

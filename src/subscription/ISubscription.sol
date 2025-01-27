@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20Metadata} from "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721} from "openzeppelin-contracts/token/ERC721/IERC721.sol";
 import {IERC721Metadata} from "openzeppelin-contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC721Enumerable} from "openzeppelin-contracts/token/ERC721/extensions/IERC721Enumerable.sol";
@@ -378,6 +377,7 @@ interface SubscriptionInitialize {
 /**
  * @title Subscription God interface
  */
+// solhint-disable-next-line no-empty-blocks
 interface ISubscription is
     IERC721,
     IERC721Metadata,
@@ -397,4 +397,5 @@ interface ISubscription is
 /**
  * @title Subscription Godless interface
  */
+// solhint-disable-next-line no-empty-blocks
 interface ISubscriptionInternal is ISubscription, SubscriptionProperties {}

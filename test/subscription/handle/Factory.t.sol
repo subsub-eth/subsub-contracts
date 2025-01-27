@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../../../src/subscription/handle/Factory.sol";
-import "../../../src/subscription/Subscription.sol";
 import "../../../src/subscription/ISubscription.sol";
 
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";

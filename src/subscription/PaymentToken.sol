@@ -11,8 +11,8 @@ library PaymentTokenLib {
     using SafeERC20 for IERC20Metadata;
     using Address for address payable;
 
-    address constant NATIVE_TOKEN_ADDRESS = address(0);
-    uint8 constant NATIVE_TOKEN_DECIMALS = 18;
+    address private constant NATIVE_TOKEN_ADDRESS = address(0);
+    uint8 private constant NATIVE_TOKEN_DECIMALS = 18;
 
     struct PaymentTokenStorage {
         address _paymentToken;
@@ -20,13 +20,16 @@ library PaymentTokenLib {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.PaymentToken")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant PaymentTokenStorageLocation =
         0x3d4585da047dd26cb39358ad8dd06dcb27eefda57a17df92d96a802687493b00;
 
     function _getPaymentTokenStorage() private pure returns (PaymentTokenStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := PaymentTokenStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function init(address token) internal {

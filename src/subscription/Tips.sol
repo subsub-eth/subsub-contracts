@@ -3,8 +3,6 @@ pragma solidity ^0.8.20;
 
 import {SubLib} from "./SubLib.sol";
 
-import {Math} from "openzeppelin-contracts/utils/math/Math.sol";
-
 library TipsLib {
     using SubLib for uint256;
 
@@ -21,12 +19,15 @@ library TipsLib {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.TipStorage")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant TipsStorageLocation = 0x6593c8e4864b6bbd915fc15cbe50a3f84670836b50d945261e8b1599f6e37400;
 
     function _getTipsStorage() private pure returns (TipsStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := TipsStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function addTip(uint256 tokenId, uint256 amount) internal {

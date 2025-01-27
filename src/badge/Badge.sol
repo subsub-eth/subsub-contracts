@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IBadge.sol";
+import {IBadge, IBadgeOperations, TokenData} from "./IBadge.sol";
 
 import {MintAllowedUpgradeable} from "../MintAllowedUpgradeable.sol";
-import {HandleOwned, HasHandleOwned} from "../handle/HandleOwned.sol";
+import {IMintAllowedUpgradeable} from "../IMintAllowedUpgradeable.sol";
+import {HandleOwned} from "../handle/HandleOwned.sol";
 
-import {OzContext, OzContextBind} from "../dependency/OzContext.sol";
+import {OzContextBind} from "../dependency/OzContext.sol";
 
 import {ERC1155Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import {ERC1155BurnableUpgradeable} from
@@ -28,6 +29,7 @@ contract Badge is
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.Badge")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant BadgeStorageLocation = 0x95c6cf3869da6cb68433b41d6e6d03ced98ce0bbe5df3fce2aaefc3bdb762e00;
 
     constructor(address handleContract) HandleOwned(handleContract) {
@@ -35,9 +37,11 @@ contract Badge is
     }
 
     function _getBadgeStorage() private pure returns (BadgeStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := BadgeStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function __BadgeUpgradeable_init() internal onlyInitializing {

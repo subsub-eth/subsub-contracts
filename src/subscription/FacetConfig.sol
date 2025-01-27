@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IDiamond} from "diamond-1-hardhat/interfaces/IDiamond.sol";
-
 import {BurnableFacet} from "./facet/BurnableFacet.sol";
 import {ClaimableFacet} from "./facet/ClaimableFacet.sol";
 import {DepositableFacet} from "./facet/DepositableFacet.sol";
@@ -11,10 +9,6 @@ import {InitFacet} from "./facet/InitFacet.sol";
 import {MetadataFacet} from "./facet/MetadataFacet.sol";
 import {PropertiesFacet} from "./facet/PropertiesFacet.sol";
 import {WithdrawableFacet} from "./facet/WithdrawableFacet.sol";
-
-import {ISubscriptionInternal, SubscriptionProperties} from "./ISubscription.sol";
-
-import {IMetadata} from "./Metadata.sol";
 
 contract FacetConfig {
     bytes4[] private s;

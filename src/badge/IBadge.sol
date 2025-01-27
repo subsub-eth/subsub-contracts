@@ -40,6 +40,7 @@ interface IBadgeInitialize {
     function initialize() external;
 }
 
+// solhint-disable-next-line no-empty-blocks
 interface IBadge is
     IERC1155,
     IERC1155MetadataURI,

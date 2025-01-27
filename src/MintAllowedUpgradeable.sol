@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IMintAllowedUpgradeable.sol";
+import {IMintAllowedUpgradeable} from "./IMintAllowedUpgradeable.sol";
 
-import "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
-import "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, IMintAllowedUpgradeable {
     struct MintAllowedStorage {
@@ -15,19 +15,23 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.MintAllowed")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant MintAllowedStorageLocation =
         0x4f61531dcaa0d27e01e5a004ecb9227e5bd475d65ba122d6d2b0e240c58f4c00;
 
     function _getMintAllowedStorage() private pure returns (MintAllowedStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := MintAllowedStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function __MintAllowedUpgradeable_init() internal onlyInitializing {
         __MintAllowedUpgradeable_init_unchained();
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function __MintAllowedUpgradeable_init_unchained() internal onlyInitializing {}
 
     function setMintAllowed(address minter, uint256 id, bool allow) public virtual {
@@ -44,7 +48,14 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
         return $._mintAllowed[id][minter];
     }
 
-    function getMinters(uint256 id) external view returns (address[] memory) {
+    function getMinters(uint256)
+        /**
+         * id
+         */
+        external
+        pure
+        returns (address[] memory)
+    {
         revert("Not Implemented");
     }
 

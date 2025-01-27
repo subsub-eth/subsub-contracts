@@ -20,17 +20,22 @@ abstract contract ContractRegistry is Initializable, HasContractRegistry {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.handle.ContractRegistry")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant ContractRegistryStorageLocation =
         0xef45d1f6881d34635203810024046e8fcd325bf121050ed25a38deba1482f700;
 
     function _getContractRegistryStorage() private pure returns (ContractRegistryStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := ContractRegistryStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function __ContractRegistry_init() internal onlyInitializing {}
 
+    // solhint-disable-next-line no-empty-blocks
     function __ContractRegistry_init_unchained() internal onlyInitializing {}
 
     function _addToRegistry(address addr, bool isManaged) internal override returns (bool) {

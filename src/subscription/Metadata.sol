@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {MetadataStruct} from "./ISubscription.sol";
-
 import {OzInitializable} from "../dependency/OzInitializable.sol";
 
 interface IMetadata {
@@ -20,13 +18,16 @@ library MetadataLib {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.Metadata")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant MetadataStorageLocation =
         0x7f09bb67b74e2a3629aad504af5663eae73f472afa1465cca7996ce7fcc2e700;
 
     function _getMetadataStorage() private pure returns (MetadataStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := MetadataStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function init(string memory description, string memory image, string memory externalUrl) internal {

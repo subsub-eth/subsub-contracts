@@ -5,27 +5,18 @@ import {SubLib} from "../SubLib.sol";
 
 import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
 import {OzERC721Enumerable, OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
-import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
+import {OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 import {Withdrawable, SubscriptionFlags} from "../ISubscription.sol";
 
 import {HasPaymentToken, PaymentToken} from "../PaymentToken.sol";
-import {Tips, HasTips} from "../Tips.sol";
 import {HasRate, Rate} from "../Rate.sol";
-import {HasUserData, UserData, MultiplierChange} from "../UserData.sol";
+import {HasUserData, UserData} from "../UserData.sol";
 import {HasEpochs, Epochs} from "../Epochs.sol";
 import {HasValidation, Validation} from "../Validation.sol";
 import {HasBaseSubscription, BaseSubscription} from "../BaseSubscription.sol";
-import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
-
-import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
-
-import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {TimestampTimeAware} from "../TimeAware.sol";
 
 abstract contract AbstractWithdrawableFacet is
     OzContext,
@@ -72,6 +63,7 @@ abstract contract AbstractWithdrawableFacet is
     }
 }
 
+// solhint-disable-next-line no-empty-blocks
 contract WithdrawableFacet is
     TimestampTimeAware,
     Rate,

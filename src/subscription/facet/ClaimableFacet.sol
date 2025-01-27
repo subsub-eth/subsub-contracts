@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import {SubLib} from "../SubLib.sol";
 
-import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
-import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
+import {OzContextBind} from "../../dependency/OzContext.sol";
+import {OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
-import {Claimable, SubscriptionFlags} from "../ISubscription.sol";
+import {Claimable} from "../ISubscription.sol";
 
 import {HasPaymentToken, PaymentToken} from "../PaymentToken.sol";
 import {Tips, HasTips} from "../Tips.sol";
@@ -18,7 +15,7 @@ import {HasHandleOwned, HandleOwned} from "../../handle/HandleOwned.sol";
 import {HasEpochs, Epochs} from "../Epochs.sol";
 import {HasTips, Tips} from "../Tips.sol";
 import {HasBaseSubscription, BaseSubscription} from "../BaseSubscription.sol";
-import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
+import {TimestampTimeAware} from "../TimeAware.sol";
 
 abstract contract AbstractClaimableFacet is
     Claimable,
@@ -47,7 +44,20 @@ abstract contract AbstractClaimableFacet is
         emit FundsClaimed(amount, _asExternal(_claimed()));
     }
 
-    function claimable(uint256 startEpoch, uint256 endEpoch) public view returns (uint256) {
+    function claimable(
+        uint256,
+        /**
+         * startEpoch
+         */
+        uint256
+    )
+        /**
+         * endEpoch
+         */
+        public
+        view
+        returns (uint256)
+    {
         (uint256 amount,,) = _scanEpochs(_rate(), _currentEpoch());
 
         return _asExternal(amount);

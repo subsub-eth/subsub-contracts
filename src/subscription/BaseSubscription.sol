@@ -5,6 +5,7 @@ import {SubLib} from "./SubLib.sol";
 
 import {HasPaymentToken} from "./PaymentToken.sol";
 
+// solhint-disable-next-line no-empty-blocks
 library BaseSubscriptionLib {}
 
 /**

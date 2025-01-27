@@ -24,6 +24,7 @@ abstract contract HasHandleOwned is IOwnable, HandleOwnedErrors {
 }
 
 abstract contract HandleOwned is OzContext, HasHandleOwned {
+    // solhint-disable-next-line immutable-vars-naming
     address private immutable _handleContract;
 
     constructor(address handleContract) {

@@ -9,13 +9,16 @@ library MaxSupplyLib {
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.subscription.MaxSupply")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant MaxSupplyStorageLocation =
         0xd5a193fb325eb4e2a20c62d7d7a9d4af372aaa9384d3e03b4a2a820ccc9af600;
 
     function _getMaxSupplyStorage() private pure returns (MaxSupplyStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := MaxSupplyStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function init(uint256 maxSupply_) internal {

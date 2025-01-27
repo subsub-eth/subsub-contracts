@@ -19,14 +19,7 @@ import {TimeAware, TimestampTimeAware} from "../TimeAware.sol";
 
 import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
 import {OzERC721Enumerable, OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
-import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
-
-import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
-
-import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ERC721Upgradeable} from "openzeppelin-contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {ERC721EnumerableUpgradeable} from
-    "openzeppelin-contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
 abstract contract AbstractDepositableFacet is
     OzContext,
@@ -179,6 +172,7 @@ abstract contract AbstractDepositableFacet is
     }
 }
 
+// solhint-disable-next-line no-empty-blocks
 contract DepositableFacet is
     TimestampTimeAware,
     OzContextBind,

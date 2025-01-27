@@ -13,6 +13,7 @@ abstract contract HasFactory {
 }
 
 abstract contract Factory is Initializable, HasFactory {
+    // solhint-disable-next-line immutable-vars-naming
     address private immutable _beacon;
 
     constructor(address beacon) {
@@ -23,6 +24,7 @@ abstract contract Factory is Initializable, HasFactory {
         __Factory_init_unchained();
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function __Factory_init_unchained() internal onlyInitializing {}
 
     // deploy a new badge

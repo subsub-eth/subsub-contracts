@@ -5,7 +5,6 @@ import {SubscriptionInitialize, MetadataStruct, SubSettings, SubscriptionInitial
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {BeaconProxy} from "openzeppelin-contracts/proxy/beacon/BeaconProxy.sol";
 import {DiamondBeaconProxy} from "diamond-beacon/DiamondBeaconProxy.sol";
 
 abstract contract HasFactory {
@@ -18,6 +17,7 @@ abstract contract HasFactory {
 }
 
 abstract contract DiamondFactory is Initializable, HasFactory {
+    // solhint-disable-next-line immutable-vars-naming
     address private immutable _beacon;
 
     constructor(address beacon) {
@@ -28,6 +28,7 @@ abstract contract DiamondFactory is Initializable, HasFactory {
         __DiamondFactory_init_unchained();
     }
 
+    // solhint-disable-next-line no-empty-blocks
     function __DiamondFactory_init_unchained() internal onlyInitializing {}
 
     // deploy a new subscription

@@ -12,9 +12,13 @@ import {Context} from "openzeppelin-contracts/utils/Context.sol";
 contract SpentAmountSingleBadgeMinter is IBadgeMinter, Context {
     event SpentAmountSingleBadgeMinted(address indexed to, uint256 indexed subscriptionId, bytes data);
 
+    // solhint-disable-next-line immutable-vars-naming
     address public immutable badgeContract;
+    // solhint-disable-next-line immutable-vars-naming
     address public immutable subscriptionContract;
+    // solhint-disable-next-line immutable-vars-naming
     uint256 public immutable badgeTokenId;
+    // solhint-disable-next-line immutable-vars-naming
     uint256 public immutable spentAmount;
 
     mapping(uint256 => bool) private _tokenIdMinted;

@@ -32,7 +32,6 @@ import {DiamondBeaconUpgradeable} from "diamond-beacon/DiamondBeaconUpgradeable.
 
 import "../src/profile/Profile.sol";
 import "../src/subscription/ISubscription.sol";
-import "../src/subscription/Subscription.sol";
 import "../src/subscription/handle/SubscriptionHandle.sol";
 import {BadgeHandle, UpgradeableBadgeHandle} from "../src/badge/handle/BadgeHandle.sol";
 import {Badge} from "../src/badge/Badge.sol";
@@ -201,7 +200,7 @@ contract TestDataScript is Script {
                 address aliceSubscription1 =
                     createSubscriptionPlanWithErc6551(pAliceAccount, "Alice's Tier 1 Sub", "SUBt1", metadata, settings);
 
-                Subscription sub2 = Subscription(
+                ISubscriptionInternal sub2 = ISubscriptionInternal(
                     createSubscriptionPlanWithErc6551(pAliceAccount, "Alice's Tier 2 Sub", "SUBt2", metadata, settings)
                 );
                 sub2.setFlags(3);

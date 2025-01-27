@@ -13,9 +13,9 @@ import {MaxSupply, HasMaxSupply} from "../MaxSupply.sol";
 import {TimestampTimeAware} from "../TimeAware.sol";
 import {HasFlagSettings, FlagSettings} from "../../FlagSettings.sol";
 
-import {OzContext, OzContextBind} from "../../dependency/OzContext.sol";
-import {OzERC721Enumerable, OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
-import {OzInitializable, OzInitializableBind} from "../../dependency/OzInitializable.sol";
+import {OzContextBind} from "../../dependency/OzContext.sol";
+import {OzERC721EnumerableBind} from "../../dependency/OzERC721Enumerable.sol";
+import {OzInitializableBind} from "../../dependency/OzInitializable.sol";
 
 /**
  * @dev Properties are not exposed on {ISubscription} but only used to modify subscription properties

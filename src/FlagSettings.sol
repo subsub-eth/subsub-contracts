@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ContextUpgradeable} from "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 
 interface IHasFlags {
     function flagsEnabled(uint256 flags) external view returns (bool);
@@ -32,12 +32,15 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable, FlagEvents,
     }
 
     // keccak256(abi.encode(uint256(keccak256("subsub.storage.FlagSettings")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant FlagStorageLocation = 0xc5c3d7bab6cceabb922a9285107a3807dc3d1fd42d4176d3391dfe1aba2acc00;
 
     function _getFlagStorage() private pure returns (FlagStorage storage $) {
+        // solhint-disable no-inline-assembly
         assembly {
             $.slot := FlagStorageLocation
         }
+        // solhint-enable no-inline-assembly
     }
 
     function __FlagSettings_init() internal onlyInitializing {
