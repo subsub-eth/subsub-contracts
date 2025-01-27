@@ -3,12 +3,14 @@
   "plugins": [],
   "rules": {
     "one-contract-per-file": "off",
+    "gas-custom-errors": "off",
     "func-name-mixedcase": "off",
     "func-visibility": [
       "warn",
       {
         "ignoreConstructors": true
       }
-    ]
+    ],
+    "reason-string": "off"
   }
 }
