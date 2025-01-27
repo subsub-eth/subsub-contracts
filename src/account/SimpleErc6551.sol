@@ -4,8 +4,8 @@ pragma solidity ^0.8.20;
 import {ERC6551} from "solady/accounts/ERC6551.sol";
 
 contract SimpleErc6551 is ERC6551 {
-    string constant public NAME = "SUBSUB_TOKEN_ACC";
-    string constant public VERSION = "1.0.0";
+    string public constant NAME = "SUBSUB_TOKEN_ACC";
+    string public constant VERSION = "1.0.0";
 
     function _domainNameAndVersion()
         internal
