@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {MetadataStruct, SubSettings} from "../ISubscription.sol";
+import {MetadataStruct, SubSettings, SubscriptionInitialize} from "../ISubscription.sol";
 
 import {SubLib} from "../SubLib.sol";
 
@@ -24,6 +24,7 @@ contract InitFacet is
     OzInitializableBind,
     OzContextBind,
     OzERC721EnumerableBind,
+    SubscriptionInitialize,
     MaxSupply,
     TokenIdProvider,
     Metadata,

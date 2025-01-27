@@ -20,9 +20,11 @@ abstract contract Factory is Initializable, HasFactory {
         _beacon = beacon;
     }
 
+    // slither-disable-start dead-code
     function __Factory_init() internal onlyInitializing {
         __Factory_init_unchained();
     }
+    // slither-disable-end dead-code
 
     // solhint-disable-next-line no-empty-blocks
     function __Factory_init_unchained() internal onlyInitializing {}

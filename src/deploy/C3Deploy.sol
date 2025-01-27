@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {CREATE3} from "solady/utils/CREATE3.sol";
 
@@ -7,6 +7,7 @@ import {CREATE3} from "solady/utils/CREATE3.sol";
  * @dev simple CREATE3 wrapper to have a constant deployer address independent from the caller
  *
  */
+// slither-disable-start missing-inheritance
 contract C3Deploy {
     mapping(address => bool) public deployers;
 
@@ -31,3 +32,4 @@ contract C3Deploy {
         return CREATE3.deployDeterministic(initCode, keccak256(bytes(salt)));
     }
 }
+// slither-disable-end missing-inheritance

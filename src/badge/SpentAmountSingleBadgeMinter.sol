@@ -24,6 +24,9 @@ contract SpentAmountSingleBadgeMinter is IBadgeMinter, Context {
     mapping(uint256 => bool) private _tokenIdMinted;
 
     constructor(address _badgeContract, uint256 _badgeTokenId, address _subscriptionContract, uint256 _spentAmount) {
+        require(_badgeContract != address(0));
+        require(_subscriptionContract != address(0));
+
         badgeContract = _badgeContract;
         badgeTokenId = _badgeTokenId;
         subscriptionContract = _subscriptionContract;
@@ -54,8 +57,8 @@ contract SpentAmountSingleBadgeMinter is IBadgeMinter, Context {
 
         _tokenIdMinted[subscriptionId] = true;
 
-        IBadge(badgeContract).mint(to, badgeTokenId, 1, data);
-
         emit SpentAmountSingleBadgeMinted(to, subscriptionId, data);
+
+        IBadge(badgeContract).mint(to, badgeTokenId, 1, data);
     }
 }

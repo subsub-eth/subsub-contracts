@@ -10,6 +10,7 @@ import {MetadataFacet} from "./facet/MetadataFacet.sol";
 import {PropertiesFacet} from "./facet/PropertiesFacet.sol";
 import {WithdrawableFacet} from "./facet/WithdrawableFacet.sol";
 
+// slither-disable-start missing-inheritance
 contract FacetConfig {
     bytes4[] private s;
 
@@ -135,3 +136,4 @@ contract FacetConfig {
         return s;
     }
 }
+// slither-disable-end missing-inheritance

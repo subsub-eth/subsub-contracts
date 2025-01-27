@@ -563,9 +563,11 @@ abstract contract HasEpochs {
 }
 
 abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
+    // slither-disable-start dead-code
     function __Epochs_init(uint256 epochSize) internal {
         __Epochs_init_unchained(epochSize);
     }
+    // slither-disable-end dead-code
 
     function __Epochs_init_unchained(uint256 epochSize) internal {
         __checkInitializing();
@@ -578,9 +580,11 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
      * @param epoch the epoch id to get
      * @return raw epoch data
      */
+    // slither-disable-start dead-code
     function _getEpoch(uint256 epoch) internal view virtual returns (Epoch memory) {
         return EpochsLib.getEpoch(epoch);
     }
+    // slither-disable-end dead-code
 
     /**
      * @notice set raw epoch data
@@ -588,45 +592,55 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
      * @param epoch the epoch id
      * @param data the epoch data to set
      */
+    // slither-disable-start dead-code
     function _setEpoch(uint256 epoch, Epoch memory data) internal virtual {
         EpochsLib.setEpoch(epoch, data);
     }
+    // slither-disable-end dead-code
 
     /**
      * @notice set last processed epoch
      * @dev for testing and debugging
      * @param epoch the epoch id
      */
+    // slither-disable-start dead-code
     function _setLastProcessedEpoch(uint256 epoch) internal virtual {
         EpochsLib.setLastProcessedEpoch(epoch);
     }
+    // slither-disable-end dead-code
 
     /**
      * @notice set active sub shares
      * @dev for testing and debugging
      * @param shares number of shares
      */
+    // slither-disable-start dead-code
     function _setActiveSubShares(uint256 shares) internal virtual {
         EpochsLib.setActiveSubShares(shares);
     }
+    // slither-disable-end dead-code
 
     /**
      * @notice get active sub shares
      * @dev for testing and debugging
      * @return number of active shares (internal state)
      */
+    // slither-disable-start dead-code
     function _getActiveSubShares() internal virtual returns (uint256) {
         return EpochsLib.getActiveSubShares();
     }
+    // slither-disable-end dead-code
 
     /**
      * @notice set claimed amount
      * @dev for testing and debugging
      * @param claimed amount of claimed funds
      */
+    // slither-disable-start dead-code
     function _setClaimed(uint256 claimed) internal virtual {
         EpochsLib.setClaimed(claimed);
     }
+    // slither-disable-end dead-code
 
     function _epochSize() internal view virtual override returns (uint256) {
         return EpochsLib.epochSize();
@@ -648,16 +662,7 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
         return EpochsLib.activeSubShares(_now());
     }
 
-    // TODO remove me
-    function _startProcessingEpoch(uint256 suggestedLastEpoch, bool initialClaim)
-        internal
-        pure
-        virtual
-        returns (uint256)
-    {
-        return EpochsLib.startProcessingEpoch(suggestedLastEpoch, initialClaim);
-    }
-
+    // slither-disable-start unused-return
     function _scanEpochs(uint256 rate, uint256 upToEpoch)
         internal
         view
@@ -667,6 +672,7 @@ abstract contract Epochs is OzInitializable, TimeAware, HasEpochs {
     {
         (amount, starting, expiring,) = EpochsLib.scanEpochs(rate, upToEpoch);
     }
+    // slither-disable-end unused-return
 
     function _claimEpochs(uint256 rate, uint256 upToEpoch) internal virtual override returns (uint256) {
         return EpochsLib.claimEpochs(rate, upToEpoch, _now());

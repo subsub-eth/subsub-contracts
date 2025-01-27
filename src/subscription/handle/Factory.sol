@@ -24,9 +24,11 @@ abstract contract DiamondFactory is Initializable, HasFactory {
         _beacon = beacon;
     }
 
+    // slither-disable-start dead-code
     function __DiamondFactory_init() internal onlyInitializing {
         __DiamondFactory_init_unchained();
     }
+    // slither-disable-end dead-code
 
     // solhint-disable-next-line no-empty-blocks
     function __DiamondFactory_init_unchained() internal onlyInitializing {}

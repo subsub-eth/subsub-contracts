@@ -27,9 +27,11 @@ abstract contract MintAllowedUpgradeable is Initializable, ContextUpgradeable, I
         // solhint-enable no-inline-assembly
     }
 
+    // slither-disable-start dead-code
     function __MintAllowedUpgradeable_init() internal onlyInitializing {
         __MintAllowedUpgradeable_init_unchained();
     }
+    // slither-disable-end dead-code
 
     // solhint-disable-next-line no-empty-blocks
     function __MintAllowedUpgradeable_init_unchained() internal onlyInitializing {}

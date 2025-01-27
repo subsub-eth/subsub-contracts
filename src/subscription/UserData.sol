@@ -469,9 +469,11 @@ abstract contract HasUserData {
 }
 
 abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
+    // slither-disable-start dead-code
     function __UserData_init(uint24 lock) internal {
         __UserData_init_unchained(lock);
     }
+    // slither-disable-end dead-code
 
     function __UserData_init_unchained(uint24 lock) internal {
         __checkInitializing();
@@ -548,15 +550,21 @@ abstract contract UserData is OzInitializable, TimeAware, HasRate, HasUserData {
         return UserDataLib.multiplier(tokenId);
     }
 
+    // slither-disable-start dead-code
     function _lastDepositedAt(uint256 tokenId) internal view virtual override returns (uint256) {
         return UserDataLib.lastDepositedAt(tokenId);
     }
+    // slither-disable-end dead-code
 
+    // slither-disable-start dead-code
     function _getSubData(uint256 tokenId) internal view virtual override returns (SubData memory) {
         return UserDataLib.getSubData(tokenId);
     }
+    // slither-disable-end dead-code
 
+    // slither-disable-start dead-code
     function _setSubData(uint256 tokenId, SubData memory data) internal virtual {
         UserDataLib.setSubData(tokenId, data);
     }
+    // slither-disable-end dead-code
 }

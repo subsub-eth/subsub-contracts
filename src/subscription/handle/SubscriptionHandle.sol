@@ -51,12 +51,14 @@ abstract contract SubscriptionHandle is
 
     // useless overrides
 
+    // slither-disable-start dead-code
     function _increaseBalance(address account, uint128 value)
         internal
         override(ERC721EnumerableUpgradeable, ERC721Upgradeable)
     {
         super._increaseBalance(account, value);
     }
+    // slither-disable-end dead-code
 
     function _update(address to, uint256 tokenId, address auth)
         internal
@@ -77,6 +79,7 @@ abstract contract SubscriptionHandle is
     }
 }
 
+// slither-disable-start unimplemented-functions
 contract UpgradeableSubscriptionHandle is
     SubscriptionHandle,
     DiamondFactory,
@@ -107,7 +110,9 @@ contract UpgradeableSubscriptionHandle is
         super._safeMint(to, tokenId, data);
     }
 }
+// slither-disable-end unimplemented-functions
 
+// slither-disable-start unimplemented-functions
 // is not upgradeable
 contract SimpleSubscriptionHandle is SubscriptionHandle, DiamondFactory, ContractRegistry, ManagingHandle {
     constructor(address beacon) DiamondFactory(beacon) initializer {
@@ -123,3 +128,4 @@ contract SimpleSubscriptionHandle is SubscriptionHandle, DiamondFactory, Contrac
         super._safeMint(to, tokenId, data);
     }
 }
+// slither-disable-end unimplemented-functions

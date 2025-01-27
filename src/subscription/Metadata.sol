@@ -73,9 +73,11 @@ abstract contract HasMetadata is IMetadata {
 }
 
 abstract contract Metadata is OzInitializable, HasMetadata {
+    // slither-disable-start dead-code
     function __Metadata_init(string memory description, string memory image, string memory externalUrl) internal {
         __Metadata_init_unchained(description, image, externalUrl);
     }
+    // slither-disable-end dead-code
 
     function __Metadata_init_unchained(string memory description, string memory image, string memory externalUrl)
         internal

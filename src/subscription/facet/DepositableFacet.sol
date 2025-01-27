@@ -40,6 +40,7 @@ abstract contract AbstractDepositableFacet is
 {
     using SubLib for uint256;
 
+    // slither-disable-next-line shadowing-local
     function mint(uint256 amount, uint24 _multiplier, string calldata message)
         external
         payable

@@ -32,12 +32,6 @@ abstract contract ContractRegistry is Initializable, HasContractRegistry {
         // solhint-enable no-inline-assembly
     }
 
-    // solhint-disable-next-line no-empty-blocks
-    function __ContractRegistry_init() internal onlyInitializing {}
-
-    // solhint-disable-next-line no-empty-blocks
-    function __ContractRegistry_init_unchained() internal onlyInitializing {}
-
     function _addToRegistry(address addr, bool isManaged) internal override returns (bool) {
         ContractRegistryStorage storage $ = _getContractRegistryStorage();
 

@@ -42,12 +42,14 @@ abstract contract BadgeHandle is
 
     // useless overrides
 
+    // slither-disable-start dead-code
     function _increaseBalance(address account, uint128 value)
         internal
         override(ERC721EnumerableUpgradeable, ERC721Upgradeable)
     {
         super._increaseBalance(account, value);
     }
+    // slither-disable-end dead-code
 
     function _update(address to, uint256 tokenId, address auth)
         internal
@@ -68,6 +70,7 @@ abstract contract BadgeHandle is
     }
 }
 
+// slither-disable-start unimplemented-functions
 contract UpgradeableBadgeHandle is
     BadgeHandle,
     Factory,
@@ -98,7 +101,9 @@ contract UpgradeableBadgeHandle is
         super._safeMint(to, tokenId, data);
     }
 }
+// slither-disable-end unimplemented-functions
 
+// slither-disable-start unimplemented-functions
 // is not upgradeable
 contract SimpleBadgeHandle is BadgeHandle, Factory, ContractRegistry, ManagingHandle {
     constructor(address beacon) Factory(beacon) initializer {
@@ -114,3 +119,4 @@ contract SimpleBadgeHandle is BadgeHandle, Factory, ContractRegistry, ManagingHa
         super._safeMint(to, tokenId, data);
     }
 }
+// slither-disable-end unimplemented-functions

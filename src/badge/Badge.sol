@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IBadge, IBadgeOperations, TokenData} from "./IBadge.sol";
+import {IBadge, IBadgeOperations, IBadgeProperties, TokenData} from "./IBadge.sol";
 
 import {MintAllowedUpgradeable} from "../MintAllowedUpgradeable.sol";
 import {IMintAllowedUpgradeable} from "../IMintAllowedUpgradeable.sol";
@@ -18,6 +18,7 @@ import {ERC1155SupplyUpgradeable} from
 contract Badge is
     OzContextBind,
     IBadge,
+    IBadgeProperties,
     ERC1155SupplyUpgradeable,
     ERC1155BurnableUpgradeable,
     HandleOwned,
@@ -44,9 +45,11 @@ contract Badge is
         // solhint-enable no-inline-assembly
     }
 
+    // slither-disable-start dead-code
     function __BadgeUpgradeable_init() internal onlyInitializing {
         __BadgeUpgradeable_init_unchained();
     }
+    // slither-disable-end dead-code
 
     function __BadgeUpgradeable_init_unchained() internal onlyInitializing {
         BadgeStorage storage $ = _getBadgeStorage();

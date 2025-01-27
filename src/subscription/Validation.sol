@@ -12,9 +12,13 @@ import {SubscriptionFlags} from "./ISubscription.sol";
  * @notice Provides validation functions needed throughout other subscription modules
  */
 abstract contract HasValidation {
+    // slither-disable-next-line incorrect-modifier
     modifier requireExists(uint256 tokenId) virtual;
+    // slither-disable-next-line incorrect-modifier
     modifier requireValidFlags(uint256 flags) virtual;
+    // slither-disable-next-line incorrect-modifier
     modifier requireValidMultiplier(uint24 multi) virtual;
+    // slither-disable-next-line incorrect-modifier
     modifier requireIsAuthorized(uint256 tokenId) virtual;
 }
 

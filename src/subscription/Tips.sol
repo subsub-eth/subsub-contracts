@@ -114,9 +114,11 @@ abstract contract Tips is HasTips {
         return TipsLib.tips(tokenId);
     }
 
+    // slither-disable-start dead-code
     function _allTips() internal view virtual override returns (uint256) {
         return TipsLib.allTips();
     }
+    // slither-disable-end dead-code
 
     function _claimedTips() internal view virtual override returns (uint256) {
         return TipsLib.claimedTips();

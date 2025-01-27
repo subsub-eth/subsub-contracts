@@ -54,6 +54,7 @@ library PaymentTokenLib {
         }
     }
 
+    // slither-disable-start arbitrary-send-erc20
     function paymentTokenReceive(address from, uint256 amount) internal {
         address token = paymentToken();
         if (token == NATIVE_TOKEN_ADDRESS) {
@@ -65,6 +66,7 @@ library PaymentTokenLib {
             IERC20Metadata(token).safeTransferFrom(from, address(this), amount);
         }
     }
+    // slither-disable-end arbitrary-send-erc20
 
     function paymentToken() internal view returns (address) {
         PaymentTokenStorage storage $ = _getPaymentTokenStorage();
@@ -88,9 +90,11 @@ abstract contract HasPaymentToken {
 }
 
 abstract contract PaymentToken is OzInitializable, HasPaymentToken {
+    // slither-disable-start dead-code
     function __PaymentToken_init(address token) internal {
         __PaymentToken_init_unchained(token);
     }
+    // slither-disable-end dead-code
 
     function __PaymentToken_init_unchained(address token) internal {
         __checkInitializing();

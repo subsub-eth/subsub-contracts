@@ -40,9 +40,11 @@ abstract contract HasRate {
 }
 
 abstract contract Rate is OzInitializable, HasRate {
+    // slither-disable-start dead-code
     function __Rate_init(uint256 rate) internal {
         __Rate_init_unchained(rate);
     }
+    // slither-disable-end dead-code
 
     function __Rate_init_unchained(uint256 rate) internal {
         __checkInitializing();

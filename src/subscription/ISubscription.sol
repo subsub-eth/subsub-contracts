@@ -122,6 +122,7 @@ interface Depositable is SubscriptionEvents, IERC4906 {
      * @param message message that is emitted on a successful renewal
      * @return the token id of the new subscription
      */
+    // slither-disable-next-line shadowing-local
     function mint(uint256 amount, uint24 multiplier, string calldata message) external payable returns (uint256);
 
     /**
@@ -138,6 +139,7 @@ interface Depositable is SubscriptionEvents, IERC4906 {
      * @param tokenId id of the subscription token
      * @param multiplier the new multiplier to apply
      */
+    // slither-disable-next-line shadowing-local
     function changeMultiplier(uint256 tokenId, uint24 multiplier) external;
 
     /**

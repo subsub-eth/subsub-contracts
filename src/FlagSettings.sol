@@ -21,8 +21,10 @@ abstract contract HasFlagSettings is IHasFlags {
 
     function _requireEnabled(uint256 flag) internal view virtual;
 
+    // slither-disable-next-line incorrect-modifier
     modifier whenDisabled(uint256 flags) virtual;
 
+    // slither-disable-next-line incorrect-modifier
     modifier whenEnabled(uint256 flags) virtual;
 }
 
@@ -43,9 +45,11 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable, FlagEvents,
         // solhint-enable no-inline-assembly
     }
 
+    // slither-disable-start dead-code
     function __FlagSettings_init() internal onlyInitializing {
         __FlagSettings_init_unchained();
     }
+    // slither-disable-end dead-code
 
     function __FlagSettings_init_unchained() internal onlyInitializing {
         FlagStorage storage $ = _getFlagStorage();
@@ -56,9 +60,11 @@ abstract contract FlagSettings is Initializable, ContextUpgradeable, FlagEvents,
         require(!flagsEnabled(flag), "Flag: setting enabled");
     }
 
+    // slither-disable-start dead-code
     function _requireEnabled(uint256 flag) internal view virtual override {
         require(flagsEnabled(flag), "Flag: setting disabled");
     }
+    // slither-disable-end dead-code
 
     modifier whenDisabled(uint256 flags) virtual override {
         _requireDisabled(flags);

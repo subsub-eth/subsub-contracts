@@ -42,9 +42,11 @@ abstract contract HasTokenIdProvider {
 }
 
 abstract contract TokenIdProvider is OzInitializable, HasTokenIdProvider {
+    // slither-disable-start dead-code
     function __TokenIdProvider_init(uint256 tokenId) internal {
         __TokenIdProvider_init_unchained(tokenId);
     }
+    // slither-disable-end dead-code
 
     function __TokenIdProvider_init_unchained(uint256 tokenId) internal {
         __checkInitializing();

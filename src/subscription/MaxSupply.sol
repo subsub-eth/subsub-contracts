@@ -37,9 +37,11 @@ abstract contract HasMaxSupply {
 }
 
 abstract contract MaxSupply is OzInitializable, HasMaxSupply {
+    // slither-disable-start dead-code
     function __MaxSupply_init(uint256 maxSupply) internal {
         __MaxSupply_init_unchained(maxSupply);
     }
+    // slither-disable-end dead-code
 
     function __MaxSupply_init_unchained(uint256 maxSupply) internal {
         __checkInitializing();
