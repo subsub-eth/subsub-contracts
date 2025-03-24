@@ -79,7 +79,7 @@ jobs:
           submodules: recursive
 
       - name: Slither static analysis
-        uses: crytic/slither-action@v0.4.0
+        uses: crytic/slither-action@v0.4.1
         id: slither
 
   publish:
