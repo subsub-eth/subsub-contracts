@@ -3,7 +3,7 @@ src = 'src'
 out = 'out'
 libs = ['lib']
 
-solc= '0.8.28'
+solc= '0.8.29'
 
 # allow disk reads to read pre-compiled contracts
 fs_permissions = [{ access = "read", path = "./"}]
