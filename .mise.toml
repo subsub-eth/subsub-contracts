@@ -3,6 +3,6 @@ _.file = '.env'
 
 [tools]
 just = "latest"
-"ubi:foundry-rs/foundry" = { version = "1.0.0", extract_all = "true" }
 nodejs = "22"
 pnpm = "10"
+foundry = "1.0.0"
