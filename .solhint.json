@@ -12,6 +12,7 @@
       }
     ],
     "reason-string": "off",
-    "compiler-version": ["error", "^0.8.28"]
+    "compiler-version": ["error", "^0.8.28"],
+    "import-path-check": ["off"]
   }
 }
