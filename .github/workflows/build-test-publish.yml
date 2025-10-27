@@ -38,7 +38,7 @@ jobs:
           forge test -vvv
         id: test
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: json-abi
           path: out/**/*.json
